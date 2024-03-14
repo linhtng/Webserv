@@ -1,8 +1,21 @@
 # Webserv
 This project is about writing your own HTTP server.
 - Setting up the server for basic reading and writing operations
+    - set up the server socket, bind it to a port, and start listening for incoming connections. When a connection is accepted, it should spawn a new thread to handle  the connection 
 - Parsing what we exchange with the clients (i.e. messages)
+    - Reading the Request from the socket using a function like `recv()`
+    - Parsing the Request Line: The first line of the request is the request line, which contains the HTTP method (GET, POST, etc.), the request target (usually a URL or file path), and the HTTP version. For example, parsing the request line `GET /index.html HTTP/1.1`, to extract HTTP method `GET`, the request target `/index.html`, and the HTTP version `HTTP/1.1`
+
+    - Parsing the Headers: After the request line, the request contains several headers, which provide additional information about the request. These are formatted as `Name: Value`. 
+    - Parsing the Body: If the request is a POST request, it will have a body after the headers. This will contain the data for the file upload. 
 - Implementing logic to handle different HTTP methods, process requests, and generate appropriate responses
+    - Handle GET Request with the requested file path from parsing:
+        - Locate the file on the disk
+        - Read the file into memory
+        - Send the file over the connection
+    - Handle POST Request with the file data and the destination file path from parsing:
+        - Write the file data to the specified file on the disk
+        - Send a response confirming the upload
 - CGI handling
 - Configuration files
 - Testing:
