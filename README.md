@@ -17,6 +17,7 @@ This project is about writing your own HTTP server.
         - Write the file data to the specified file on the disk
         - Send a response confirming the upload
 - CGI handling
+    - Implement support for executing CGI scripts and returning their output in the HTTP response 
 - Configuration files
 - Testing:
     - default basic files to test and demonstrate **every** feature works, inc. script to check CGI
