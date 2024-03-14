@@ -1,5 +1,12 @@
 # Webserv
 This project is about writing your own HTTP server.
+- Setting up the server for basic reading and writing operations
+- Parsing what we exchange with the clients (i.e. messages)
+- Implementing logic to handle different HTTP methods, process requests, and generate appropriate responses
+- CGI handling
+- Configuration files
+- Testing:
+    - default basic files to test and demonstrate **every** feature works, inc. script to check CGI
 
 # Resources
 __Networking__
