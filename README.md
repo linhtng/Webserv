@@ -8,3 +8,6 @@ __Networking__
 
 __HTTP__
 - [How the web works: HTTP and CGI explained](https://www.garshol.priv.no/download/text/http-tut.html)
+
+__General__
+- https://github.com/Bima42/webserv
