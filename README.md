@@ -20,7 +20,9 @@ This project is about writing your own HTTP server.
     - Implement support for executing CGI scripts and returning their output in the HTTP response 
 - Configuration files
 - Testing:
-    - default basic files to test and demonstrate **every** feature works, inc. script to check CGI
+    - default basic files to test and demonstrate **every** feature works
+    - script(s) to check CGI
+    - simple website to test the server
 
 # Resources
 __Networking__
