@@ -28,9 +28,14 @@ This project is about writing your own HTTP server.
 __Networking__
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/html/split/)
 - [webserv: Building a Non-Blocking Web Server in C++](https://m4nnb3ll.medium.com/webserv-building-a-non-blocking-web-server-in-c-98-a-42-project-04c7365e4ec7)
+- [Socket Programming in C] (https://www.geeksforgeeks.org/socket-programming-cc)
 
 __HTTP__
 - [How the web works: HTTP and CGI explained](https://www.garshol.priv.no/download/text/http-tut.html)
 
 __General__
 - https://github.com/Bima42/webserv
+- https://github.com/Kaydooo/Webserv_42
+
+__CGI__
+- [C++ Web Programming](https://www.tutorialspoint.com/cplusplus/cpp_web_programming.htm)
