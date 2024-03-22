@@ -30,6 +30,7 @@ __Networking__
 - [webserv: Building a Non-Blocking Web Server in C++](https://m4nnb3ll.medium.com/webserv-building-a-non-blocking-web-server-in-c-98-a-42-project-04c7365e4ec7)
 - [Socket Programming in C](https://www.geeksforgeeks.org/socket-programming-cc/)
 - [Explores epoll](https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642)
+- [Using poll() instead of select()](https://www.ibm.com/docs/en/i/7.4?topic=designs-using-poll-instead-select)
 
 __HTTP__
 - [How the web works: HTTP and CGI explained](https://www.garshol.priv.no/download/text/http-tut.html)
