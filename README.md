@@ -23,6 +23,8 @@ This project is about writing your own HTTP server.
     - default basic files to test and demonstrate **every** feature works
     - script(s) to check CGI
     - simple website to test the server
+- Logging (Optional):
+  - to log everything happened in the server
 
 # Resources
 __Networking__
