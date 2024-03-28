@@ -35,6 +35,8 @@ __Networking__
 - [Using poll() instead of select()](https://www.ibm.com/docs/en/i/7.4?topic=designs-using-poll-instead-select)
 
 __HTTP__
+- [RFC 9112 - HTTP/1.1](https://www.rfc-editor.org/rfc/rfc9112.html)
+- [RFC 9110 - HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)
 - [How the web works: HTTP and CGI explained](https://www.garshol.priv.no/download/text/http-tut.html)
 
 __General__
