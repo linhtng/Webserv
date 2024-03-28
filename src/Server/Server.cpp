@@ -169,6 +169,15 @@ void Server::recvRequest(std::vector<pollfd>::iterator it)
 {
 	char buf[BUFFER_SIZE];
 	recv(it->fd, buf, sizeof(buf), 0);
+	// read until /r/n
+	// Request request(headerStr);
+	// if (request.success)
+	// {
+	// read body for request.bytes
+	//	request.addBody(bodyStr);
+	// }
+	// Response (request);
+	// save response to client
 	std::cout << buf << std::endl;
 	// set fd to ready for write
 	*it = {it->fd, POLLOUT, 0};
