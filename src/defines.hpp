@@ -7,4 +7,10 @@
 #define SP " "
 #define DEFAULT_TIMEOUT 1000
 
+enum RequestStatus
+{
+	SUCCESS,
+	ERROR
+};
+
 #endif

@@ -23,3 +23,9 @@ how are we gonna read start-line and header in the first place without knowing t
 
 
 "String-based parsers can only be safely used within protocol elements after the element has been extracted from the message, such as within a header field line value after message parsing has delineated the individual field lines."
+
+
+
+
+Error page that has error number and message passed as params
+keep error numbers and messages in an unordered_map somewhere? utility class?
