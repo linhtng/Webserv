@@ -3,12 +3,13 @@ CFLAGS = c++ -Wall -Wextra -Werror -std=c++17 -Iincludes
 
 NAME = webserv
 
-SRCS = srcs/config_parser/main.cpp \
-	srcs/config_parser/ConfigParser.cpp \
+SRCS = main.cpp \
+	ConfigParser.cpp \
+	ConfigData.cpp \
 
-# OBJ_PATH = objects/
+OBJ_PATH = objects/
 OBJ		= $(SRCS:.cpp=.o)
-# OBJS	= $(addprefix $(OBJ_PATH), $(OBJ))
+OBJS	= $(addprefix $(OBJ_PATH), $(OBJ))
 
 # SRCFD = sources/
 # SRCS	= $(addprefix $(SRCFD), $(SRC))
@@ -21,11 +22,11 @@ $(OBJ_PATH):
 $(OBJ_PATH)%.o: $(SRCFD)%.cpp
 	$(CFLAGS) $(DEBUG) -c $< -o $@
 
-$(NAME): $(OBJ_PATH) $(OBJ)
-	$(CFLAGS) $(OBJ) $(DEBUG) -o $@
+$(NAME): $(OBJ_PATH) $(OBJS)
+	$(CFLAGS) $(OBJS) $(DEBUG) -o $@
 	
 clean:
-	rm $(OBJ)
+	rm -rf $(OBJ_PATH)
 
 fclean: clean
 	rm -f $(NAME)

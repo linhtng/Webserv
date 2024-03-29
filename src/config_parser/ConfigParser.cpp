@@ -1,6 +1,7 @@
 #include "ConfigParser.hpp"
 
-ConfigParser::ConfigParser(std::string &fileName) : serverCount(0) {
+ConfigParser::ConfigParser(std::string &fileName) : serverCount(0)
+{
     this->readConfigFile(fileName);
 }
 
@@ -30,12 +31,12 @@ void ConfigParser::readConfigFile(const std::string &fileName)
         throw std::runtime_error("Error: unable to open input file " + fileName);
     }
     std::string fullFileContent = std::string((std::istreambuf_iterator<char>(inputFile)),
-                                    (std::istreambuf_iterator<char>()));
-    fileContent = removeComments(fullFileContent);                                
+                                              (std::istreambuf_iterator<char>()));
+    fileContent = removeComments(fullFileContent);
     // std::cout << "File content: " << this->fileContent << std::endl;
 }
 
-/* 
+/*
 1. Split the content into separate server blocks
 2. Remove comments from each block
 3. Extract server name, number, etc. from each block
@@ -46,6 +47,16 @@ void ConfigParser::extractServerConfigs()
 {
     // std::cout << "Extracting server configurations...\n";
     splitServerBlocks();
+    for (int i = 0; i < serverCount; i++)
+    {
+        ConfigData serverConfig(configBlock[i]);
+        serverConfig.analyzeConfigData();
+        servers.push_back(serverConfig);
+    }
+    for (auto &server : servers)
+    {
+        server.printConfigData();
+    }
 }
 
 std::string ConfigParser::removeComments(std::string &fullFileContent)
@@ -63,16 +74,20 @@ void ConfigParser::splitServerBlocks()
     int braceCount = 0;
     bool insideServerBlock = false;
 
-    while (std::getline(iss, line)) {
+    while (std::getline(iss, line))
+    {
         if (line.find("server {") != std::string::npos)
             insideServerBlock = true;
-        if (insideServerBlock) {
+        if (insideServerBlock)
+        {
             if (line.find("{") != std::string::npos)
                 braceCount++;
             currentBlock += line + "\n";
-            if (line.find("}") != std::string::npos) {
+            if (line.find("}") != std::string::npos)
+            {
                 braceCount--;
-                if (braceCount == 0) {
+                if (braceCount == 0)
+                {
                     configBlock.push_back(currentBlock);
                     currentBlock.clear();
                     serverCount++;
@@ -81,37 +96,10 @@ void ConfigParser::splitServerBlocks()
             }
         }
     }
-    for (auto &block : configBlock) {
-        std::cout << "Block: " << std::endl;
-        std::cout << block << std::endl;
-    }
-    std::cout << "Number of servers: " << serverCount << std::endl;
+    // for (auto &block : configBlock)
+    // {
+    //     std::cout << "Block: " << std::endl;
+    //     std::cout << block << std::endl;
+    // }
+    // std::cout << "Number of servers: " << serverCount << std::endl;
 }
-
-// void ConfigParser::splitServerBlocks()
-// {
-//     std::istringstream iss(fileContent);
-//     std::string line;
-//     std::string currentBlock;
-//     int braceCount = 0;
-
-//     while (std::getline(iss, line)) {
-//         if (line.find("server {") != std::string::npos)
-//             braceCount++;
-//         if (braceCount > 0)
-//             currentBlock += line + "\n";
-//         if (line.find("}") != std::string::npos) {
-//             braceCount--;
-//             if (braceCount == 0){
-//                 configBlock.push_back(currentBlock);
-//                 currentBlock.clear();
-//                 serverCount++;
-//             }
-//         }
-//     }
-//     for (auto &block : configBlock) {
-//         std::cout << "Block: " << std::endl;
-//         std::cout << block << std::endl;
-//     }
-//     std::cout << "Number of servers: " << serverCount << std::endl;
-// }

@@ -9,11 +9,11 @@
 #include <string>
 #include <regex>
 
+#include "ConfigData.hpp"
+
 #define RED "\e[91m"
 #define CYAN "\033[36m"
 #define RESET "\e[0m"
-
-class ConfigData;
 
 class ConfigParser
 {
@@ -30,7 +30,7 @@ public:
 private:
     std::string fileContent;
     std::vector<std::string> configBlock;
-    // std::vector<ConfigData> servers;
+    std::vector<ConfigData> servers;
     int serverCount; // number of servers
 
     std::string removeComments(std::string &fullFileContent);
