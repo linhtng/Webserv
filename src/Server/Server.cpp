@@ -1,11 +1,14 @@
 #include "Server.hpp"
+#include <cstring>
 
 volatile sig_atomic_t shutdown_flag = 0;
 
 Server::Server()
 {
 	client.addrlen = sizeof(client.address);
-	// to be replaced by config file
+
+	// TODO - to be replaced by config file
+
 	std::unordered_map<std::string, std::string> server;
 	server["port"] = "8082";
 	server["host"] = "127.0.0.1";
@@ -22,6 +25,7 @@ Server::~Server()
 // signal handler for shutting down the server
 void signalHandler(int signum)
 {
+	(void)signum;
 	shutdown_flag = 1;
 }
 
@@ -29,12 +33,12 @@ void signalHandler(int signum)
 void Server::runServer()
 {
 	// TODO - create Config object
-	// register signal handler
-	signal(SIGINT, signalHandler);
+
+	signal(SIGINT, signalHandler); // register signal handler
 	setUpServerSocket();
 	serverLoop();
-	// close all fds
-	for (pollfd &fd : fds)
+
+	for (pollfd &fd : fds) // close all fds
 		close(fd.fd);
 }
 
@@ -48,55 +52,46 @@ void Server::setUpServerSocket()
 	opt = 1;
 	for (auto &server : servers)
 	{
-		// create socket file descriptor
-		server_fd = socket(AF_INET, SOCK_STREAM, 0);
+		server_fd = socket(AF_INET, SOCK_STREAM, 0); // create socket file descriptor
 		if (server_fd < 0)
 			throw SocketCreationException();
-		// add server socket and its info into server_sockets map
-		server_sockets[server_fd] = server;
 
-		// set file descriptor to be reuseable
-		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
-					   sizeof(opt)) < 0)
+		server_sockets[server_fd] = server; // add server socket and its info into server_sockets map
+
+		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
+									 sizeof(opt)) < 0)
 		{
 			for (pollfd &fd : fds)
 				close(fd.fd);
 			throw SocketSetOptionException();
 		}
 
-		/* Set socket to be nonblocking. All of the sockets for
-		the incoming connections will also be nonblocking since
-		they will inherit that state from the listening socket. */
-		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0)
+		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 		{
 			for (pollfd &fd : fds)
 				close(fd.fd);
 			throw SocketSetNonBlockingException();
 		}
 
-		// define the address and port number
-		address.sin_family = AF_INET;
+		address.sin_family = AF_INET; // define the address and port number
 		address.sin_port = htons(std::stoi(server["port"]));
 		address.sin_addr.s_addr = inet_addr(server["host"].c_str());
 
-		// bind the socket to the address and port number
-		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
 		{
 			for (pollfd &fd : fds)
 				close(fd.fd);
 			throw SocketBindingException();
 		}
 
-		// set server socket in passive mode
-		if (listen(server_fd, BACKLOG) < 0)
+		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
 		{
 			for (pollfd &fd : fds)
 				close(fd.fd);
 			throw SocketListenException();
 		}
 
-		// add the server sockets to poll fd
-		fds.push_back({server_fd, POLLIN, 0});
+		fds.push_back({server_fd, POLLIN, 0}); // add the server socket to poll fd
 	}
 }
 
@@ -105,8 +100,18 @@ void Server::serverLoop()
 {
 	while (!shutdown_flag)
 	{
-		// wait for event on a file descriptor
-		if (poll(fds.data(), fds.size(), -1) < 0)
+		// std::cout << "set: ";
+		// for (auto &fd : fds)
+		// {
+		// 	std::cout << fd.fd << ", ";
+		// }
+		// std::cout << std::endl;
+
+		std::vector<pollfd> poll_fds;
+		poll_fds.reserve(fds.size());
+		std::copy(fds.begin(), fds.end(), std::back_inserter(poll_fds));
+
+		if (poll(poll_fds.data(), fds.size(), -1) < 0) // wait for event on a file descriptor
 		{
 			if (!shutdown_flag)
 			{
@@ -116,59 +121,86 @@ void Server::serverLoop()
 			}
 		}
 
-		// loop through all fds to check the event
-		for (std::vector<pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
+		fds.clear();
+		std::move(poll_fds.begin(), poll_fds.end(), std::back_inserter(fds));
+
+		// std::cout << "new set: ";
+		// for (auto &fd : fds)
+		// {
+		// 	std::cout << fd.fd << ", ";
+		// }
+		// std::cout << std::endl;
+
+		for (std::list<pollfd>::iterator it = fds.begin(); it != fds.end(); ++it) // loop through all fds to check the event
 		{
-			if (it->revents & POLLIN)
+			// std::cout << "fd: " << it->fd << std::endl;
+
+			if (!it->revents)
+				continue;
+			else if (it->revents == POLLIN)
 			{
-				bool isServer = false;
-
-				for (auto &server_socket : server_sockets)
-				{
-					if (it->fd == server_socket.first)
-						isServer = true;
-				}
-
-				if (isServer == true)
-					acceptNewConnection(*it); // accept new connection if the fd is server fd
+				if (server_sockets.find(it->fd) != server_sockets.end())
+					acceptNewConnection(it->fd); // accept new connection if the fd is server fd
 				else
-					recvRequest(it); // parse and build response
-
-				break;
+					receiveRequest(it); // parse and build response
 			}
-			else if (it->revents & POLLOUT)
-			{
+			else if (it->revents == POLLOUT)
 				sendResponse(it);
-				break;
+			else
+			{
+				for (pollfd &fd : fds)
+					close(fd.fd);
+				throw PollErrorException();
 			}
 		}
 	}
 }
 
-// accept new connection
-void Server::acceptNewConnection(pollfd &fd)
+// accept new connection(s)
+void Server::acceptNewConnection(const int &server_fd)
 {
-	int new_fd = accept(fd.fd,
-						(struct sockaddr *)&(client.address),
-						&(client.addrlen));
-	if (new_fd < 0)
+	int new_fd = -1;
+	do
 	{
-		if (errno != EWOULDBLOCK)
+		new_fd = accept(server_fd,
+										(struct sockaddr *)&(client.address),
+										&(client.addrlen));
+
+		if (new_fd < 0)
 		{
+			if (errno == EWOULDBLOCK || errno == EAGAIN) // listen() queue is empty
+				break;
+
 			for (pollfd &fd : fds)
 				close(fd.fd);
 			throw AcceptException();
 		}
-	}
-	// add the new fd to poll fd
-	fds.push_back({new_fd, POLLIN, 0});
+
+		fds.push_back({new_fd, POLLIN, 0}); // add the new fd to poll fd
+	} while (new_fd != -1);
 }
 
 // receive the request
-void Server::recvRequest(std::vector<pollfd>::iterator it)
+void Server::receiveRequest(std::list<pollfd>::iterator &it)
 {
+
 	char buf[BUFFER_SIZE];
-	recv(it->fd, buf, sizeof(buf), 0);
+	int rc = recv(it->fd, buf, sizeof(buf), 0);
+	if (rc == 0) // connection has been closed by the client
+	{
+		close(it->fd);
+		it = fds.erase(it);
+	}
+
+	if (rc < 0)
+	{
+		if (errno != EWOULDBLOCK || errno != EAGAIN)
+		{
+			for (pollfd &fd : fds)
+				close(fd.fd);
+			throw RecvException();
+		}
+	}
 	// read until /r/n
 	// Request request(headerStr);
 	// if (request.success)
@@ -179,25 +211,24 @@ void Server::recvRequest(std::vector<pollfd>::iterator it)
 	// Response (request);
 	// save response to client
 	std::cout << buf << std::endl;
-	// set fd to ready for write
-	*it = {it->fd, POLLOUT, 0};
+
+	*it = {it->fd, POLLOUT, 0}; // set fd to ready for write
 }
 
 // send the response
-void Server::sendResponse(std::vector<pollfd>::iterator it)
+void Server::sendResponse(std::list<pollfd>::iterator &it)
 {
 	// send response
 	char buf[1024] = "Hello from server";
-	//  write(fd.fd, buf, sizeof(buf));
 	send(it->fd, buf, sizeof(buf), 0);
-	printf("Hello message sent\n");
 
-	// if request header = keep alive
-	//  *it = {it->fd, POLLIN, 0};
-	// else remove fd and close connection
+	std::cout << "Hello from server" << std::endl;
 
+	// keep the connect by default
+	// *it = {it->fd, POLLIN, 0};
+	// if request header = close, remove fd and close connection
 	close(it->fd);
-	fds.erase(it);
+	it = fds.erase(it);
 }
 
 const char *Server::SocketCreationException::what() const throw()
@@ -233,4 +264,19 @@ const char *Server::PollException::what() const throw()
 const char *Server::AcceptException::what() const throw()
 {
 	return ("Server::Accept() failed");
+}
+
+const char *Server::RecvException::what() const throw()
+{
+	return ("Server::Recv() failed");
+}
+
+const char *Server::SendException::what() const throw()
+{
+	return ("Server::Send() failed");
+}
+
+const char *Server::PollErrorException::what() const throw()
+{
+	return ("Server::POLL error");
 }
