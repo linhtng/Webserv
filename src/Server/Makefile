@@ -1,7 +1,8 @@
 NAME = server
 
 SRCS = main.cpp \
-		Server.cpp
+		Server.cpp \
+		ServerManager.cpp
 
 CC = c++
 

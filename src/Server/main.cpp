@@ -1,14 +1,15 @@
-#include "Server.hpp"
+#include "ServerManager.hpp"
 #include <iostream>
 
-int main (void)
+int main(void)
 {
 
-	Server server;
-	try {
-		server.runServer();
+	ServerManager server_manager;
+	try
+	{
+		server_manager.runServer();
 	}
-	catch(std::exception &e)
+	catch (std::exception &e)
 	{
 		std::cout << e.what() << std::endl;
 		exit(EXIT_FAILURE);

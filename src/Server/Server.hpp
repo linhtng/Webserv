@@ -8,37 +8,21 @@
 #include <unordered_map>
 #include <string>
 #include <stdexcept>
-#include <sys/poll.h>
 #include <arpa/inet.h>
-#include <csignal>
 #include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <list>
-
-typedef typename std::vector<std::unordered_map<std::string, std::string>> config_t;
-typedef typename std::unordered_map<int, std::unordered_map<std::string, std::string>> server_sockets_t;
 
 class Server
 {
 
 private:
-	Server(Server const &src);
-	Server &operator=(Server const &rhs);
+	int server_fd;
+	std::unordered_map<std::string, std::string> config;
+	std::vector<int> client_fds;
 
-	server_sockets_t server_sockets;
-	std::list<pollfd> fds;
-
-	void setUpServerSocket();
-	void serverLoop();
-	void acceptNewConnection(const int &server_fd);
-	void receiveRequest(std::list<pollfd>::iterator &it);
-	void sendResponse(std::list<pollfd>::iterator &it);
-
-	// to be replaced by config file
-	config_t servers;
+	Server();
 
 	struct
 	{
@@ -47,6 +31,12 @@ private:
 	} client;
 
 public:
+	enum ConnectionStatus
+	{
+		OPEN,
+		CLOSE
+	};
+
 	class SocketCreationException : public std::exception
 	{
 	public:
@@ -77,12 +67,6 @@ public:
 		virtual const char *what() const throw();
 	};
 
-	class PollException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
 	class AcceptException : public std::exception
 	{
 	public:
@@ -101,16 +85,18 @@ public:
 		virtual const char *what() const throw();
 	};
 
-	class PollErrorException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
-	Server();
+	Server(const std::unordered_map<std::string, std::string> &config);
 	~Server();
+	Server(Server const &src);
+	Server &operator=(Server const &rhs);
 
-	void runServer();
+	void setUpServerSocket();
+	std::vector<int> acceptNewConnection();
+	ConnectionStatus receiveRequest(int const &client_fd);
+	ConnectionStatus sendResponse(int const &client_fd);
+
+	int const &getServerFd(void) const;
+	std::vector<int> const &getClientFds(void) const;
 };
 
 #endif
