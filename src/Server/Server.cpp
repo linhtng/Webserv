@@ -100,12 +100,12 @@ void Server::serverLoop()
 {
 	while (!shutdown_flag)
 	{
-		// std::cout << "set: ";
-		// for (auto &fd : fds)
-		// {
-		// 	std::cout << fd.fd << ", ";
-		// }
-		// std::cout << std::endl;
+		std::cout << "set: ";
+		for (auto &fd : fds)
+		{
+			std::cout << fd.fd << ", ";
+		}
+		std::cout << std::endl;
 
 		std::vector<pollfd> poll_fds;
 		poll_fds.reserve(fds.size());
@@ -124,12 +124,12 @@ void Server::serverLoop()
 		fds.clear();
 		std::move(poll_fds.begin(), poll_fds.end(), std::back_inserter(fds));
 
-		// std::cout << "new set: ";
-		// for (auto &fd : fds)
-		// {
-		// 	std::cout << fd.fd << ", ";
-		// }
-		// std::cout << std::endl;
+		std::cout << "new set: ";
+		for (auto &fd : fds)
+		{
+			std::cout << fd.fd << ", ";
+		}
+		std::cout << std::endl;
 
 		for (std::list<pollfd>::iterator it = fds.begin(); it != fds.end(); ++it) // loop through all fds to check the event
 		{
@@ -190,6 +190,7 @@ void Server::receiveRequest(std::list<pollfd>::iterator &it)
 	{
 		close(it->fd);
 		it = fds.erase(it);
+		return;
 	}
 
 	if (rc < 0)
