@@ -19,7 +19,7 @@ ServerManager &ServerManager::operator=(ServerManager const &rhs)
 	{
 		configs = rhs.configs;
 		servers = rhs.servers;
-		fds = rhs.fds;
+		pollfds = rhs.pollfds;
 	}
 
 	return *this;
@@ -60,7 +60,7 @@ void ServerManager::runServer()
 
 	startServerLoop(); // start the main server loop
 
-	for (pollfd &fd : fds) // close all fds
+	for (pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
 }
 
@@ -78,7 +78,7 @@ void ServerManager::createServers()
 			handleServerError(e);
 		}
 		servers.push_back(server);
-		fds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
+		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
 }
 
@@ -88,7 +88,7 @@ void ServerManager::startServerLoop()
 	while (!shutdown_flag)
 	{
 		setUpPoll();
-		for (std::list<pollfd>::iterator it = fds.begin(); it != fds.end(); ++it) // loop through all fds to check the event
+		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it) // loop through all pollfds to check the event
 		{
 			if (!it->revents)
 				continue;
@@ -98,7 +98,7 @@ void ServerManager::startServerLoop()
 				handlePollout(it);
 			else
 			{
-				for (pollfd &fd : fds)
+				for (pollfd &fd : pollfds)
 					close(fd.fd);
 				throw PollErrorException();
 			}
@@ -109,22 +109,22 @@ void ServerManager::startServerLoop()
 // copy list to vector for poll, and then move vector back to list
 void ServerManager::setUpPoll()
 {
-	std::vector<pollfd> poll_fds;
-	poll_fds.reserve(fds.size());
-	std::copy(fds.begin(), fds.end(), std::back_inserter(poll_fds)); // copy list to vector
+	std::vector<pollfd> pollfds_tmp;
+	pollfds_tmp.reserve(pollfds.size());
+	std::copy(pollfds.begin(), pollfds.end(), std::back_inserter(pollfds_tmp)); // copy list to vector
 
-	if (poll(poll_fds.data(), fds.size(), -1) < 0) // wait for event on a file descriptor
+	if (poll(pollfds_tmp.data(), pollfds.size(), -1) < 0) // wait for event on a file descriptor
 	{
 		if (!shutdown_flag)
 		{
-			for (pollfd &fd : fds)
+			for (pollfd &fd : pollfds)
 				close(fd.fd);
 			throw PollException();
 		}
 	}
 
-	fds.clear();
-	std::move(poll_fds.begin(), poll_fds.end(), std::back_inserter(fds)); // move vector to list
+	pollfds.clear();
+	std::move(pollfds_tmp.begin(), pollfds_tmp.end(), std::back_inserter(pollfds)); // move vector to list
 }
 
 void ServerManager::handlePollin(std::list<pollfd>::iterator &it)
@@ -136,7 +136,7 @@ void ServerManager::handlePollin(std::list<pollfd>::iterator &it)
 			try
 			{
 				for (int &new_fd : server.acceptNewConnection()) // accept new connection
-					fds.push_back({new_fd, POLLIN, 0});						 // add the new fd to poll fd
+					pollfds.push_back({new_fd, POLLIN, 0});				 // add the new fd to poll fd
 			}
 			catch (std::exception &e)
 			{
@@ -144,14 +144,26 @@ void ServerManager::handlePollin(std::list<pollfd>::iterator &it)
 			}
 			break;
 		}
-		if (std::find(server.getClientFds().begin(), server.getClientFds().end(), it->fd) != server.getClientFds().end()) // if the fd is client fd of that server
+		if (server.isClient(it->fd)) // if the fd is client fd of that server
 		{
 			try
 			{																																				// parse and build response
-				if (server.receiveRequest(it->fd) == Server::ConnectionStatus::CLOSE) // if connection has been closed by the client, close connection and remove fd
+				if (server.receiveRequest(it->fd) == Server::ConnectionStatus::CLOSE) // if connection has been closed by the client, close connection, remove fd and remove client
 				{
+					std::cout << "pollfd :";
+					for (auto &pollfd : pollfds)
+					{
+						std::cout << pollfd.fd << ", ";
+					}
+					std::cout << std::endl;
 					close(it->fd);
-					it = fds.erase(it);
+					it = pollfds.erase(it);
+					std::cout << "pollfd :";
+					for (auto &pollfd : pollfds)
+					{
+						std::cout << pollfd.fd << ", ";
+					}
+					std::cout << std::endl;
 				}
 				else
 					*it = {it->fd, POLLOUT, 0}; // set fd to ready for write
@@ -169,14 +181,22 @@ void ServerManager::handlePollout(std::list<pollfd>::iterator &it)
 {
 	for (Server &server : servers)
 	{
-		if (std::find(server.getClientFds().begin(), server.getClientFds().end(), it->fd) != server.getClientFds().end()) // if the fd is client fd of that server
+		if (server.isClient(it->fd)) // if the fd is client fd of that server
 		{
 			if (server.sendResponse(it->fd) == Server::ConnectionStatus::OPEN) // keep the connection open by default
-				*it = {it->fd, POLLIN, 0};																			 // set fd to ready for read
-			else																															 // if request header = close, close connection and remove fd
+			{
+				std::cout << "pollfd here:";
+				for (auto &pollfd : pollfds)
+				{
+					std::cout << pollfd.fd << ", ";
+				}
+				std::cout << std::endl;
+				*it = {it->fd, POLLIN, 0}; // set fd to ready for read
+			}
+			else // if request header = close, close connection and remove fd
 			{
 				close(it->fd);
-				it = fds.erase(it);
+				it = pollfds.erase(it);
 			}
 			break;
 		}
@@ -185,7 +205,7 @@ void ServerManager::handlePollout(std::list<pollfd>::iterator &it)
 
 void ServerManager::handleServerError(std::exception &e)
 {
-	for (pollfd &fd : fds) // close all fds
+	for (pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
 	std::cout << e.what() << std::endl;
 	exit(EXIT_FAILURE);

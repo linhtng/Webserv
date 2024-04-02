@@ -13,6 +13,8 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <algorithm>
+#include "Client.hpp"
 
 class Server
 {
@@ -20,15 +22,9 @@ class Server
 private:
 	int server_fd;
 	std::unordered_map<std::string, std::string> config;
-	std::vector<int> client_fds;
+	std::vector<Client> clients;
 
 	Server();
-
-	struct
-	{
-		struct sockaddr_in address;
-		socklen_t addrlen;
-	} client;
 
 public:
 	enum ConnectionStatus
@@ -73,6 +69,12 @@ public:
 		virtual const char *what() const throw();
 	};
 
+	class TimeoutException : public std::exception
+	{
+	public:
+		virtual const char *what() const throw();
+	};
+
 	class RecvException : public std::exception
 	{
 	public:
@@ -95,8 +97,9 @@ public:
 	ConnectionStatus receiveRequest(int const &client_fd);
 	ConnectionStatus sendResponse(int const &client_fd);
 
+	bool isClient(int const &client_fd);
+
 	int const &getServerFd(void) const;
-	std::vector<int> const &getClientFds(void) const;
 };
 
 #endif

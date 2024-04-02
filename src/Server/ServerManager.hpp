@@ -24,7 +24,7 @@ private:
 	//--------------------------------------------------------------
 
 	std::vector<Server> servers;
-	std::list<pollfd> fds;
+	std::list<pollfd> pollfds;
 
 	void createServers();
 	void startServerLoop();
