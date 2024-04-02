@@ -7,11 +7,31 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <arpa/inet.h>
+#include <map>
 #include <regex>
 
 #define RED "\e[91m"
 #define CYAN "\033[36m"
 #define RESET "\e[0m"
+
+#define MAX_PORT 65535
+#define MIN_PORT 0
+
+namespace DirectiveKeys
+{
+    const std::string PORT = "listen";
+    const std::string HOST = "host";
+    const std::string SERVER_NAME = "server_name";
+    // Add more directive keys here
+}
+
+namespace DefaultValues
+{
+    const int PORT = 80;
+    const std::string HOST = "127.0.0.1";
+    const std::string SERVER_NAME = "localhost";
+}
 
 class ConfigData
 {
@@ -23,11 +43,14 @@ public:
     void printConfigData();
 
 private:
+    std::map<std::string, std::string> defaultValues;
     std::string serverBlock;
-    std::string serverPort;
+    int serverPort;
     std::string serverHost;
     std::string serverName;
 
+    std::string extractDirectiveValue(const std::string &directiveKey);
     void extractServerPort();
     void extractServerName();
+    void extractServerHost();
 };
