@@ -29,3 +29,6 @@ how are we gonna read start-line and header in the first place without knowing t
 
 Error page that has error number and message passed as params
 keep error numbers and messages in an unordered_map somewhere? utility class?
+
+
+505 HTTP Version Not Supported

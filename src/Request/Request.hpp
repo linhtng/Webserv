@@ -14,10 +14,9 @@ private:
 	{
 		std::string method;
 		std::string requestTarget;
-		std::string HTTPVersions;
+		std::string HTTPVersion;
 	};
 
-	bool _error;
 	RequestStatus _status;
 	bool _bodyExpected;
 	RequestLine _requestLine;
@@ -32,11 +31,14 @@ private:
 
 	Request();
 
+	void parseRequestLine(const std::string &requestLine);
+	void parseHeaderLine(const std::string &headerLine);
+
 public:
 	// Constructor that takes a string representing request-line and header file lines
-	Request(const std::string &requestLine);
+	Request(const std::string &requestLineAndHeaders);
 	// Request(const Request &source);
-	~Request();
+	~Request(){};
 
 	// Request &operator=(const Request &source);
 
@@ -46,10 +48,11 @@ public:
 
 	std::vector<std::byte> getBody() const;
 	bool isError() const;
-	RequestStatus getStatus const;
+	RequestStatus getStatus() const;
+	size_t getContentLength() const;
 	bool bodyExpected() const;
 };
 
-std::ostream &operator<<(std::ostream &out, const Request &request);
+// std::ostream &operator<<(std::ostream &out, const Request &request);
 
 #endif
