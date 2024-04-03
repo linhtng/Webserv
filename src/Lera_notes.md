@@ -39,3 +39,6 @@ Upon receiving an HTTP/1.1 (or later) request that has a method, target URI, and
 
 an immediate response with a final status code, if that status can be determined by examining just the method, target URI, and header fields, or
 an immediate 100 (Continue) response to encourage the client to send the request content.
+
+
+Field values containing CR, LF, or NUL characters are invalid and dangerous, due to the varying ways that implementations might parse and interpret those characters; a recipient of CR, LF, or NUL within a field value MUST either reject the message or replace each of those characters with SP before further processing or forwarding of that message.

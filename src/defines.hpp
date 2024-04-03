@@ -3,6 +3,7 @@
 
 #define CR "\r"
 #define LF "\n"
+#define NUL "\0"
 #define CRLF "\r\n"
 #define SP " "
 #define DEFAULT_TIMEOUT 1000

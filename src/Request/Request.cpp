@@ -63,7 +63,7 @@ void Request::parseRequestLine(const std::string &requestLine)
 
 void Request::parseHeaderLine(const std::string &headerLine)
 {
-	std::regex headerLineRegex("^(.+):" SP "(.+)$");
+	std::regex headerLineRegex("^([^" CR LF NUL "]+):" SP "([^" CR LF NUL "]+)$");
 	std::smatch match;
 	if (std::regex_match(headerLine, match, headerLineRegex))
 	{
