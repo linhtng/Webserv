@@ -15,10 +15,11 @@ private:
 		std::string method;
 		std::string requestTarget;
 		std::string HTTPVersion;
+		/* When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant. */
 	};
 
 	RequestStatus _status;
-	bool _bodyExpected;
+	HttpStatusCode _statusCode;
 	RequestLine _requestLine;
 	/*
 	The normal procedure for parsing an HTTP message is to read the start-line
@@ -28,6 +29,7 @@ private:
 	 */
 	std::unordered_map<std::string, std::string> _headerLines;
 	std::vector<std::byte> _body;
+	size_t _contentLength; // Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
 
 	Request();
 
@@ -47,7 +49,6 @@ public:
 	// no it's a stupid idea because I would need to define a struct for that...
 
 	std::vector<std::byte> getBody() const;
-	bool isError() const;
 	RequestStatus getStatus() const;
 	size_t getContentLength() const;
 	bool bodyExpected() const;

@@ -1,10 +1,10 @@
 TODO:
 
-- default error pages
+- default error pages (pass messages as params)
 
 {method_token} 
 
-
+SHOULD MESSAGE BE AN ABSTRACT CLASS THAT REQUEST AND RESPONSE INHERIT FROM? genius or stupid
 
 
 to parse a message to an encoding in newer versions of cpp use cppcodec:
@@ -31,4 +31,11 @@ Error page that has error number and message passed as params
 keep error numbers and messages in an unordered_map somewhere? utility class?
 
 
-505 HTTP Version Not Supported
+
+Generally, the web server handles basic request/response handling, static file serving, and routing, while the backend application processes dynamic content generation, business logic, and database interactions.
+
+
+Upon receiving an HTTP/1.1 (or later) request that has a method, target URI, and complete header section that contains a 100-continue expectation and an indication that request content will follow, an origin server MUST send either:
+
+an immediate response with a final status code, if that status can be determined by examining just the method, target URI, and header fields, or
+an immediate 100 (Continue) response to encourage the client to send the request content.
