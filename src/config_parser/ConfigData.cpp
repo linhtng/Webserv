@@ -12,13 +12,28 @@ void ConfigData::analyzeConfigData()
     extractServerPort();
     extractServerName();
     extractServerHost();
+    extractDefaultErrorPages();
+}
+
+// Generic print function
+template <typename T>
+void print(const T &container)
+{
+    for (const auto &elem : container)
+    {
+        std::cout << "elem: "
+                  << " ";
+        std::cout << elem.first << " " << elem.second << std::endl;
+    }
 }
 
 void ConfigData::printConfigData()
 {
-    std::cout << "Server name: " << serverName << std::endl;
-    std::cout << "Server port: " << serverPort << std::endl;
-    std::cout << "Server host: " << serverHost << std::endl;
+    // std::cout << "Server name: " << serverName << std::endl;
+    // std::cout << "Server port: " << serverPort << std::endl;
+    // std::cout << "Server host: " << serverHost << std::endl;
+    std::cout << "Error pages: ";
+    print(defaultErrorPages);
 }
 
 void trimSpace(std::string &str)
@@ -27,20 +42,20 @@ void trimSpace(std::string &str)
     str = std::regex_replace(str, pattern, "");
 }
 
-std::string ConfigData::extractDirectiveValue(const std::string &directiveKey)
+std::string ConfigData::extractDirectiveValue(const std::string confBlock, const std::string &directiveKey)
 {
     const std::string::size_type keyLength = directiveKey.length();
 
-    std::string::size_type start = serverBlock.find(directiveKey);
+    std::string::size_type start = confBlock.find(directiveKey);
     if (start == std::string::npos)
         return "";
-    int keyValueBetween = serverBlock[start + keyLength];
+    int keyValueBetween = confBlock[start + keyLength];
     if (!std::isspace(keyValueBetween))
         throw std::runtime_error("Invalid directive: " + directiveKey);
-    std::string::size_type end = serverBlock.find(";", start);
+    std::string::size_type end = confBlock.find(";", start);
     if (end == std::string::npos)
         throw std::runtime_error("semicolon not found in serverBlock");
-    std::string directiveValue = serverBlock.substr(start + keyLength, end - start - keyLength);
+    std::string directiveValue = confBlock.substr(start + keyLength, end - start - keyLength);
     trimSpace(directiveValue);
     return directiveValue;
 }
@@ -51,7 +66,7 @@ std::string ConfigData::extractDirectiveValue(const std::string &directiveKey)
 */
 void ConfigData::extractServerPort()
 {
-    std::string serverPortStr = extractDirectiveValue(DirectiveKeys::PORT);
+    std::string serverPortStr = extractDirectiveValue(serverBlock, DirectiveKeys::PORT);
     if (serverPortStr.empty())
     {
         serverPort = DefaultValues::PORT;
@@ -81,7 +96,7 @@ void ConfigData::extractServerPort()
 */
 void ConfigData::extractServerName()
 {
-    std::string serverNameStr = extractDirectiveValue(DirectiveKeys::SERVER_NAME);
+    std::string serverNameStr = extractDirectiveValue(serverBlock, DirectiveKeys::SERVER_NAME);
     if (serverNameStr.empty())
     {
         serverName = DefaultValues::SERVER_NAME;
@@ -89,7 +104,7 @@ void ConfigData::extractServerName()
     }
     // Regular expression for valid server names
     std::regex pattern("^[A-Za-z0-9-.]+$");
-    if (std::regex_match(serverNameStr, pattern) && serverNameStr.size() <= 253)
+    if (std::regex_match(serverNameStr, pattern) && serverNameStr.size() <= MAX_SERVER_NAME_LENGTH)
     {
         serverName = serverNameStr;
     }
@@ -101,7 +116,7 @@ void ConfigData::extractServerName()
 
 void ConfigData::extractServerHost()
 {
-    std::string serverHostStr = extractDirectiveValue(DirectiveKeys::HOST);
+    std::string serverHostStr = extractDirectiveValue(serverBlock, DirectiveKeys::HOST);
     if (serverHostStr.empty() || serverHostStr == "localhost")
     {
         serverHost = "127.0.0.1";
@@ -120,3 +135,50 @@ void ConfigData::extractServerHost()
         throw std::runtime_error("Invalid server host: " + serverHostStr);
     }
 }
+
+/* Regex to extract error pages: error_page <error_code> <error_page_path>;
+- error_code: integer
+*/
+void ConfigData::extractDefaultErrorPages()
+{
+    std::regex errorPageRegex("error_page\\s+(\\d{3})\\s+(\\S+);");
+    std::smatch match;
+    std::string::const_iterator searchStart(serverBlock.cbegin());
+    while (std::regex_search(searchStart, serverBlock.cend(), match, errorPageRegex))
+    {
+        int errorCode = std::stoi(match[1]);
+        if (errorCode < MIN_ERROR_CODE || errorCode > MAX_ERROR_CODE)
+        {
+            std::string errorLine(match[0]);
+            throw std::runtime_error("Invalid line: " + errorLine);
+        }
+        std::string errorPage = match[2];
+        defaultErrorPages[errorCode] = errorPage;
+        searchStart = match.suffix().first;
+    }
+}
+
+// int countOccurrences(const std::string &text, const std::string &pattern)
+// {
+//     int count = 0;
+//     std::size_t pos = 0;
+//     while ((pos = text.find(pattern, pos)) != std::string::npos)
+//     {
+//         ++count;
+//         pos += pattern.length();
+//     }
+//     return count;
+// }
+
+// void ConfigData::extractDefaultErrorPages()
+// {
+//     int errorPageCount = countOccurrences(serverBlock, DirectiveKeys::ERROR_PAGE);
+//     std::size_t startPos = 0;
+//     for (int i = 0; i < errorPageCount; i++)
+//     {
+//         startPos = serverBlock.find(DirectiveKeys::ERROR_PAGE, startPos);
+//         std::string errorPageStr = extractDirectiveValue(serverBlock.substr(startPos), DirectiveKeys::ERROR_PAGE);
+//         errorPagesValues.push_back(errorPageStr);
+//         startPos += DirectiveKeys::ERROR_PAGE.length();
+//     }
+// }

@@ -96,10 +96,10 @@ void ConfigParser::splitServerBlocks()
             }
         }
     }
-    for (auto &block : configBlock)
-    {
-        std::cout << "Block: " << std::endl;
-        std::cout << block << std::endl;
-    }
-    std::cout << "Number of servers: " << serverCount << std::endl;
+    // for (auto &block : configBlock)
+    // {
+    //     std::cout << "Block: " << std::endl;
+    //     std::cout << block << std::endl;
+    // }
+    // std::cout << "Number of servers: " << serverCount << std::endl;
 }

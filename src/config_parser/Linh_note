@@ -9,3 +9,6 @@ Here's the priority order:
 So, if a server block is specified with listen 80 default_server;, it will be the default server for requests that do not match any server_name, even if there are other server blocks without a server_name.
 
 In other words, listen 80 default_server; is a more explicit way to set a server block as the default, and it will take precedence over a server block without a server_name.
+
+Command to check your default error page with curl:
+curl -k -I https://your-nginx-server/nonexistent-page
