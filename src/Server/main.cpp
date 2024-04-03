@@ -11,8 +11,8 @@ int main(void)
 	}
 	catch (std::exception &e)
 	{
-		std::cout << e.what() << std::endl;
-		exit(EXIT_FAILURE);
+		server_manager.handleException(e);
+		return 1;
 	}
 
 	return 0;

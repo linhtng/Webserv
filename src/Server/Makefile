@@ -16,6 +16,10 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CC) -o $@ $(OBJS) $(FLAGS)
 
+client:
+	gcc client1.c -o client1
+	gcc client2.c -o client2
+
 %.o: %.cpp
 	$(CC) -c $(FLAGS) -o $@ $<
 
@@ -26,5 +30,7 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
+	rm -f client1
+	rm -f client2
 
-re: fclean all
+re: fclean all client

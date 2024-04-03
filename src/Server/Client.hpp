@@ -8,7 +8,6 @@ class Client
 {
 
 private:
-	int client_fd;
 	struct sockaddr_in address;
 	socklen_t addrlen;
 	std::string response;
@@ -21,10 +20,8 @@ public:
 
 	struct sockaddr_in &getAndSetAddress(void);
 	socklen_t &getAndSetAddrlen(void);
-	const int &getClientFd(void) const;
 	std::string getResponse(void) const;
 
-	void setFd(int client_fd);
 	void setResponse(std::string new_response);
 };
 

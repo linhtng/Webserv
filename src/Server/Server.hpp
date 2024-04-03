@@ -14,15 +14,23 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <algorithm>
+#include <unistd.h>
 #include "Client.hpp"
 
 class Server
 {
 
+public:
+	typedef struct configData
+	{
+		int serverPort;
+		std::string serverHost;
+	} configData_t;
+
 private:
 	int server_fd;
-	std::unordered_map<std::string, std::string> config;
-	std::vector<Client> clients;
+	configData_t config;
+	std::unordered_map<int, Client> clients;
 
 	Server();
 
@@ -32,6 +40,21 @@ public:
 		OPEN,
 		CLOSE
 	};
+
+	Server(configData_t &config);
+	~Server();
+	Server(Server const &src);
+	Server &operator=(Server const &rhs);
+
+	void setUpServerSocket();
+	std::vector<int> acceptNewConnections();
+	ConnectionStatus receiveRequest(int const &client_fd);
+	ssize_t formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
+	ConnectionStatus sendResponse(int const &client_fd);
+
+	bool isClient(int const &client_fd) const;
+
+	int const &getServerFd(void) const;
 
 	class SocketCreationException : public std::exception
 	{
@@ -86,20 +109,6 @@ public:
 	public:
 		virtual const char *what() const throw();
 	};
-
-	Server(const std::unordered_map<std::string, std::string> &config);
-	~Server();
-	Server(Server const &src);
-	Server &operator=(Server const &rhs);
-
-	void setUpServerSocket();
-	std::vector<int> acceptNewConnection();
-	ConnectionStatus receiveRequest(int const &client_fd);
-	ConnectionStatus sendResponse(int const &client_fd);
-
-	bool isClient(int const &client_fd);
-
-	int const &getServerFd(void) const;
 };
 
 #endif
