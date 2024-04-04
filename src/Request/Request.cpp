@@ -55,7 +55,7 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 
 void Request::parseRequestLine(const std::string &requestLine)
 {
-	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\d+\\.\d+)$"); // nginx takes up to 3 digits for the minor version
+	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\\d+\\.\\d+)$"); // nginx takes up to 3 digits for the minor version
 	std::smatch match;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
@@ -73,7 +73,8 @@ void Request::parseRequestLine(const std::string &requestLine)
 
 void Request::parseHeaderLine(const std::string &headerLine)
 {
-	std::regex headerLineRegex("^([^" CR LF NUL "]+):" SP "([^" CR LF NUL "]+)$");
+	std::string chars = CR LF NUL;
+	std::regex headerLineRegex("^([^" + chars + "]+):" SP "([^" + chars + "]+)$");
 	std::smatch match;
 	if (std::regex_match(headerLine, match, headerLineRegex))
 	{
