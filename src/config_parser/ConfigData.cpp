@@ -13,6 +13,7 @@ void ConfigData::analyzeConfigData()
     extractServerName();
     extractServerHost();
     extractDefaultErrorPages();
+    extractMaxClientBodySize();
 }
 
 // Generic print function
@@ -32,8 +33,9 @@ void ConfigData::printConfigData()
     // std::cout << "Server name: " << serverName << std::endl;
     // std::cout << "Server port: " << serverPort << std::endl;
     // std::cout << "Server host: " << serverHost << std::endl;
-    std::cout << "Error pages: ";
-    print(defaultErrorPages);
+    // std::cout << "Error pages: ";
+    // print(defaultErrorPages);
+    std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
 }
 
 void trimSpace(std::string &str)
@@ -189,4 +191,46 @@ bool ConfigData::validErrorCode(std::string &errorCodeStr)
         throw std::runtime_error("Error code out of range: " + errorCodeStr);
     }
     return true;
+}
+
+/* In nginx, setting size to 0 means no limit on client body size.
+But we don't allow that. 0 is invalid.
+*/
+void ConfigData::extractMaxClientBodySize()
+{
+    std::string maxClientBodySizeStr = extractDirectiveValue(serverBlock, DirectiveKeys::ClientBodySize);
+    if (maxClientBodySizeStr.empty())
+    {
+        maxClientBodySize = DefaultValues::MAX_CLIENT_BODY_SIZE;
+        return;
+    }
+    std::unordered_map<std::string, int> units = {
+        {"k", 1024},
+        {"K", 1024},
+        {"m", 1024 * 1024},
+        {"M", 1024 * 1024},
+        {"g", 1024 * 1024 * 1024},
+        {"G", 1024 * 1024 * 1024}};
+
+    std::regex pattern("(\\d+)([kKmMgG]?)");
+    std::smatch matches;
+    if (std::regex_match(maxClientBodySizeStr, matches, pattern))
+    {
+        std::string numberPart = matches[1].str();
+        std::string unit = matches[2].str();
+        int multiplier = 1;
+        if (units.find(unit) != units.end())
+        {
+            multiplier = units[unit];
+        }
+        maxClientBodySize = std::stoll(numberPart) * multiplier;
+        if (maxClientBodySize <= 0 || maxClientBodySize > INT_MAX)
+        {
+            throw std::runtime_error("Out of range max client body size: " + maxClientBodySizeStr);
+        }
+    }
+    else
+    {
+        throw std::runtime_error("Invalid max client body size: " + maxClientBodySizeStr);
+    }
 }

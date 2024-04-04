@@ -28,6 +28,7 @@ namespace DirectiveKeys
     const std::string HOST = "host";
     const std::string SERVER_NAME = "server_name";
     const std::string ERROR_PAGE = "error_page";
+    const std::string ClientBodySize = "client_max_body_size";
     // Add more directive keys here
 }
 
@@ -36,6 +37,7 @@ namespace DefaultValues
     const int PORT = 8080;
     const std::string HOST = "127.0.0.1";
     const std::string SERVER_NAME = "localhost";
+    const long long MAX_CLIENT_BODY_SIZE = 1048576;
 }
 
 class ConfigData
@@ -53,11 +55,15 @@ private:
     std::string serverHost;
     std::string serverName;
     std::unordered_map<int, std::string> defaultErrorPages;
+    std::string clientBodySize;
+    long long maxClientBodySize;
 
-    std::string extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
+    std::string
+    extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
     void extractServerPort();
     void extractServerName();
     void extractServerHost();
     void extractDefaultErrorPages();
     bool validErrorCode(std::string &errorCode);
+    void extractMaxClientBodySize();
 };
