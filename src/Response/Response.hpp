@@ -4,6 +4,9 @@
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
 
+#include <vector>
+#include <string>
+
 class Response
 {
 private:
