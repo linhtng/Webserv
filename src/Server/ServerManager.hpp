@@ -38,8 +38,7 @@ public:
 	ServerManager &operator=(ServerManager const &rhs);
 	~ServerManager();
 
-	void runServer();
-	void handleException(std::exception &e);
+	int runServer();
 
 	class PollException : public std::exception
 	{

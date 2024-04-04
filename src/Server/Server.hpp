@@ -31,6 +31,7 @@ private:
 	int server_fd;
 	configData_t config;
 	std::unordered_map<int, Client> clients;
+	struct sockaddr_in address;
 
 	Server();
 
@@ -49,12 +50,13 @@ public:
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
 	ConnectionStatus receiveRequest(int const &client_fd);
-	ssize_t formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
+	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
 	ConnectionStatus sendResponse(int const &client_fd);
 
 	bool isClient(int const &client_fd) const;
 
 	int const &getServerFd(void) const;
+	std::vector<int> getClinetsFd(void) const;
 
 	class SocketCreationException : public std::exception
 	{

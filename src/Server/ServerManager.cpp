@@ -21,7 +21,6 @@ ServerManager &ServerManager::operator=(ServerManager const &rhs)
 		servers = rhs.servers;
 		pollfds = rhs.pollfds;
 	}
-
 	return *this;
 }
 
@@ -37,7 +36,7 @@ void signalHandler(int signum)
 }
 
 // run the server
-void ServerManager::runServer()
+int ServerManager::runServer()
 {
 
 	//--------------------------------------------------------------
@@ -55,12 +54,31 @@ void ServerManager::runServer()
 
 	signal(SIGINT, signalHandler);
 
-	createServers();
+	try
+	{
+		createServers();
+		startServerLoop();
+		for (const pollfd &fd : pollfds) // close all pollfds
+			close(fd.fd);
+		return EXIT_SUCCESS;
+	}
+	catch (std::exception &e)
+	{
+		for (Server &server : servers) // send server error response to client
+		{
+			for (int fd : server.getClinetsFd())
+			{
+				send(fd, "server error", 13, 0); // TODO - replace with response to client
+				std::cout << "server error" << std::endl;
+			}
+		}
 
-	startServerLoop();
+		for (const pollfd &fd : pollfds) // close all pollfds
+			close(fd.fd);
 
-	for (const pollfd &fd : pollfds) // close all pollfds
-		close(fd.fd);
+		std::cout << e.what() << std::endl;
+		return EXIT_FAILURE;
+	}
 }
 
 void ServerManager::createServers()
@@ -153,22 +171,14 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 	}
 }
 
-void ServerManager::handleException(std::exception &e)
-{
-	// TODO - send server error as response if the client is connected to the server
-	for (const pollfd &fd : pollfds) // close all pollfds
-		close(fd.fd);
-	std::cout << e.what() << std::endl;
-}
-
 const char *ServerManager::PollException::what() const throw()
 {
-	return ("ServerManager::poll() failed");
+	return "ServerManager::poll() failed";
 }
 
 const char *ServerManager::ReventErrorFlagException::what() const throw()
 {
-	return ("ServerManager::error flag in revent");
+	return "ServerManager::error flag in revent";
 }
 
 // std::cout << "pollfd :";
