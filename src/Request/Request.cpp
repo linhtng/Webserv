@@ -16,6 +16,16 @@ bool Request::bodyExpected() const
 	return false;
 }
 
+std::vector<std::byte> Request::getBody() const
+{
+	return this->_body;
+}
+
+void Request::setBody(const std::vector<std::byte> &body)
+{
+	this->_body = body;
+}
+
 size_t Request::getContentLength() const
 {
 	// TODO: handle exceptions, or better yet validate before calling
@@ -76,7 +86,8 @@ void Request::parseHeaderLine(const std::string &headerLine)
 	}
 }
 
-Request::Request(const std::string &requestLineAndHeaders) : _statusCode(HttpStatusCode::UNDEFINED)
+Request::Request(const std::string &requestLineAndHeaders)
+	: _statusCode(HttpStatusCode::UNDEFINED)
 {
 	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
 

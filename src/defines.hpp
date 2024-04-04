@@ -18,7 +18,8 @@ enum Method
 {
 	GET,
 	HEAD,
-	POST
+	POST,
+	DELETE
 };
 
 enum HttpStatusCode

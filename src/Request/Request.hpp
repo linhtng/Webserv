@@ -10,6 +10,8 @@
 class Request
 {
 private:
+	// STRUCTS
+
 	struct RequestLine
 	{
 		std::string method;
@@ -20,10 +22,17 @@ private:
 
 	struct Header
 	{
-		std::string method;
-		std::string requestTarget;
-		std::string HTTPVersion;
+		std::string host;
+		std::string contentLength;
+		std::string contentType;
+		std::string accept;
+		std::string userAgent;
+		std::string connection;
+		std::string accentEncoding;
+		std::string acceptLanguage;
 	};
+
+	// PROPERTIES
 
 	RequestStatus _status;
 	HttpStatusCode _statusCode;
@@ -38,7 +47,11 @@ private:
 	std::vector<std::byte> _body;
 	size_t _contentLength; // Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
 
+	// CONSTRUCTORS
+
 	Request();
+
+	// METHODS
 
 	void parseRequestLine(const std::string &requestLine);
 	void parseHeaderLine(const std::string &headerLine);
@@ -51,10 +64,13 @@ public:
 
 	// Request &operator=(const Request &source);
 
-	void setBody(const std::vector<std::byte> &str) const;
+	// SETTERS
+
+	void setBody(const std::vector<std::byte> &str);
 	// Also add getters for all the info - or maybe a single getter?
 	// no it's a stupid idea because I would need to define a struct for that...
 
+	// GETTERS
 	std::vector<std::byte> getBody() const;
 	RequestStatus getStatus() const;
 	size_t getContentLength() const;

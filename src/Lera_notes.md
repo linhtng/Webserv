@@ -42,3 +42,11 @@ an immediate 100 (Continue) response to encourage the client to send the request
 
 
 Field values containing CR, LF, or NUL characters are invalid and dangerous, due to the varying ways that implementations might parse and interpret those characters; a recipient of CR, LF, or NUL within a field value MUST either reject the message or replace each of those characters with SP before further processing or forwarding of that message.
+
+multiform parsing
+content-type form, border
+enctype= multipart/form-data
+
+even if request is not chunked, it still may come in several reads
+
+if response is really large, it may not go through on school macs. we should either send in chunks or throw error
