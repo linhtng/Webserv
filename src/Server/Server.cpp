@@ -1,236 +1,244 @@
 #include "Server.hpp"
+#include <cstring>
 
-volatile sig_atomic_t shutdown_flag = 0;
-
-Server::Server()
+Server::Server(configData_t &config) : server_fd(0), config(config)
 {
-	client.addrlen = sizeof(client.address);
-	// to be replaced by config file
-	std::unordered_map<std::string, std::string> server;
-	server["port"] = "8082";
-	server["host"] = "127.0.0.1";
-	servers.push_back(server);
-	server["port"] = "8083";
-	server["host"] = "127.0.0.1";
-	servers.push_back(server);
+}
+
+Server::Server(Server const &src)
+{
+	*this = src;
+}
+
+Server &Server::operator=(Server const &rhs)
+{
+	if (this != &rhs)
+	{
+		server_fd = rhs.server_fd;
+		config = rhs.config;
+		clients = rhs.clients;
+		address = rhs.address;
+	}
+	return *this;
 }
 
 Server::~Server()
 {
 }
 
-// signal handler for shutting down the server
-void signalHandler(int signum)
-{
-	shutdown_flag = 1;
-}
-
-// run the server
-void Server::runServer()
-{
-	// TODO - create Config object
-	// register signal handler
-	signal(SIGINT, signalHandler);
-	setUpServerSocket();
-	serverLoop();
-	// close all fds
-	for (pollfd &fd : fds)
-		close(fd.fd);
-}
-
 // set up server socket
 void Server::setUpServerSocket()
 {
-	int server_fd;
-	struct sockaddr_in address;
-	int opt;
+	int opt = 1;
 
-	opt = 1;
-	for (auto &server : servers)
+	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // create socket file descriptor
+		throw SocketCreationException();
+	try
 	{
-		// create socket file descriptor
-		server_fd = socket(AF_INET, SOCK_STREAM, 0);
-		if (server_fd < 0)
-			throw SocketCreationException();
-		// add server socket and its info into server_sockets map
-		server_sockets[server_fd] = server;
-
-		// set file descriptor to be reuseable
-		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
+		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
 					   sizeof(opt)) < 0)
-		{
-			for (pollfd &fd : fds)
-				close(fd.fd);
 			throw SocketSetOptionException();
-		}
 
-		/* Set socket to be nonblocking. All of the sockets for
-		the incoming connections will also be nonblocking since
-		they will inherit that state from the listening socket. */
-		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0)
-		{
-			for (pollfd &fd : fds)
-				close(fd.fd);
+		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 			throw SocketSetNonBlockingException();
-		}
 
-		// define the address and port number
 		address.sin_family = AF_INET;
-		address.sin_port = htons(std::stoi(server["port"]));
-		address.sin_addr.s_addr = inet_addr(server["host"].c_str());
-
-		// bind the socket to the address and port number
-		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
-		{
-			for (pollfd &fd : fds)
-				close(fd.fd);
+		address.sin_port = htons(config.serverPort);
+		address.sin_addr.s_addr = inet_addr(config.serverHost.c_str());
+		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
 			throw SocketBindingException();
-		}
 
-		// set server socket in passive mode
-		if (listen(server_fd, BACKLOG) < 0)
-		{
-			for (pollfd &fd : fds)
-				close(fd.fd);
+		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
 			throw SocketListenException();
-		}
-
-		// add the server sockets to poll fd
-		fds.push_back({server_fd, POLLIN, 0});
+	}
+	catch (std::exception &e)
+	{
+		close(server_fd);
+		throw;
 	}
 }
 
-// main loop for server
-void Server::serverLoop()
+// accept new connections
+std::vector<int> Server::acceptNewConnections()
 {
-	while (!shutdown_flag)
+	std::vector<int> client_fds;
+	int client_fd;
+
+	try
 	{
-		// wait for event on a file descriptor
-		if (poll(fds.data(), fds.size(), -1) < 0)
+		while (true)
 		{
-			if (!shutdown_flag)
+			Client client;
+			client_fd = accept(server_fd,
+							   (struct sockaddr *)&(client.getAndSetAddress()),
+							   &(client.getAndSetAddrlen()));
+			if (client_fd < 0)
 			{
-				for (pollfd &fd : fds)
-					close(fd.fd);
-				throw PollException();
+				if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR) // listen() queue is empty or interrupted by a signal
+					break;
+				else if (errno == ECONNABORTED) // a connection has been aborted
+					continue;
+				throw AcceptException();
 			}
+			if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
+				throw SocketSetNonBlockingException();
+			clients[client_fd] = client;
+			client_fds.push_back(client_fd);
 		}
-
-		// loop through all fds to check the event
-		for (std::vector<pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
-		{
-			if (it->revents & POLLIN)
-			{
-				bool isServer = false;
-
-				for (auto &server_socket : server_sockets)
-				{
-					if (it->fd == server_socket.first)
-						isServer = true;
-				}
-
-				if (isServer == true)
-					acceptNewConnection(*it); // accept new connection if the fd is server fd
-				else
-					recvRequest(it); // parse and build response
-
-				break;
-			}
-			else if (it->revents & POLLOUT)
-			{
-				sendResponse(it);
-				break;
-			}
-		}
+		return client_fds;
 	}
-}
-
-// accept new connection
-void Server::acceptNewConnection(pollfd &fd)
-{
-	int new_fd = accept(fd.fd,
-						(struct sockaddr *)&(client.address),
-						&(client.addrlen));
-	if (new_fd < 0)
+	catch (std::exception &e)
 	{
-		if (errno != EWOULDBLOCK)
-		{
-			for (pollfd &fd : fds)
-				close(fd.fd);
-			throw AcceptException();
-		}
+		if (client_fd >= 0)
+			close(client_fd);
+		for (const int fd : client_fds) // close all client fds
+			close(fd);
+		throw;
 	}
-	// add the new fd to poll fd
-	fds.push_back({new_fd, POLLIN, 0});
 }
 
 // receive the request
-void Server::recvRequest(std::vector<pollfd>::iterator it)
+Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 {
-	char buf[BUFFER_SIZE];
-	recv(it->fd, buf, sizeof(buf), 0);
-	// read until /r/n
+	std::string request_header;
+	std::string request_body_buf;
+
+	if (formRequestHeader(client_fd, request_header, request_body_buf) == ConnectionStatus::CLOSE)
+		return ConnectionStatus::CLOSE;
+
+	if (!clients[client_fd].getResponse().empty())
+		return ConnectionStatus::OPEN;
+
+	std::cout << "body message buf: " << request_body_buf << std::endl;
+	std::cout << "request_header: " << request_header << std::endl;
+
 	// Request request(headerStr);
 	// if (request.success)
 	// {
+	// body = request_body_buf + loop for read
 	// read body for request.bytes
 	//	request.addBody(bodyStr);
 	// }
 	// Response (request);
 	// save response to client
-	std::cout << buf << std::endl;
-	// set fd to ready for write
-	*it = {it->fd, POLLOUT, 0};
+
+	clients[client_fd].setResponse("Hello from server");
+	return ConnectionStatus::OPEN;
+}
+
+Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::string &request_body_buf)
+{
+	ssize_t bytes;
+	char buf[BUFFER_SIZE];
+	std::string delimitor = "\r\n\r\n";
+
+	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	{
+		request_header.append(buf, bytes);
+		size_t delimitor_pos = request_header.find(delimitor);
+		if (delimitor_pos != std::string::npos)
+		{
+			request_body_buf = request_header.substr(delimitor_pos + delimitor.length()); // store the message body that is already read into buf
+			request_header.erase(delimitor_pos);
+			return ConnectionStatus::OPEN;
+		}
+	}
+
+	if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
+	{
+		clients[client_fd].setResponse("no delimitor in request header"); // TODO - replace with response to client
+		perror("no delimitor in request header");
+		return ConnectionStatus::OPEN;
+	}
+	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
+		throw RecvException();
+	else // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
+		clients.erase(client_fd);
+
+	return ConnectionStatus::CLOSE;
 }
 
 // send the response
-void Server::sendResponse(std::vector<pollfd>::iterator it)
+Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 {
+	std::string response = clients[client_fd].getResponse();
+
 	// send response
-	char buf[1024] = "Hello from server";
-	//  write(fd.fd, buf, sizeof(buf));
-	send(it->fd, buf, sizeof(buf), 0);
-	printf("Hello message sent\n");
+	send(client_fd, response.c_str(), response.length(), 0);
 
-	// if request header = keep alive
-	//  *it = {it->fd, POLLIN, 0};
-	// else remove fd and close connection
+	std::cout << "Response sent from server" << std::endl;
 
-	close(it->fd);
-	fds.erase(it);
+	// keep the connection by default
+	// return ConnectionStatus::OPEN;
+	// if request header = close, close connection, remove fd and remove client
+	clients.erase(client_fd);
+	return ConnectionStatus::CLOSE;
+}
+
+bool Server::isClient(int const &client_fd) const
+{
+	if (clients.find(client_fd) == clients.end())
+		return false;
+	return true;
+}
+
+int const &Server::getServerFd(void) const
+{
+	return server_fd;
+}
+
+std::vector<int> Server::getClinetsFd(void) const
+{
+	std::vector<int> client_fds;
+	client_fds.reserve(clients.size());
+
+	for (std::pair<int, Client> client : clients)
+		client_fds.push_back(client.first);
+
+	return client_fds;
 }
 
 const char *Server::SocketCreationException::what() const throw()
 {
-	return ("Server::Fail to create socket");
+	return "Server::Fail to create socket";
 }
 
 const char *Server::SocketBindingException::what() const throw()
 {
-	return ("Server::Fail to bind socket");
+	return "Server::Fail to bind socket";
 }
 
 const char *Server::SocketListenException::what() const throw()
 {
-	return ("Server::Fail to set socket in passive mode");
+	return "Server::Fail to set socket in passive mode";
 }
 
 const char *Server::SocketSetNonBlockingException::what() const throw()
 {
-	return ("Server::Fail to set socket as non-blocking");
+	return "Server::Fail to set socket as non-blocking";
 }
 
 const char *Server::SocketSetOptionException::what() const throw()
 {
-	return ("Server::Fail to set socket options");
-}
-
-const char *Server::PollException::what() const throw()
-{
-	return ("Server::Poll() failed");
+	return "Server::Fail to set socket options";
 }
 
 const char *Server::AcceptException::what() const throw()
 {
-	return ("Server::Accept() failed");
+	return "Server::accept() failed";
+}
+
+const char *Server::TimeoutException::what() const throw()
+{
+	return "Server::Operation timeout";
+}
+
+const char *Server::RecvException::what() const throw()
+{
+	return "Server::recv() failed";
+}
+
+const char *Server::SendException::what() const throw()
+{
+	return "Server::send() failed";
 }

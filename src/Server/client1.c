@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define PORT 8082
+#define PORT 8080
 
 int	main(int argc, char const *argv[])
 {
@@ -14,7 +14,7 @@ int	main(int argc, char const *argv[])
 	char				buffer[1024];
 
 	int status, valread, client_fd;
-	hello = "Hello from client 1";
+	hello = "Hello from client 1\r\n\r\n123456789";
 	if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		printf("\n Socket creation error \n");
