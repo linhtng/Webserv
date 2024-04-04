@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <regex>
+#include <algorithm>
 
 class Request
 {
@@ -66,7 +67,7 @@ public:
 
 	// SETTERS
 
-	void setBody(const std::vector<std::byte> &str);
+	void appendToBody(const std::vector<std::byte> &newBodyChunk);
 	// Also add getters for all the info - or maybe a single getter?
 	// no it's a stupid idea because I would need to define a struct for that...
 

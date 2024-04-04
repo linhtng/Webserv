@@ -21,9 +21,9 @@ std::vector<std::byte> Request::getBody() const
 	return this->_body;
 }
 
-void Request::setBody(const std::vector<std::byte> &body)
+void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
-	this->_body = body;
+	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
 }
 
 size_t Request::getContentLength() const
