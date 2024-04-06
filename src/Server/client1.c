@@ -7,14 +7,14 @@
 #include <unistd.h>
 #define PORT 8080
 
-int	main(int argc, char const *argv[])
+int main(int argc, char const *argv[])
 {
-	struct sockaddr_in	serv_addr;
-	char				*hello;
-	char				buffer[1024];
+	struct sockaddr_in serv_addr;
+	char *hello;
+	char buffer[1024];
 
 	int status, valread, client_fd;
-	hello = "Hello from client 1\r\n\r\n123456789";
+	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 9\r\nContent-Type: text/plain\r\n\r\n123456789";
 	if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		printf("\n Socket creation error \n");
@@ -27,11 +27,11 @@ int	main(int argc, char const *argv[])
 	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
 	{
 		printf(
-			"\nInvalid address/ Address not supported \n");
+				"\nInvalid address/ Address not supported \n");
 		return (-1);
 	}
 	if ((status = connect(client_fd, (struct sockaddr *)&serv_addr,
-				sizeof(serv_addr))) < 0)
+												sizeof(serv_addr))) < 0)
 	{
 		printf("\nConnection Failed \n");
 		return (-1);
@@ -39,9 +39,20 @@ int	main(int argc, char const *argv[])
 	send(client_fd, hello, strlen(hello), 0);
 	printf("Hello message sent\n");
 	valread = read(client_fd, buffer,
-					1024 - 1); // subtract 1 for the null
-								// terminator at the end
+								 1024 - 1); // subtract 1 for the null
+														// terminator at the end
 	printf("%s\n", buffer);
+	memset(buffer, 0, 1024);
+
+	sleep(2);
+	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 6\r\nContent-Type: text/plain\r\n\r\n123456";
+	send(client_fd, hello, strlen(hello), 0);
+	printf("Hello message sent\n");
+	valread = read(client_fd, buffer,
+								 1024 - 1); // subtract 1 for the null
+														// terminator at the end
+	printf("%s\n", buffer);
+	memset(buffer, 0, 1024);
 	// closing the connected socket
 	close(client_fd);
 	return (0);

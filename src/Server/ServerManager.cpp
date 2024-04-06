@@ -85,8 +85,8 @@ void ServerManager::createServers()
 {
 	for (Server::configData_t &config : configs)
 	{
-		servers.emplace_back(config);								  // construct and insert server
-		servers.back().setUpServerSocket();							  // set up each server socket
+		servers.emplace_back(config);																	// construct and insert server
+		servers.back().setUpServerSocket();														// set up each server socket
 		pollfds.push_back({servers.back().getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
 }
@@ -143,7 +143,7 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 		{
 			if (server.receiveRequest(it->fd) == Server::ConnectionStatus::OPEN)
 				*it = {it->fd, POLLOUT, 0}; // set fd to ready for write
-			else							// if connection has been closed by the client, close connection and remove fd
+			else													// if connection has been closed by the client, close connection and remove fd
 			{
 				close(it->fd);
 				it = pollfds.erase(it);
@@ -160,8 +160,26 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 		if (server.isClient(it->fd)) // if the fd is client fd of that server
 		{
 			if (server.sendResponse(it->fd) == Server::ConnectionStatus::OPEN) // keep the connection open by default
-				*it = {it->fd, POLLIN, 0};									   // set fd to ready for read
-			else															   // if request header = close, close connection and remove fd
+			{
+				while (true)
+				{
+					if (shutdown_flag)
+						break;
+					ssize_t bytes = server.hasNewDataFromClient(it->fd);
+					if (bytes > 0)
+					{
+						*it = {it->fd, POLLIN, 0}; // set fd to ready for read
+						break;
+					}
+					else if (bytes == 0)
+					{
+						close(it->fd);
+						it = pollfds.erase(it);
+						break;
+					}
+				}
+			}
+			else // if request header = close, close connection and remove fd
 			{
 				close(it->fd);
 				it = pollfds.erase(it);

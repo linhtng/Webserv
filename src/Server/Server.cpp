@@ -36,7 +36,7 @@ void Server::setUpServerSocket()
 	try
 	{
 		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
-					   sizeof(opt)) < 0)
+									 sizeof(opt)) < 0)
 			throw SocketSetOptionException();
 
 		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
@@ -70,8 +70,8 @@ std::vector<int> Server::acceptNewConnections()
 		{
 			Client client;
 			client_fd = accept(server_fd,
-							   (struct sockaddr *)&(client.getAndSetAddress()),
-							   &(client.getAndSetAddrlen()));
+												 (struct sockaddr *)&(client.getAndSetAddress()),
+												 &(client.getAndSetAddrlen()));
 			if (client_fd < 0)
 			{
 				if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR) // listen() queue is empty or interrupted by a signal
@@ -103,8 +103,6 @@ Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 	std::string request_header;
 	std::vector<std::byte> request_body_buf;
 
-	std::cout << "here1" << std::endl;
-
 	if (formRequestHeader(client_fd, request_header, request_body_buf) == ConnectionStatus::CLOSE)
 		return ConnectionStatus::CLOSE;
 
@@ -133,7 +131,9 @@ Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 	for (std::byte byte : response.getBody())
 		body.push_back(static_cast<char>(byte));
 
-	clients[client_fd].setResponse(response.getHeader().append(body));
+	std::string response_line = response.getHeader().append(body);
+
+	clients[client_fd].setResponse(response_line);
 	return ConnectionStatus::OPEN;
 }
 
@@ -149,18 +149,8 @@ Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::st
 		size_t delimitor_pos = request_header.find(delimitor);
 		if (delimitor_pos != std::string::npos)
 		{
-			// for (char ch : request_header.substr(delimitor_pos + delimitor.length()))
-			// {
-			// 	request_body_buf.push_back(static_cast<std::byte>(ch));
-			// 	std::cout << "ch: " << ch << " ";
-			// }
-			for (size_t i = delimitor_pos + delimitor.length(); i < request_header.size() - 2; ++i)
-			{ // store the message body that is already read into buf
-				char ch = request_header[i];
+			for (char ch : request_header.substr(delimitor_pos + delimitor.length()))
 				request_body_buf.push_back(static_cast<std::byte>(ch));
-				std::cout << "ch: " << ch << " ";
-			}
-			std::cout << std::endl;
 			request_header.erase(delimitor_pos);
 			return ConnectionStatus::OPEN;
 		}
@@ -189,7 +179,6 @@ Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vect
 
 	while (len > 0 && (bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-		std::cout << buf << std::endl;
 		std::vector<std::byte> newBodyChunk;
 		for (char ch : buf)
 			newBodyChunk.push_back(static_cast<std::byte>(ch));
@@ -197,10 +186,7 @@ Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vect
 		len -= bytes;
 	}
 	if (errno == EWOULDBLOCK || errno == EAGAIN) // read till the end
-	{
-		std::cout << "here" << std::endl;
 		return ConnectionStatus::OPEN;
-	}
 	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
 		throw RecvException();
 	else // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
@@ -217,6 +203,8 @@ Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 	// send response
 	send(client_fd, response.c_str(), response.length(), 0);
 
+	clients[client_fd].setResponse(""); // TODO - check reset the response
+
 	std::cout << "Response sent from server" << std::endl;
 
 	// keep the connection by default
@@ -224,6 +212,15 @@ Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 	// if request header = close, close connection, remove fd and remove client
 	// clients.erase(client_fd);
 	// return ConnectionStatus::CLOSE;
+}
+
+ssize_t Server::hasNewDataFromClient(int const &client_fd)
+{
+	char buffer[1024]; // Adjust the buffer size as needed
+	ssize_t bytes = recv(client_fd, buffer, sizeof(buffer), MSG_PEEK);
+	if (bytes < 0 && errno != EWOULDBLOCK && errno != EAGAIN)
+		throw RecvException();
+	return bytes;
 }
 
 bool Server::isClient(int const &client_fd) const

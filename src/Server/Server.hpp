@@ -29,6 +29,12 @@ public:
 		std::string serverHost;
 	} configData_t;
 
+	enum ConnectionStatus
+	{
+		OPEN,
+		CLOSE
+	};
+
 private:
 	int server_fd;
 	configData_t config;
@@ -37,13 +43,10 @@ private:
 
 	Server();
 
-public:
-	enum ConnectionStatus
-	{
-		OPEN,
-		CLOSE
-	};
+	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
+	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
 
+public:
 	Server(configData_t &config);
 	~Server();
 	Server(Server const &src);
@@ -52,9 +55,8 @@ public:
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
 	ConnectionStatus receiveRequest(int const &client_fd);
-	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
-	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
 	ConnectionStatus sendResponse(int const &client_fd);
+	ssize_t hasNewDataFromClient(int const &client_fd);
 
 	bool isClient(int const &client_fd) const;
 
