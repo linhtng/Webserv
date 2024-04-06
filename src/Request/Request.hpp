@@ -75,6 +75,7 @@ public:
 	std::vector<std::byte> getBody() const;
 	RequestStatus getStatus() const;
 	size_t getContentLength() const;
+	HttpStatusCode getStatusCode() const;
 	bool bodyExpected() const;
 };
 

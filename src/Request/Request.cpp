@@ -5,6 +5,11 @@ RequestStatus Request::getStatus() const
 	return this->_status;
 }
 
+HttpStatusCode Request::getStatusCode() const
+{
+	return this->_statusCode;
+}
+
 bool Request::bodyExpected() const
 {
 	// also consider Content-Length == "0"
@@ -90,6 +95,14 @@ void Request::parseHeaderLine(const std::string &headerLine)
 Request::Request(const std::string &requestLineAndHeaders)
 	: _statusCode(HttpStatusCode::UNDEFINED)
 {
+	// TODO: safeguard from empty string
+	if (requestLineAndHeaders.empty())
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		this->_status = RequestStatus::ERROR;
+		return;
+	}
+
 	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
 
 	parseRequestLine(split[0]);
