@@ -101,7 +101,9 @@ std::vector<int> Server::acceptNewConnections()
 Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 {
 	std::string request_header;
-	std::string request_body_buf;
+	std::vector<std::byte> request_body_buf;
+
+	std::cout << "here1" << std::endl;
 
 	if (formRequestHeader(client_fd, request_header, request_body_buf) == ConnectionStatus::CLOSE)
 		return ConnectionStatus::CLOSE;
@@ -109,24 +111,33 @@ Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 	if (!clients[client_fd].getResponse().empty())
 		return ConnectionStatus::OPEN;
 
-	std::cout << "body message buf: " << request_body_buf << std::endl;
+	// std::cout << "body message buf: ";
+	// for (const auto &byte : request_body_buf)
+	// 	std::cout << static_cast<char>(byte);
+	// std::cout << std::endl;
+
 	std::cout << "request_header: " << request_header << std::endl;
 
-	// Request request(headerStr);
-	// if (request.success)
-	// {
-	// body = request_body_buf + loop for read
-	// read body for request.bytes
-	//	request.addBody(bodyStr);
-	// }
-	// Response (request);
-	// save response to client
+	Request request(request_header);
 
-	clients[client_fd].setResponse("Hello from server");
+	if (request.bodyExpected())
+	{
+		if (formRequestBody(client_fd, request_body_buf, request) == ConnectionStatus::CLOSE)
+			return ConnectionStatus::CLOSE;
+	}
+
+	Response response(request);
+
+	std::string body;
+
+	for (std::byte byte : response.getBody())
+		body.push_back(static_cast<char>(byte));
+
+	clients[client_fd].setResponse(response.getHeader().append(body));
 	return ConnectionStatus::OPEN;
 }
 
-Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::string &request_body_buf)
+Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
@@ -138,16 +149,56 @@ Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::st
 		size_t delimitor_pos = request_header.find(delimitor);
 		if (delimitor_pos != std::string::npos)
 		{
-			request_body_buf = request_header.substr(delimitor_pos + delimitor.length()); // store the message body that is already read into buf
+			// for (char ch : request_header.substr(delimitor_pos + delimitor.length()))
+			// {
+			// 	request_body_buf.push_back(static_cast<std::byte>(ch));
+			// 	std::cout << "ch: " << ch << " ";
+			// }
+			for (size_t i = delimitor_pos + delimitor.length(); i < request_header.size() - 2; ++i)
+			{ // store the message body that is already read into buf
+				char ch = request_header[i];
+				request_body_buf.push_back(static_cast<std::byte>(ch));
+				std::cout << "ch: " << ch << " ";
+			}
+			std::cout << std::endl;
 			request_header.erase(delimitor_pos);
 			return ConnectionStatus::OPEN;
 		}
 	}
-
 	if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
 	{
 		clients[client_fd].setResponse("no delimitor in request header"); // TODO - replace with response to client
 		perror("no delimitor in request header");
+		return ConnectionStatus::OPEN;
+	}
+	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
+		throw RecvException();
+	else // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
+		clients.erase(client_fd);
+
+	return ConnectionStatus::CLOSE;
+}
+
+Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request)
+{
+	request.appendToBody(request_body_buf);
+
+	ssize_t bytes;
+	char buf[BUFFER_SIZE];
+	size_t len = request.getContentLength();
+
+	while (len > 0 && (bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	{
+		std::cout << buf << std::endl;
+		std::vector<std::byte> newBodyChunk;
+		for (char ch : buf)
+			newBodyChunk.push_back(static_cast<std::byte>(ch));
+		request.appendToBody(newBodyChunk);
+		len -= bytes;
+	}
+	if (errno == EWOULDBLOCK || errno == EAGAIN) // read till the end
+	{
+		std::cout << "here" << std::endl;
 		return ConnectionStatus::OPEN;
 	}
 	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
@@ -169,10 +220,10 @@ Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 	std::cout << "Response sent from server" << std::endl;
 
 	// keep the connection by default
-	// return ConnectionStatus::OPEN;
+	return ConnectionStatus::OPEN;
 	// if request header = close, close connection, remove fd and remove client
-	clients.erase(client_fd);
-	return ConnectionStatus::CLOSE;
+	// clients.erase(client_fd);
+	// return ConnectionStatus::CLOSE;
 }
 
 bool Server::isClient(int const &client_fd) const

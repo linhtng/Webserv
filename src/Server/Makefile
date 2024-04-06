@@ -3,11 +3,13 @@ NAME = server
 SRCS = main.cpp \
 		Server.cpp \
 		ServerManager.cpp \
-		Client.cpp
+		Client.cpp \
+		../Request/Request.cpp \
+		../Response/Response.cpp
 
 CC = c++
 
-FLAGS = -Wall -Wextra -Werror -std=c++11
+FLAGS = -Wall -Wextra -Werror -std=c++17
 
 OBJS = $(SRCS:.cpp=.o)
 

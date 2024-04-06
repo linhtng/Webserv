@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <unistd.h>
 #include "Client.hpp"
+#include "../Request/Request.hpp"
+#include "../Response/Response.hpp"
 
 class Server
 {
@@ -50,7 +52,8 @@ public:
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
 	ConnectionStatus receiveRequest(int const &client_fd);
-	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
+	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
+	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
 	ConnectionStatus sendResponse(int const &client_fd);
 
 	bool isClient(int const &client_fd) const;
