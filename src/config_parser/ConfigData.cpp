@@ -13,6 +13,7 @@ void ConfigData::analyzeConfigData()
     extractServerName();
     extractServerHost();
     extractDefaultErrorPages();
+    extractMaxClientBodySize();
 }
 
 // Generic print function
@@ -32,8 +33,9 @@ void ConfigData::printConfigData()
     // std::cout << "Server name: " << serverName << std::endl;
     // std::cout << "Server port: " << serverPort << std::endl;
     // std::cout << "Server host: " << serverHost << std::endl;
-    std::cout << "Error pages: ";
-    print(defaultErrorPages);
+    // std::cout << "Error pages: ";
+    // print(defaultErrorPages);
+    std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
 }
 
 void trimSpace(std::string &str)
@@ -136,49 +138,99 @@ void ConfigData::extractServerHost()
     }
 }
 
-/* Regex to extract error pages: error_page <error_code> <error_page_path>;
-- error_code: integer
+/* Validating error codes only.
+No error page URIs validation is done here.
+The line must be in format error_page <error_code> <error_page_uri>;
+If no error page URI is provided, throw invalid number of arguments error.
+If more than 2 arguments are provided, skip it. Not error but we don't
+process it.
 */
 void ConfigData::extractDefaultErrorPages()
 {
-    std::regex errorPageRegex("error_page\\s+(\\d{3})\\s+(\\S+);");
+    std::regex errorPageRegex("error_page\\s+(\\S+)(\\s+(\\S+))?;");
     std::smatch match;
     std::string::const_iterator searchStart(serverBlock.cbegin());
     while (std::regex_search(searchStart, serverBlock.cend(), match, errorPageRegex))
     {
-        int errorCode = std::stoi(match[1]);
-        if (errorCode < MIN_ERROR_CODE || errorCode > MAX_ERROR_CODE)
+        if (match[2].str().empty())
+        {
+            throw std::runtime_error("Invalid number of argument: " + match.str());
+        }
+        std::string errorCodeStr(match[1]);
+        if (!validErrorCode(errorCodeStr))
         {
             std::string errorLine(match[0]);
             throw std::runtime_error("Invalid line: " + errorLine);
         }
+        int errorCode = std::stoi(errorCodeStr);
         std::string errorPage = match[2];
         defaultErrorPages[errorCode] = errorPage;
         searchStart = match.suffix().first;
     }
 }
 
-// int countOccurrences(const std::string &text, const std::string &pattern)
-// {
-//     int count = 0;
-//     std::size_t pos = 0;
-//     while ((pos = text.find(pattern, pos)) != std::string::npos)
-//     {
-//         ++count;
-//         pos += pattern.length();
-//     }
-//     return count;
-// }
+/* Handling error:
+- Error code is not a number
+- Error code out of range: error code is not within the range 400-599
+*/
+bool ConfigData::validErrorCode(std::string &errorCodeStr)
+{
+    if (!std::all_of(errorCodeStr.begin(), errorCodeStr.end(), ::isdigit))
+        return false;
+    int errorCode = 0;
+    try
+    {
+        errorCode = std::stoi(errorCodeStr);
+    }
+    catch (const std::out_of_range &)
+    {
+        throw std::runtime_error("Error code out of range: " + errorCodeStr);
+    }
+    if (errorCode < MIN_ERROR_CODE || errorCode > MAX_ERROR_CODE)
+    {
+        throw std::runtime_error("Error code out of range: " + errorCodeStr);
+    }
+    return true;
+}
 
-// void ConfigData::extractDefaultErrorPages()
-// {
-//     int errorPageCount = countOccurrences(serverBlock, DirectiveKeys::ERROR_PAGE);
-//     std::size_t startPos = 0;
-//     for (int i = 0; i < errorPageCount; i++)
-//     {
-//         startPos = serverBlock.find(DirectiveKeys::ERROR_PAGE, startPos);
-//         std::string errorPageStr = extractDirectiveValue(serverBlock.substr(startPos), DirectiveKeys::ERROR_PAGE);
-//         errorPagesValues.push_back(errorPageStr);
-//         startPos += DirectiveKeys::ERROR_PAGE.length();
-//     }
-// }
+/* In nginx, setting size to 0 means no limit on client body size.
+But we don't allow that. 0 is invalid.
+*/
+void ConfigData::extractMaxClientBodySize()
+{
+    std::string maxClientBodySizeStr = extractDirectiveValue(serverBlock, DirectiveKeys::ClientBodySize);
+    if (maxClientBodySizeStr.empty())
+    {
+        maxClientBodySize = DefaultValues::MAX_CLIENT_BODY_SIZE;
+        return;
+    }
+    std::unordered_map<std::string, int> units = {
+        {"k", 1024},
+        {"K", 1024},
+        {"m", 1024 * 1024},
+        {"M", 1024 * 1024},
+        {"g", 1024 * 1024 * 1024},
+        {"G", 1024 * 1024 * 1024}};
+
+    std::regex pattern("(\\d+)([kKmMgG]?)");
+    std::smatch matches;
+    if (std::regex_match(maxClientBodySizeStr, matches, pattern))
+    {
+        std::string numberPart = matches[1].str();
+        std::string unit = matches[2].str();
+        int multiplier = 1;
+        if (units.find(unit) != units.end())
+        {
+            multiplier = units[unit];
+        }
+        maxClientBodySize = std::stoll(numberPart) * multiplier;
+        if (maxClientBodySize <= 0 || maxClientBodySize > INT_MAX)
+        {
+            throw std::runtime_error("Out of range max client body size: " + maxClientBodySizeStr);
+        }
+    }
+    else
+    {
+        throw std::runtime_error("Invalid max client body size: " + maxClientBodySizeStr);
+    }
+}

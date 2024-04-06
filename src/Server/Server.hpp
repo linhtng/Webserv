@@ -8,44 +8,59 @@
 #include <unordered_map>
 #include <string>
 #include <stdexcept>
-#include <sys/poll.h>
 #include <arpa/inet.h>
-#include <csignal>
 #include <fcntl.h>
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <algorithm>
 #include <unistd.h>
-
-typedef typename std::vector<std::unordered_map<std::string, std::string>> config_t;
-typedef typename std::unordered_map<int, std::unordered_map<std::string, std::string>> server_sockets_t;
+#include "Client.hpp"
+#include "../Request/Request.hpp"
+#include "../Response/Response.hpp"
 
 class Server
 {
 
+public:
+	typedef struct configData
+	{
+		int serverPort;
+		std::string serverHost;
+	} configData_t;
+
 private:
+	int server_fd;
+	configData_t config;
+	std::unordered_map<int, Client> clients;
+	struct sockaddr_in address;
+
+	Server();
+
+public:
+	enum ConnectionStatus
+	{
+		OPEN,
+		CLOSE
+	};
+
+	Server(configData_t &config);
+	~Server();
 	Server(Server const &src);
 	Server &operator=(Server const &rhs);
 
-	server_sockets_t server_sockets;
-	std::vector<pollfd> fds;
-
 	void setUpServerSocket();
-	void serverLoop();
-	void acceptNewConnection(pollfd &fd);
-	void recvRequest(std::vector<pollfd>::iterator it);
-	void sendResponse(std::vector<pollfd>::iterator it);
+	std::vector<int> acceptNewConnections();
+	ConnectionStatus receiveRequest(int const &client_fd);
+	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
+	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
+	ConnectionStatus sendResponse(int const &client_fd);
 
-	// to be replaced by config file
-	config_t servers;
+	bool isClient(int const &client_fd) const;
 
-	struct
-	{
-		struct sockaddr_in address;
-		socklen_t addrlen;
-	} client;
+	int const &getServerFd(void) const;
+	std::vector<int> getClinetsFd(void) const;
 
-public:
 	class SocketCreationException : public std::exception
 	{
 	public:
@@ -76,22 +91,29 @@ public:
 		virtual const char *what() const throw();
 	};
 
-	class PollException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
 	class AcceptException : public std::exception
 	{
 	public:
 		virtual const char *what() const throw();
 	};
 
-	Server();
-	~Server();
+	class TimeoutException : public std::exception
+	{
+	public:
+		virtual const char *what() const throw();
+	};
 
-	void runServer();
+	class RecvException : public std::exception
+	{
+	public:
+		virtual const char *what() const throw();
+	};
+
+	class SendException : public std::exception
+	{
+	public:
+		virtual const char *what() const throw();
+	};
 };
 
 #endif
