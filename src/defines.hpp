@@ -14,13 +14,23 @@ enum RequestStatus
 	ERROR
 };
 
-enum Method
+enum HttpMethod
 {
 	GET,
 	HEAD,
 	POST,
-	DELETE
+	DELETE,
 };
+
+#define VALID_HTTP_METHODS                          \
+	{                                               \
+		"GET", "HEAD", "POST", "DELETE", "OPTIONS", \
+			"PUT", "PATCH", "TRACE", "CONNECT"      \
+	}
+#define IMPLEMENTED_HTTP_METHODS        \
+	{                                   \
+		"GET", "HEAD", "POST", "DELETE" \
+	}
 
 enum HttpStatusCode
 {

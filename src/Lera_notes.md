@@ -50,3 +50,7 @@ enctype= multipart/form-data
 even if request is not chunked, it still may come in several reads
 
 if response is really large, it may not go through on school macs. we should either send in chunks or throw error
+
+
+chunk size is in HEX
+chunks can contain CRLF

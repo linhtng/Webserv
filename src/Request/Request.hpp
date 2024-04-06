@@ -13,11 +13,15 @@ class Request
 private:
 	// STRUCTS
 
+	HttpMethod _method;
+	std::string _requestTarget;
+	int _HTTPVersionMajor;
 	struct RequestLine
 	{
 		std::string method;
 		std::string requestTarget;
-		std::string HTTPVersion;
+		std::string HTTPVersionMajor;
+		// std::string HTTPVersionMinor;
 		/* When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant. */
 	};
 
@@ -56,6 +60,7 @@ private:
 
 	void parseRequestLine(const std::string &requestLine);
 	void parseHeaderLine(const std::string &headerLine);
+	void validateRequestLine();
 
 public:
 	// Constructor that takes a string representing request-line and header file lines

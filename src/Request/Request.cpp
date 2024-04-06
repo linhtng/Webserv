@@ -60,18 +60,80 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 
 void Request::parseRequestLine(const std::string &requestLine)
 {
-	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\\d+\\.\\d+)$"); // nginx takes up to 3 digits for the minor version
+	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$"); // nginx takes up to 3 digits for the minor version
 	std::smatch match;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
-		this->_requestLine.HTTPVersion = match[3];
+		this->_requestLine.HTTPVersionMajor = match[3];
+		/* if (match[4].matched)
+		{
+			this->_requestLine.HTTPVersionMinor = match[4].str().substr(1);
+		}
+		else
+		{
+			this->_requestLine.HTTPVersionMinor = "0";
+		} */
 		this->_status = RequestStatus::SUCCESS;
 	}
 	else
 	{
 		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		this->_status = RequestStatus::ERROR;
+	}
+}
+
+void Request::validateRequestLine()
+{
+	// METHOD validation
+	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
+	auto itValid = std::find(validMethods.begin(), validMethods.end(), this->_requestLine.method);
+	if (itValid == validMethods.end())
+	{
+		// Error for invalid methods
+		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
+		this->_status = RequestStatus::ERROR;
+		return;
+	}
+	// Success for implemented methods
+	if (this->_requestLine.method == "GET")
+	{
+		this->_method = HttpMethod::GET;
+	}
+	else if (this->_requestLine.method == "HEAD")
+	{
+		this->_method = HttpMethod::HEAD;
+	}
+	else if (this->_requestLine.method == "POST")
+	{
+		this->_method = HttpMethod::POST;
+	}
+	else if (this->_requestLine.method == "DELETE")
+	{
+		this->_method = HttpMethod::DELETE;
+	}
+	else
+	{
+		// Error for valid but not implemented methods
+		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
+		this->_status = RequestStatus::ERROR;
+		return;
+	}
+
+	// TARGET validation - is any needed?
+	this->_requestTarget = this->_requestLine.requestTarget;
+
+	// HTTP VERSION validation
+	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
+	if (major > 1)
+	{
+		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
+		this->_status = RequestStatus::ERROR;
+	}
+	else if (major < 1)
+	{
+		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
 		this->_status = RequestStatus::ERROR;
 	}
 }
@@ -93,9 +155,9 @@ void Request::parseHeaderLine(const std::string &headerLine)
 }
 
 Request::Request(const std::string &requestLineAndHeaders)
-	: _statusCode(HttpStatusCode::UNDEFINED)
+	: _statusCode(HttpStatusCode::UNDEFINED),
+	  _status(RequestStatus::SUCCESS)
 {
-	// TODO: safeguard from empty string
 	if (requestLineAndHeaders.empty())
 	{
 		this->_statusCode = HttpStatusCode::BAD_REQUEST;
@@ -110,6 +172,11 @@ Request::Request(const std::string &requestLineAndHeaders)
 	{
 		return;
 	}
+	validateRequestLine();
+	if (this->_status == RequestStatus::ERROR)
+	{
+		return;
+	}
 	for (size_t i = 1; i < split.size(); ++i)
 	{
 		parseHeaderLine(split[i]);
@@ -118,4 +185,5 @@ Request::Request(const std::string &requestLineAndHeaders)
 			return;
 		}
 	}
+	// validateHeaders();
 }
