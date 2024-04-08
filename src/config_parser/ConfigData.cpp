@@ -14,6 +14,7 @@ void ConfigData::analyzeConfigData()
     extractServerHost();
     extractDefaultErrorPages();
     extractMaxClientBodySize();
+    extractLocationBlocks();
 }
 
 // Generic print function
@@ -28,6 +29,17 @@ void print(const T &container)
     }
 }
 
+template <typename T>
+void printVector(const std::vector<T> &vec)
+{
+    for (const T &element : vec)
+    {
+        // std::cout << "Elem: ";
+        std::cout << element << " ";
+    }
+    std::cout << "\n";
+}
+
 void ConfigData::printConfigData()
 {
     // std::cout << "Server name: " << serverName << std::endl;
@@ -35,7 +47,14 @@ void ConfigData::printConfigData()
     // std::cout << "Server host: " << serverHost << std::endl;
     // std::cout << "Error pages: ";
     // print(defaultErrorPages);
-    std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
+    // std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
+    // std::cout << "Location blocks: ";
+    // printVector(locationBlocks);
+    // std::cout << "Locations: ";
+    for (auto &location : locations)
+    {
+        location.second.printLocationData();
+    }
 }
 
 void trimSpace(std::string &str)
@@ -169,7 +188,7 @@ void ConfigData::extractDefaultErrorPages()
     }
 }
 
-/* Handling error:
+/* Handling error for error codes parameter in error_page directive:
 - Error code is not a number
 - Error code out of range: error code is not within the range 400-599
 */
@@ -232,5 +251,51 @@ void ConfigData::extractMaxClientBodySize()
     else
     {
         throw std::runtime_error("Invalid max client body size: " + maxClientBodySizeStr);
+    }
+}
+
+/* Extract location blocks from server block and create Location objects for each location block. If a location block has a route that already exists in the locations map, skip it.
+ */
+void ConfigData::extractLocationBlocks()
+{
+    splitLocationBlocks();
+    for (const auto &locationBlock : locationBlocks)
+    {
+        Location location(locationBlock);
+        location.analyzeLocationData();
+        std::string route = location.getLocationRoute();
+        if (locations.find(route) == locations.end())
+            locations[location.getLocationRoute()] = location;
+    }
+}
+
+void ConfigData::splitLocationBlocks()
+{
+    std::istringstream iss(serverBlock);
+    std::string line;
+    std::string currentBlock;
+    int braceCount = 0;
+    bool insideBlock = false;
+
+    while (std::getline(iss, line))
+    {
+        if (line.find("location") != std::string::npos && line.find(" {") != std::string::npos)
+            insideBlock = true;
+        if (insideBlock)
+        {
+            if (line.find("{") != std::string::npos)
+                braceCount++;
+            currentBlock += line + "\n";
+            if (line.find("}") != std::string::npos)
+            {
+                braceCount--;
+                if (braceCount == 0)
+                {
+                    locationBlocks.push_back(currentBlock);
+                    currentBlock.clear();
+                    insideBlock = false;
+                }
+            }
+        }
     }
 }

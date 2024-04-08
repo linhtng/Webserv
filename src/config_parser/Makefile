@@ -6,6 +6,7 @@ NAME = webserv
 SRCS = main.cpp \
 	ConfigParser.cpp \
 	ConfigData.cpp \
+	Location.cpp \
 
 OBJ_PATH = objects/
 OBJ		= $(SRCS:.cpp=.o)
