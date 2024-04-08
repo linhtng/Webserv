@@ -30,9 +30,10 @@ public:
 private:
     std::string locationBlock;
     std::string locationRoute;
-    std::vector<std::string> _acceptedMethods;
-    std::string _redirection;
-    std::string _root;
+    std::vector<std::string> acceptedMethods;
+    std::string redirectionRoute;
+    std::string root;
+    std::string alias;
     // bool _directoryListing;
     std::string _defaultFile;
     std::string _cgiExtension;
@@ -40,4 +41,8 @@ private:
     // ... other properties ...
 
     void setLocationRoute();
+    void setAcceptedMethods();
+    void setRedirection();
+    void setLocationRoot();
+    void setLocationAlias();
 };

@@ -50,6 +50,11 @@ void ConfigData::printConfigData()
     // std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
     // std::cout << "Location blocks: ";
     // printVector(locationBlocks);
+    // std::cout << "Locations: ";
+    for (auto &location : locations)
+    {
+        location.second.printLocationData();
+    }
 }
 
 void trimSpace(std::string &str)
@@ -261,12 +266,6 @@ void ConfigData::extractLocationBlocks()
         std::string route = location.getLocationRoute();
         if (locations.find(route) == locations.end())
             locations[location.getLocationRoute()] = location;
-    }
-    for (auto &location : locations)
-    {
-        std::cout << "Location route: " << location.first << std::endl;
-        std::cout << "Location data: ";
-        // location.second.printLocationData();
     }
 }
 

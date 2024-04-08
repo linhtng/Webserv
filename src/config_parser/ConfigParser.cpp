@@ -47,15 +47,22 @@ void ConfigParser::extractServerConfigs()
 {
     // std::cout << "Extracting server configurations...\n";
     splitServerBlocks();
+    if (serverCount == 0)
+    {
+        throw std::runtime_error("Invalid {} syntax found in the configuration file");
+    }
     for (int i = 0; i < serverCount; i++)
     {
         ConfigData serverConfig(configBlock[i]);
         serverConfig.analyzeConfigData();
         servers.push_back(serverConfig);
     }
+    int i = 0;
     for (auto &server : servers)
     {
+        std::cout << "Server " << i++ << ":\n";
         server.printConfigData();
+        std::cout << "//////////////////////" << std::endl;
     }
 }
 
