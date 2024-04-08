@@ -56,7 +56,6 @@ public:
 	std::vector<int> acceptNewConnections();
 	ConnectionStatus receiveRequest(int const &client_fd);
 	ConnectionStatus sendResponse(int const &client_fd);
-	ssize_t hasNewDataFromClient(int const &client_fd);
 
 	bool isClient(int const &client_fd) const;
 

@@ -155,18 +155,18 @@ Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::st
 			return ConnectionStatus::OPEN;
 		}
 	}
-	if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
+	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT || errno == EINTR) // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
+	{
+		clients.erase(client_fd);
+		return ConnectionStatus::CLOSE;
+	}
+	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
 	{
 		clients[client_fd].setResponse("no delimitor in request header"); // TODO - replace with response to client
 		perror("no delimitor in request header");
 		return ConnectionStatus::OPEN;
 	}
-	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
-		throw RecvException();
-	else // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
-		clients.erase(client_fd);
-
-	return ConnectionStatus::CLOSE;
+	throw RecvException();
 }
 
 Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request)
@@ -185,14 +185,14 @@ Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vect
 		request.appendToBody(newBodyChunk);
 		len -= bytes;
 	}
-	if (errno == EWOULDBLOCK || errno == EAGAIN) // read till the end
-		return ConnectionStatus::OPEN;
-	else if (bytes < 0 && errno != EINTR && errno != ECONNRESET && errno != ETIMEDOUT)
-		throw RecvException();
-	else // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
+	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT || errno == EINTR) // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
+	{
 		clients.erase(client_fd);
-
-	return ConnectionStatus::CLOSE;
+		return ConnectionStatus::CLOSE;
+	}
+	else if (errno == EWOULDBLOCK || errno == EAGAIN) // read till the end
+		return ConnectionStatus::OPEN;
+	throw RecvException();
 }
 
 // send the response
@@ -212,15 +212,6 @@ Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 	// if request header = close, close connection, remove fd and remove client
 	// clients.erase(client_fd);
 	// return ConnectionStatus::CLOSE;
-}
-
-ssize_t Server::hasNewDataFromClient(int const &client_fd)
-{
-	char buffer[1024]; // Adjust the buffer size as needed
-	ssize_t bytes = recv(client_fd, buffer, sizeof(buffer), MSG_PEEK);
-	if (bytes < 0 && errno != EWOULDBLOCK && errno != EAGAIN)
-		throw RecvException();
-	return bytes;
 }
 
 bool Server::isClient(int const &client_fd) const

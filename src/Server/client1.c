@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
 	printf("%s\n", buffer);
 	memset(buffer, 0, 1024);
 
-	sleep(2);
+	sleep(5);
 	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 6\r\nContent-Type: text/plain\r\n\r\n123456";
 	send(client_fd, hello, strlen(hello), 0);
 	printf("Hello message sent\n");
