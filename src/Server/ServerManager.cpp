@@ -160,26 +160,8 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 		if (server.isClient(it->fd)) // if the fd is client fd of that server
 		{
 			if (server.sendResponse(it->fd) == Server::ConnectionStatus::OPEN) // keep the connection open by default
-			{
-				while (true)
-				{
-					if (shutdown_flag)
-						break;
-					ssize_t bytes = server.hasNewDataFromClient(it->fd);
-					if (bytes > 0)
-					{
-						*it = {it->fd, POLLIN, 0}; // set fd to ready for read
-						break;
-					}
-					else if (bytes == 0)
-					{
-						close(it->fd);
-						it = pollfds.erase(it);
-						break;
-					}
-				}
-			}
-			else // if request header = close, close connection and remove fd
+				*it = {it->fd, POLLIN, 0};																			 // set fd to ready for read
+			else																															 // if request header = close, close connection and remove fd
 			{
 				close(it->fd);
 				it = pollfds.erase(it);
