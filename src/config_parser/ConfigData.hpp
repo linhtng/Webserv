@@ -11,6 +11,7 @@
 #include <map>
 #include <regex>
 #include <unordered_map>
+#include "Location.hpp"
 
 #define RED "\e[91m"
 #define CYAN "\033[36m"
@@ -57,13 +58,16 @@ private:
     std::unordered_map<int, std::string> defaultErrorPages;
     std::string clientBodySize;
     long long maxClientBodySize;
+    std::vector<std::string> locationBlocks;
+    std::map<std::string, Location> locations;
 
-    std::string
-    extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
+    std::string extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
     void extractServerPort();
     void extractServerName();
     void extractServerHost();
     void extractDefaultErrorPages();
     bool validErrorCode(std::string &errorCode);
     void extractMaxClientBodySize();
+    void extractLocationBlocks();
+    void splitLocationBlocks();
 };
