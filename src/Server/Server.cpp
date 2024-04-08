@@ -126,14 +126,15 @@ Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 
 	Response response(request);
 
-	std::string body;
+	std::vector<std::byte> new_response;
 
-	for (std::byte byte : response.getBody())
-		body.push_back(static_cast<char>(byte));
+	for (char ch : response.getHeader())
+		new_response.push_back(static_cast<std::byte>(ch));
 
-	std::string response_line = response.getHeader().append(body);
+	std::vector<std::byte> body = response.getBody();
+	new_response.insert(new_response.end(), body.begin(), body.end());
 
-	clients[client_fd].setResponse(response_line);
+	clients[client_fd].setResponse(new_response);
 	return ConnectionStatus::OPEN;
 }
 
@@ -162,7 +163,10 @@ Server::ConnectionStatus Server::formRequestHeader(int const &client_fd, std::st
 	}
 	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
 	{
-		clients[client_fd].setResponse("no delimitor in request header"); // TODO - replace with response to client
+		std::vector<std::byte> response_bytes;
+		for (char ch : "no delimitor in request header")
+			response_bytes.push_back(static_cast<std::byte>(ch));
+		clients[client_fd].setResponse(response_bytes); // TODO - replace with response to client
 		perror("no delimitor in request header");
 		return ConnectionStatus::OPEN;
 	}
@@ -175,15 +179,16 @@ Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vect
 
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
-	size_t len = request.getContentLength();
+	size_t bytes_to_receive = request.getContentLength() - request_body_buf.size();
 
-	while (len > 0 && (bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	while (bytes_to_receive > 0 && (bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		std::vector<std::byte> newBodyChunk;
-		for (char ch : buf)
-			newBodyChunk.push_back(static_cast<std::byte>(ch));
+		for (ssize_t i = 0; i < bytes; ++i)
+			newBodyChunk.push_back(static_cast<std::byte>(buf[i]));
+
 		request.appendToBody(newBodyChunk);
-		len -= bytes;
+		bytes_to_receive -= bytes;
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT || errno == EINTR) // client has shutdown or timeout or interrupted by a signal , close connection, remove fd and remove client
 	{
@@ -198,20 +203,33 @@ Server::ConnectionStatus Server::formRequestBody(int const &client_fd, std::vect
 // send the response
 Server::ConnectionStatus Server::sendResponse(int const &client_fd)
 {
-	std::string response = clients[client_fd].getResponse();
+	ssize_t bytes;
+	std::vector<std::byte> response = clients[client_fd].getResponse();
+	size_t response_len = response.size();
+	size_t bytes_sent = 0;
 
-	// send response
-	send(client_fd, response.c_str(), response.length(), 0);
-
-	clients[client_fd].setResponse(""); // TODO - check reset the response
-
-	std::cout << "Response sent from server" << std::endl;
-
-	// keep the connection by default
-	return ConnectionStatus::OPEN;
-	// if request header = close, close connection, remove fd and remove client
-	// clients.erase(client_fd);
-	// return ConnectionStatus::CLOSE;
+	while (bytes_sent < response_len && (bytes = send(
+																					 client_fd,
+																					 &(*(response.begin() + bytes_sent)),
+																					 std::min(response_len - bytes_sent, static_cast<size_t>(BUFFER_SIZE)),
+																					 0)) > 0)
+		bytes_sent += bytes;
+	if (bytes > 0 || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
+	{
+		clients[client_fd].setResponse(std::vector<std::byte>{});
+		std::cout << "Response sent from server" << std::endl;
+		// keep the connection by default
+		return ConnectionStatus::OPEN;
+		// if request header = close, close connection, remove fd and remove client
+		// clients.erase(client_fd);
+		// return ConnectionStatus::CLOSE;
+	}
+	else if (bytes == 0 || errno == ECONNRESET || errno == EINTR) // client has shutdown or interrupted by a signal , close connection, remove fd and remove client
+	{
+		clients.erase(client_fd);
+		return ConnectionStatus::CLOSE;
+	}
+	throw SendException();
 }
 
 bool Server::isClient(int const &client_fd) const

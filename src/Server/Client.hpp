@@ -2,7 +2,7 @@
 #define CLIENT_HPP
 
 #include <netinet/in.h>
-#include <string>
+#include <vector>
 
 class Client
 {
@@ -10,7 +10,7 @@ class Client
 private:
 	struct sockaddr_in address;
 	socklen_t addrlen;
-	std::string response;
+	std::vector<std::byte> response;
 
 public:
 	Client();
@@ -20,9 +20,9 @@ public:
 
 	struct sockaddr_in &getAndSetAddress(void);
 	socklen_t &getAndSetAddrlen(void);
-	std::string getResponse(void) const;
+	std::vector<std::byte> getResponse(void) const;
 
-	void setResponse(std::string new_response);
+	void setResponse(std::vector<std::byte> new_response);
 };
 
 #endif

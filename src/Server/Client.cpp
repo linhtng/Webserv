@@ -15,6 +15,7 @@ Client &Client::operator=(Client const &rhs)
 	{
 		address = rhs.address;
 		addrlen = rhs.addrlen;
+		response = rhs.response;
 	}
 	return *this;
 }
@@ -33,12 +34,12 @@ socklen_t &Client::getAndSetAddrlen(void)
 	return addrlen;
 }
 
-std::string Client::getResponse(void) const
+std::vector<std::byte> Client::getResponse(void) const
 {
 	return response;
 }
 
-void Client::setResponse(std::string new_response)
+void Client::setResponse(std::vector<std::byte> new_response)
 {
 	response = new_response;
 }

@@ -58,24 +58,14 @@ int ServerManager::runServer()
 	{
 		createServers();
 		startServerLoop();
-		for (const pollfd &fd : pollfds) // close all pollfds
-			close(fd.fd);
+		handleServerError(503);
+		std::cout << "server shutting down..." << std::endl;
 		return EXIT_SUCCESS;
 	}
 	catch (std::exception &e)
 	{
-		for (Server &server : servers) // send server error response to client
-		{
-			for (int fd : server.getClinetsFd())
-			{
-				send(fd, "server error", 13, 0); // TODO - replace with response to client
-				std::cout << "server error" << std::endl;
-			}
-		}
-
-		for (const pollfd &fd : pollfds) // close all pollfds
-			close(fd.fd);
-
+		handleServerError(500);
+		std::cout << "internal server error" << std::endl;
 		std::cout << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
@@ -169,6 +159,18 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 			break;
 		}
 	}
+}
+
+void ServerManager::handleServerError(const int &status_code)
+{
+	std::string error_response = "server error with status code " + std::to_string(status_code);
+	for (Server &server : servers)
+	{
+		for (int fd : server.getClinetsFd())
+			send(fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+	}
+	for (const pollfd &fd : pollfds) // close all pollfds
+		close(fd.fd);
 }
 
 const char *ServerManager::PollException::what() const throw()

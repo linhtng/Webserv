@@ -31,6 +31,7 @@ private:
 	void handlePoll();
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
+	void handleServerError(const int &status_code);
 
 public:
 	ServerManager();
