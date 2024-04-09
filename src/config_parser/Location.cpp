@@ -7,6 +7,8 @@ Location::Location(const std::string &input)
     locationBlock = input;
     root = "";
     alias = "";
+    directoryListing = false;
+    defaultFile = "index.html";
 }
 
 Location::~Location() {}
@@ -31,12 +33,15 @@ void Location::analyzeLocationData()
     setAcceptedMethods();
     setRedirection();
     setLocationAlias();
-    if (alias.empty())
-        setLocationRoot();
+    setLocationRoot();
+    // if (alias.empty())
+    //     setLocationRoot();
     if (root.empty() && alias.empty())
     {
         throw std::runtime_error("Root or alias must be set in location block: " + locationBlock);
     }
+    setDirectoryListing();
+    setDefaultFile();
 }
 
 void Location::printLocationData()
@@ -52,6 +57,8 @@ void Location::printLocationData()
     std::cout << "Redirection rout: " << redirectionRoute << std::endl;
     std::cout << "Root: " << root << std::endl;
     std::cout << "Alias: " << alias << std::endl;
+    std::cout << "Directory listing: " << (directoryListing ? "on" : "off") << std::endl;
+    std::cout << "Default file: " << defaultFile << std::endl;
     std::cout << std::endl;
 }
 
@@ -128,5 +135,50 @@ void Location::setLocationAlias()
     if (std::regex_search(locationBlock, match, aliasRegex))
     {
         alias = match[1].str();
+    }
+}
+
+void Location::setDirectoryListing()
+{
+    std::regex directoryListingRegex("autoindex\\s+(on|off)\\;");
+    std::smatch match;
+    if (std::regex_search(locationBlock, match, directoryListingRegex))
+    {
+        std::string value = match[1].str();
+        directoryListing = value == "on";
+    }
+}
+
+void Location::setDefaultFile()
+{
+    // std::regex defaultFileRegex("\\bindex\\s+(\\S*\\s*)?\\;"); // work for normal case and detect if no argument ok. Not work for case with multiple arguments
+
+    // work ok with normal case. Detect 0 argument case and multiple arguments case
+    std::regex defaultFileRegex("\\bindex\\s+(\\S+(\\s+\\S+)*)?\\;");
+
+    std::smatch match;
+    if (std::regex_search(locationBlock, match, defaultFileRegex))
+    {
+        std::string arguments = match[1].str();
+        // std::cout << "Arguments: " << arguments << std::endl;
+        std::istringstream iss(arguments);
+        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+
+        if (tokens.size() == 0)
+        {
+            throw std::invalid_argument("Missing argument for index directive for route " + locationRoute);
+        }
+        else if (tokens.size() > 1)
+        {
+            throw std::invalid_argument("Too many arguments for index directive for route " + locationRoute);
+        }
+
+        defaultFile = tokens[0];
+        // Check for invalid characters
+        std::regex invalidCharRegex("[\\\\/;:*?\"<>|]");
+        if (std::regex_search(defaultFile, invalidCharRegex))
+        {
+            throw std::invalid_argument("Invalid character in default file name " + defaultFile);
+        }
     }
 }

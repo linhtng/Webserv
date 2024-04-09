@@ -34,10 +34,10 @@ private:
     std::string redirectionRoute;
     std::string root;
     std::string alias;
-    // bool _directoryListing;
-    std::string _defaultFile;
-    std::string _cgiExtension;
-    std::string _uploadPath;
+    bool directoryListing;
+    std::string defaultFile;
+    std::string cgiExtension;
+    std::string uploadPath;
     // ... other properties ...
 
     void setLocationRoute();
@@ -45,4 +45,6 @@ private:
     void setRedirection();
     void setLocationRoot();
     void setLocationAlias();
+    void setDirectoryListing();
+    void setDefaultFile();
 };
