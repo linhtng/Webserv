@@ -29,18 +29,22 @@ public:
 		std::string serverHost;
 	} configData_t;
 
-	enum ConnectionStatus
-	{
-		OPEN,
-		CLOSE
-	};
-
 	enum RequestStatus
 	{
-		DELIMITER_FOUND,
-		NO_DELIMITER,
-		CLIENT_DISCONNECTED,
-		READY_TO_WRITE
+		HEADER_DELIMITER_FOUND,
+		HEADER_NO_DELIMITER,
+		REQUEST_CLIENT_DISCONNECTED,
+		BODY_IN_CHUNK,
+		READY_TO_WRITE,
+		REQUEST_INTERRUPTED
+	};
+
+	enum ResponseStatus
+	{
+		RESPONSE_CLIENT_DISCONNECTED,
+		KEEP_ALIVE,
+		CLOSE_CONNECTION,
+		RESPONSE_INTERRUPTED
 	};
 
 private:
@@ -49,8 +53,8 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
-	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
+	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
+	RequestStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
 
 public:
 	Server();
@@ -61,8 +65,8 @@ public:
 
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
-	ConnectionStatus receiveRequest(int const &client_fd);
-	ConnectionStatus sendResponse(int const &client_fd);
+	RequestStatus receiveRequest(int const &client_fd);
+	ResponseStatus sendResponse(int const &client_fd);
 
 	int const &getServerFd(void) const;
 	void removeClient(int const &client_fd);
