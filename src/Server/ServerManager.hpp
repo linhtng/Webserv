@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include "Server.hpp"
 
+#define POLL_TIMEOUT 5000
+
 typedef typename std::vector<Server::configData_t> config_t;
 
 class ServerManager
@@ -23,7 +25,8 @@ private:
 	config_t configs;
 	//--------------------------------------------------------------
 
-	std::vector<Server> servers;
+	std::unordered_map<int, Server> servers;
+	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
 
 	void createServers();
@@ -31,6 +34,7 @@ private:
 	void handlePoll();
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
+	void handleClientDisconnection(std::list<pollfd>::iterator &it);
 	void handleServerError(const int &status_code);
 
 public:

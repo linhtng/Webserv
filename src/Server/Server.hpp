@@ -35,18 +35,25 @@ public:
 		CLOSE
 	};
 
+	enum RequestStatus
+	{
+		DELIMITER_FOUND,
+		NO_DELIMITER,
+		CLIENT_DISCONNECTED,
+		READY_TO_WRITE
+	};
+
 private:
 	int server_fd;
 	configData_t config;
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	Server();
-
 	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
 	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
 
 public:
+	Server();
 	Server(configData_t &config);
 	~Server();
 	Server(Server const &src);
@@ -57,10 +64,8 @@ public:
 	ConnectionStatus receiveRequest(int const &client_fd);
 	ConnectionStatus sendResponse(int const &client_fd);
 
-	bool isClient(int const &client_fd) const;
-
 	int const &getServerFd(void) const;
-	std::vector<int> getClinetsFd(void) const;
+	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception
 	{

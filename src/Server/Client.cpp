@@ -1,6 +1,7 @@
 #include "Client.hpp"
 
-Client::Client() : addrlen(sizeof(address))
+Client::Client()
+	: addrlen(sizeof(address))
 {
 }
 
@@ -17,7 +18,7 @@ Client &Client::operator=(Client const &rhs)
 		addrlen = rhs.addrlen;
 		response = rhs.response;
 	}
-	return *this;
+	return (*this);
 }
 
 Client::~Client()
@@ -26,17 +27,22 @@ Client::~Client()
 
 sockaddr_in &Client::getAndSetAddress(void)
 {
-	return address;
+	return (address);
 }
 
 socklen_t &Client::getAndSetAddrlen(void)
 {
-	return addrlen;
+	return (addrlen);
 }
 
 std::vector<std::byte> Client::getResponse(void) const
 {
-	return response;
+	return (response);
+}
+
+void Client::setRequest(std::vector<std::byte> new_request_chunk)
+{
+	request.insert(request.end(), new_request_chunk.begin(), new_request_chunk.end());
 }
 
 void Client::setResponse(std::vector<std::byte> new_response)
