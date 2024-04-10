@@ -1,12 +1,24 @@
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
 
+#define DEFAULT_TIMEOUT 1000
+
 #define CR "\r"
 #define LF "\n"
 #define NUL "\0"
 #define CRLF "\r\n"
 #define SP " "
-#define DEFAULT_TIMEOUT 1000
+#define HTAB "\t"
+#define VCHAR_REGEX "[[:print:]]"
+#define DIGIT_REGEX "[0-9]"
+#define ALPHA_REGEX "[A-Za-z]"
+#define RWS_REGEX "[\t ]+"
+#define OBS_TEXT_REGEX "[\x80-\xFF]"
+#define QUOTED_PAIR_REGEX "\\\\(" HTAB "|" SP "|" VCHAR_REGEX "|" OBS_TEXT_REGEX ")"
+#define CTEXT_REGEX "(" HTAB "|" SP "|[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]|" OBS_TEXT_REGEX ")"
+#define TCHAR_REGEX "[!#$%&'*+-.^_`|~0-9A-Za-z]"
+#define TOKEN_REGEX TCHAR_REGEX "+"
+#define DELIMITERS_REGEX "[\"()/:;<=>?@[\\]{}]"
 
 enum RequestStatus
 {
@@ -27,6 +39,7 @@ enum HttpMethod
 		"GET", "HEAD", "POST", "DELETE", "OPTIONS", \
 			"PUT", "PATCH", "TRACE", "CONNECT"      \
 	}
+
 #define IMPLEMENTED_HTTP_METHODS        \
 	{                                   \
 		"GET", "HEAD", "POST", "DELETE" \

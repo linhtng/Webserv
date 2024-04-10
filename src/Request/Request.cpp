@@ -58,7 +58,7 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 	return result;
 }
 
-void Request::parseRequestLine(const std::string &requestLine)
+void Request::extractRequestLine(const std::string &requestLine)
 {
 	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$"); // nginx takes up to 3 digits for the minor version
 	std::smatch match;
@@ -84,7 +84,7 @@ void Request::parseRequestLine(const std::string &requestLine)
 	}
 }
 
-void Request::validateRequestLine()
+void Request::parseRequestLine()
 {
 	// METHOD validation
 	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
@@ -138,14 +138,16 @@ void Request::validateRequestLine()
 	}
 }
 
-void Request::parseHeaderLine(const std::string &headerLine)
+void Request::extractHeaderLine(const std::string &headerLine)
 {
 	std::string forbiddenChars = CR LF NUL;
 	std::regex headerLineRegex("^([^" + forbiddenChars + "]+):" SP "([^" + forbiddenChars + "]+)$");
 	std::smatch match;
 	if (std::regex_match(headerLine, match, headerLineRegex))
 	{
-		this->_headerLines[match[1]] = match[2];
+		std::string fieldName = match[1];
+		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
+		this->_headerLines[fieldName] = match[2];
 	}
 	else
 	{
@@ -154,25 +156,60 @@ void Request::parseHeaderLine(const std::string &headerLine)
 	}
 }
 
-void Request::validateHost()
+void Request::parseHost()
 {
-	if (this->_headerLines.find("Host") == this->_headerLines.end())
+	if (this->_headerLines.find("host") == this->_headerLines.end())
 	{
-		this->_statusCode = HttpStatusCode::BAD_REQUEST;
-		this->_status = RequestStatus::ERROR;
+		throw BadRequestException();
 	}
 }
 
-void Request::validateHeaders()
+bool Request::isDigitsOnly(const std::string &str) const
 {
-	validateHost();
-	/* validateContentLength();
-	validateContentType();
-	validateAccept();
-	validateUserAgent();
-	validateConnection();
-	validateAcceptEncoding();
-	validateAcceptLanguage(); */
+	return std::all_of(
+		str.begin(), str.end(), [](unsigned char c)
+		{ return std::isdigit(c); });
+}
+
+void Request::parseContentLength()
+{
+	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("content-length");
+	if (it == this->_headerLines.end())
+	{
+		return;
+	}
+	std::string contentLengthValue = it->second;
+	if (!isDigitsOnly(contentLengthValue))
+	{
+		throw BadRequestException();
+	}
+	/*
+	Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
+	*/
+	try
+	{
+		this->_contentLength = std::stoul(contentLengthValue);
+	}
+	catch (const std::exception &e)
+	{
+		// Maybe make these 2 lines a separate function?
+		this->_statusCode = HttpStatusCode::CONTENT_TOO_LARGE;
+		throw BadRequestException();
+	}
+}
+
+void Request::parseHeaders()
+{
+	parseHost();
+	parseContentLength();
+	/*
+	parseContentType();
+	parseAccept();
+	parseUserAgent();
+	parseConnection();
+	parseAcceptEncoding();
+	parseAcceptLanguage();
+	*/
 }
 
 void Request::processRequest(const std::string &requestLineAndHeaders)
@@ -182,13 +219,13 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 		throw BadRequestException();
 	}
 	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
-	parseRequestLine(split[0]);
-	validateRequestLine();
+	extractRequestLine(split[0]);
+	parseRequestLine();
 	for (size_t i = 1; i < split.size(); ++i)
 	{
-		parseHeaderLine(split[i]);
+		extractHeaderLine(split[i]);
 	}
-	validateHeaders();
+	parseHeaders();
 }
 
 Request::Request(const std::string &requestLineAndHeaders)
@@ -199,13 +236,17 @@ Request::Request(const std::string &requestLineAndHeaders)
 	{
 		processRequest(requestLineAndHeaders);
 	}
-	catch (const std::exception &e)
+	catch (const BadRequestException &e)
 	{
 		if (this->_statusCode == UNDEFINED)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
 		this->_status = RequestStatus::ERROR;
-		return;
+	}
+	catch (const std::exception &e)
+	{
+		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+		this->_status = RequestStatus::ERROR;
 	}
 }
