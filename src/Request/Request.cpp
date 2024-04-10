@@ -196,6 +196,7 @@ void Request::parseContentLength()
 		this->_statusCode = HttpStatusCode::CONTENT_TOO_LARGE;
 		throw BadRequestException();
 	}
+	// TODO: actually, overflow would be 400 and 413 should be thrown if value is bigger than configured max body size
 }
 
 void Request::parseHeaders()

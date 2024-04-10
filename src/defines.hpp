@@ -19,6 +19,7 @@
 #define TCHAR_REGEX "[!#$%&'*+-.^_`|~0-9A-Za-z]"
 #define TOKEN_REGEX TCHAR_REGEX "+"
 #define DELIMITERS_REGEX "[\"()/:;<=>?@[\\]{}]"
+#define MAX_BODY_SIZE_TEMP 10000
 
 enum RequestStatus
 {
