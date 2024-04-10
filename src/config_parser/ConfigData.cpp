@@ -9,7 +9,7 @@ ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
 {
-    extractServerPort();
+    extractServerPorts();
     extractServerName();
     extractServerHost();
     extractDefaultErrorPages();
@@ -42,12 +42,13 @@ void printVector(const std::vector<T> &vec)
 
 void ConfigData::printConfigData()
 {
-    // std::cout << "Server name: " << serverName << std::endl;
-    // std::cout << "Server port: " << serverPort << std::endl;
-    // std::cout << "Server host: " << serverHost << std::endl;
-    // std::cout << "Error pages: ";
-    // print(defaultErrorPages);
-    // std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
+    std::cout << "Server name: " << serverName << std::endl;
+    std::cout << "Server port: ";
+    printVector(serverPorts);
+    std::cout << "Server host: " << serverHost << std::endl;
+    std::cout << "Error pages: ";
+    print(defaultErrorPages);
+    std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
     // std::cout << "Location blocks: ";
     // printVector(locationBlocks);
     // std::cout << "Locations: ";
@@ -83,32 +84,57 @@ std::string ConfigData::extractDirectiveValue(const std::string confBlock, const
 
 /* Handling error:
 - Invalid port number: not all characters in serverPortStr are digits
-- Port number out of range: port number is not within the range 0-65535
+- Port number out of range: port number is not within the range 1024-65535
 */
-void ConfigData::extractServerPort()
+bool ConfigData::validPortString(std::string &portStr)
 {
-    std::string serverPortStr = extractDirectiveValue(serverBlock, DirectiveKeys::PORT);
-    if (serverPortStr.empty())
-    {
-        serverPort = DefaultValues::PORT;
-        return;
-    }
-    if (!std::all_of(serverPortStr.begin(), serverPortStr.end(), ::isdigit))
-    {
-        throw std::runtime_error("Invalid port number: " + serverPortStr);
-    }
-    int port = 0;
+    if (!std::all_of(portStr.begin(), portStr.end(), ::isdigit))
+        return false;
+    int errorCode = 0;
     try
     {
-        port = std::stoi(serverPortStr);
+        errorCode = std::stoi(portStr);
     }
     catch (const std::out_of_range &)
     {
-        throw std::runtime_error("Port number out of range: " + serverPortStr);
+        throw std::runtime_error("Port out of range: " + portStr);
     }
-    if (port < MIN_PORT || port > MAX_PORT)
-        throw std::runtime_error("Port number out of range: " + serverPortStr);
-    serverPort = port;
+    if (errorCode < MIN_PORT || errorCode > MAX_PORT)
+    {
+        throw std::runtime_error("Port out of range: " + portStr);
+    }
+    return true;
+}
+
+void ConfigData::extractServerPorts()
+{
+    std::istringstream stream(serverBlock);
+    std::string line;
+    while (std::getline(stream, line))
+    {
+        std::regex listenRegex("^\\s*listen");
+        if (std::regex_search(line, listenRegex))
+        {
+            std::regex serverPortRegex("listen\\s+(\\S+)\\;");
+            std::smatch match;
+            if (std::regex_search(line, match, serverPortRegex))
+            {
+                std::string portString(match[1]);
+                if (portString.empty() || !validPortString(portString))
+                {
+                    throw std::invalid_argument("Invalid listen directive in server block " + line);
+                }
+                int portNumber = std::stoi(portString);
+                serverPorts.push_back(portNumber);
+            }
+            else
+                throw std::invalid_argument("Invalid listen directive in server block " + line);
+        }
+    }
+    if (serverPorts.empty())
+    {
+        serverPorts.push_back(DefaultValues::PORT);
+    }
 }
 
 /* Handling error:

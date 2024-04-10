@@ -52,7 +52,7 @@ public:
 
 private:
     std::string serverBlock;
-    int serverPort;
+    std::vector<int> serverPorts;
     std::string serverHost;
     std::string serverName;
     std::unordered_map<int, std::string> defaultErrorPages;
@@ -62,7 +62,8 @@ private:
     std::map<std::string, Location> locations;
 
     std::string extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
-    void extractServerPort();
+    void extractServerPorts();
+    bool validPortString(std::string &errorCodeStr);
     void extractServerName();
     void extractServerHost();
     void extractDefaultErrorPages();

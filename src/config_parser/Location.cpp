@@ -42,6 +42,8 @@ void Location::analyzeLocationData()
     }
     setDirectoryListing();
     setDefaultFile();
+    setCgiExtension();
+    setCgiPath();
 }
 
 void Location::printLocationData()
@@ -59,6 +61,8 @@ void Location::printLocationData()
     std::cout << "Alias: " << alias << std::endl;
     std::cout << "Directory listing: " << (directoryListing ? "on" : "off") << std::endl;
     std::cout << "Default file: " << defaultFile << std::endl;
+    std::cout << "Cgi extension: " << cgiExtension << std::endl;
+    std::cout << "Cgi path: " << cgiPath << std::endl;
     std::cout << std::endl;
 }
 
@@ -151,34 +155,61 @@ void Location::setDirectoryListing()
 
 void Location::setDefaultFile()
 {
-    // std::regex defaultFileRegex("\\bindex\\s+(\\S*\\s*)?\\;"); // work for normal case and detect if no argument ok. Not work for case with multiple arguments
-
-    // work ok with normal case. Detect 0 argument case and multiple arguments case
-    std::regex defaultFileRegex("\\bindex\\s+(\\S+(\\s+\\S+)*)?\\;");
+    std::regex defaultFileRegex("\\bindex\\s+(\\S*\\s*)?\\;"); // work for normal case and detect if no argument ok. Not work for case with multiple arguments
 
     std::smatch match;
     if (std::regex_search(locationBlock, match, defaultFileRegex))
     {
-        std::string arguments = match[1].str();
-        // std::cout << "Arguments: " << arguments << std::endl;
-        std::istringstream iss(arguments);
-        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
-
-        if (tokens.size() == 0)
+        if (match[1].length() == 0)
         {
-            throw std::invalid_argument("Missing argument for index directive for route " + locationRoute);
+            throw std::invalid_argument("Missing argument for index directive in route " + locationRoute);
         }
-        else if (tokens.size() > 1)
-        {
-            throw std::invalid_argument("Too many arguments for index directive for route " + locationRoute);
-        }
-
-        defaultFile = tokens[0];
+        defaultFile = match[1].str();
         // Check for invalid characters
-        std::regex invalidCharRegex("[\\\\/;:*?\"<>|]");
+        std::regex invalidCharRegex("[\\\\/;:*?<>|]");
         if (std::regex_search(defaultFile, invalidCharRegex))
         {
             throw std::invalid_argument("Invalid character in default file name " + defaultFile);
+        }
+    }
+}
+
+void Location::setCgiExtension()
+{
+    std::regex cgiExtensionRegex("\\bcgi-exten\\s+(\\S+\\s*)?\\;");
+    std::smatch match;
+    if (std::regex_search(locationBlock, match, cgiExtensionRegex))
+    {
+        if (match[1].length() == 0)
+        {
+            throw std::invalid_argument("Missing argument for cgi-exten directive in route " + locationRoute);
+        }
+        cgiExtension = match[1].str();
+        // Check for invalid characters
+        std::regex invalidCharRegex("[\\\\/;:*?<>|]");
+        if (std::regex_search(cgiExtension, invalidCharRegex))
+        {
+            throw std::invalid_argument("Invalid character for cgi-exten " + cgiExtension);
+        }
+    }
+}
+
+void Location::setCgiPath()
+{
+    std::regex cgiPathRegex("\\bcgi-path\\s+(\\S+\\s*)?\\;");
+    std::smatch match;
+    if (std::regex_search(locationBlock, match, cgiPathRegex))
+    {
+        if (match[1].length() == 0)
+        {
+            throw std::invalid_argument("Missing argument for cgi-exten directive in route " + locationRoute);
+        }
+        cgiPath = match[1].str();
+        // Check for invalid characters
+        std::regex invalidCharRegex("[;:*?<>|]");
+        if (std::regex_search(cgiPath, invalidCharRegex))
+        {
+            throw std::invalid_argument("Invalid character for cgi-exten " + cgiPath);
         }
     }
 }
