@@ -16,6 +16,8 @@ private:
 	HttpMethod _method;
 	std::string _requestTarget;
 	int _HTTPVersionMajor;
+	size_t _contentLength;
+	bool chunked;
 	struct RequestLine
 	{
 		std::string method;
@@ -61,6 +63,9 @@ private:
 	void parseRequestLine(const std::string &requestLine);
 	void parseHeaderLine(const std::string &headerLine);
 	void validateRequestLine();
+	void validateHost();
+	void validateHeaders();
+	void processRequest(const std::string &requestLineAndHeaders);
 
 public:
 	// Constructor that takes a string representing request-line and header file lines
@@ -82,6 +87,14 @@ public:
 	size_t getContentLength() const;
 	HttpStatusCode getStatusCode() const;
 	bool bodyExpected() const;
+
+	class BadRequestException : public std::exception
+	{
+		virtual const char *what() const throw()
+		{
+			return "Bad Request";
+		}
+	};
 };
 
 // std::ostream &operator<<(std::ostream &out, const Request &request);

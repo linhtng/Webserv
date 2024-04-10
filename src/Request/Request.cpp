@@ -140,8 +140,8 @@ void Request::validateRequestLine()
 
 void Request::parseHeaderLine(const std::string &headerLine)
 {
-	std::string chars = CR LF NUL;
-	std::regex headerLineRegex("^([^" + chars + "]+):" SP "([^" + chars + "]+)$");
+	std::string forbiddenChars = CR LF NUL;
+	std::regex headerLineRegex("^([^" + forbiddenChars + "]+):" SP "([^" + forbiddenChars + "]+)$");
 	std::smatch match;
 	if (std::regex_match(headerLine, match, headerLineRegex))
 	{
@@ -154,36 +154,58 @@ void Request::parseHeaderLine(const std::string &headerLine)
 	}
 }
 
+void Request::validateHost()
+{
+	if (this->_headerLines.find("Host") == this->_headerLines.end())
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		this->_status = RequestStatus::ERROR;
+	}
+}
+
+void Request::validateHeaders()
+{
+	validateHost();
+	/* validateContentLength();
+	validateContentType();
+	validateAccept();
+	validateUserAgent();
+	validateConnection();
+	validateAcceptEncoding();
+	validateAcceptLanguage(); */
+}
+
+void Request::processRequest(const std::string &requestLineAndHeaders)
+{
+	if (requestLineAndHeaders.empty())
+	{
+		throw BadRequestException();
+	}
+	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
+	parseRequestLine(split[0]);
+	validateRequestLine();
+	for (size_t i = 1; i < split.size(); ++i)
+	{
+		parseHeaderLine(split[i]);
+	}
+	validateHeaders();
+}
+
 Request::Request(const std::string &requestLineAndHeaders)
 	: _statusCode(HttpStatusCode::UNDEFINED),
 	  _status(RequestStatus::SUCCESS)
 {
-	if (requestLineAndHeaders.empty())
+	try
 	{
-		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		processRequest(requestLineAndHeaders);
+	}
+	catch (const std::exception &e)
+	{
+		if (this->_statusCode == UNDEFINED)
+		{
+			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		}
 		this->_status = RequestStatus::ERROR;
 		return;
 	}
-
-	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
-
-	parseRequestLine(split[0]);
-	if (this->_status == RequestStatus::ERROR)
-	{
-		return;
-	}
-	validateRequestLine();
-	if (this->_status == RequestStatus::ERROR)
-	{
-		return;
-	}
-	for (size_t i = 1; i < split.size(); ++i)
-	{
-		parseHeaderLine(split[i]);
-		if (this->_status == RequestStatus::ERROR)
-		{
-			return;
-		}
-	}
-	// validateHeaders();
 }
