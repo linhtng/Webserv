@@ -6,7 +6,7 @@ Server::Server() : server_fd(0)
 }
 
 Server::Server(configData_t &config)
-	: server_fd(0), config(config)
+		: server_fd(0), config(config)
 {
 }
 
@@ -42,7 +42,7 @@ void Server::setUpServerSocket()
 	try
 	{
 		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
-					   sizeof(opt)) < 0)
+									 sizeof(opt)) < 0)
 			throw SocketSetOptionException();
 		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 			throw SocketSetNonBlockingException();
@@ -72,8 +72,8 @@ std::vector<int> Server::acceptNewConnections()
 		{
 			Client client;
 			int client_fd = accept(server_fd,
-								   (struct sockaddr *)&(client.getAndSetAddress()),
-								   &(client.getAndSetAddrlen()));
+														 (struct sockaddr *)&(client.getAndSetAddress()),
+														 &(client.getAndSetAddrlen()));
 			if (client_fd < 0)
 			{
 				if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR) // listen() queue is empty or interrupted by a signal
@@ -98,28 +98,43 @@ std::vector<int> Server::acceptNewConnections()
 }
 
 // receive the request
-Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
+Server::RequestStatus Server::receiveRequest(int const &client_fd)
 {
 	std::string request_header;
 	std::vector<std::byte> request_body_buf;
 
-	if (formRequestHeader(client_fd, request_header,
-						  request_body_buf) == ConnectionStatus::CLOSE)
-		return (ConnectionStatus::CLOSE);
-	if (!clients[client_fd].getResponse().empty())
-		return (ConnectionStatus::OPEN);
+	RequestStatus request_header_status = formRequestHeader(client_fd, request_header,
+																													request_body_buf);
+	if (request_header_status == REQUEST_CLIENT_DISCONNECTED)
+		return (REQUEST_CLIENT_DISCONNECTED);
+	else if (request_header_status == REQUEST_INTERRUPTED)
+		return (REQUEST_INTERRUPTED);
+	else if (request_header_status == HEADER_NO_DELIMITER)
+	{
+		std::vector<std::byte> response_bytes;
+		for (char ch : "no delimiter in request header")
+			response_bytes.push_back(static_cast<std::byte>(ch));
+		clients[client_fd].setResponse(response_bytes); // TODO-replace with response to client
+		perror("no delimiter in request header");
+		return (READY_TO_WRITE);
+	}
 	// std::cout << "body message buf: ";
 	// for (const auto &byte : request_body_buf)
 	// 	std::cout << static_cast<char>(byte);
 	// std::cout << std::endl;
 	std::cout << "request_header: " << request_header << std::endl;
 
-	Request request(request_header);
+	Request request(request_header); // TODO - move it to client
 	if (request.bodyExpected())
 	{
-		if (formRequestBody(client_fd, request_body_buf,
-							request) == ConnectionStatus::CLOSE)
-			return (ConnectionStatus::CLOSE);
+		RequestStatus request_body_status = formRequestBody(client_fd, request_body_buf,
+																												request);
+		if (request_body_status == REQUEST_CLIENT_DISCONNECTED)
+			return (REQUEST_CLIENT_DISCONNECTED);
+		else if (request_body_status == REQUEST_INTERRUPTED)
+			return (REQUEST_INTERRUPTED);
+		else if (request_body_status == BODY_IN_CHUNK)
+			return (BODY_IN_CHUNK);
 	}
 
 	Response response(request);
@@ -129,97 +144,91 @@ Server::ConnectionStatus Server::receiveRequest(int const &client_fd)
 	std::vector<std::byte> body = response.getBody();
 	new_response.insert(new_response.end(), body.begin(), body.end());
 	clients[client_fd].setResponse(new_response);
-	return (ConnectionStatus::OPEN);
+	return (READY_TO_WRITE);
 }
 
-Server::ConnectionStatus Server::formRequestHeader(int const &client_fd,
-												   std::string &request_header, std::vector<std::byte> &request_body_buf)
+// read request header
+Server::RequestStatus Server::formRequestHeader(int const &client_fd,
+																								std::string &request_header, std::vector<std::byte> &request_body_buf)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
-	size_t delimitor_pos;
 
 	std::string delimitor = "\r\n\r\n";
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		request_header.append(buf, bytes);
-		delimitor_pos = request_header.find(delimitor);
+		size_t delimitor_pos = request_header.find(delimitor);
 		if (delimitor_pos != std::string::npos)
 		{
 			for (char ch : request_header.substr(delimitor_pos + delimitor.length()))
 				request_body_buf.push_back(static_cast<std::byte>(ch));
 			request_header.erase(delimitor_pos);
-			return (ConnectionStatus::OPEN);
+			return (HEADER_DELIMITER_FOUND);
 		}
 	}
-	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT || errno == EINTR)
-		// client has shutdown or timeout or interrupted by a signal
-		return (ConnectionStatus::CLOSE);
-	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if can't search for the delimitor, send error to client
-
-	{
-		std::vector<std::byte> response_bytes;
-		for (char ch : "no delimitor in request header")
-			response_bytes.push_back(static_cast<std::byte>(ch));
-		clients[client_fd].setResponse(response_bytes); // TODO-replace with response to client
-		perror("no delimitor in request header");
-		return (ConnectionStatus::OPEN);
-	}
+	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+		return (REQUEST_CLIENT_DISCONNECTED);
+	else if (errno == EINTR) // interrupted by a signal
+		return (REQUEST_INTERRUPTED);
+	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if cannot search for the delimiter
+		return (HEADER_NO_DELIMITER);
 	throw RecvException();
 }
 
-Server::ConnectionStatus Server::formRequestBody(int const &client_fd,
-												 std::vector<std::byte> &request_body_buf, Request &request)
+// read request body
+Server::RequestStatus Server::formRequestBody(int const &client_fd,
+																							std::vector<std::byte> &request_body_buf, Request &request)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
-	size_t bytes_to_receive;
 
 	request.appendToBody(request_body_buf);
-	bytes_to_receive = request.getContentLength() - request_body_buf.size();
+	size_t bytes_to_receive = request.getContentLength() - request_body_buf.size(); // TODO - amend the size for chunk
 	while (bytes_to_receive > 0 && (bytes = recv(client_fd, buf, sizeof(buf),
-												 0)) > 0)
+																							 0)) > 0)
 	{
-		std::vector<std::byte> newBodyChunk;
+		std::vector<std::byte> new_body_chunk;
 		for (ssize_t i = 0; i < bytes; ++i)
-			newBodyChunk.push_back(static_cast<std::byte>(buf[i]));
-		request.appendToBody(newBodyChunk);
+			new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
+		request.appendToBody(new_body_chunk);
 		bytes_to_receive -= bytes;
 	}
-	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT || errno == EINTR)
-		// client has shutdown or timeout or interrupted by a signal
-		return (ConnectionStatus::CLOSE);
-	else if (errno == EWOULDBLOCK || errno == EAGAIN) // read till the end
-		return (ConnectionStatus::OPEN);
+	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+		return (REQUEST_CLIENT_DISCONNECTED);
+	else if (errno == EINTR) // interrupted by a signal
+		return (REQUEST_INTERRUPTED);
+	else if ((errno == EWOULDBLOCK || errno == EAGAIN) && bytes_to_receive > 0) // request body send in chunk
+		return (BODY_IN_CHUNK);
+	else if ((errno == EWOULDBLOCK || errno == EAGAIN) && bytes_to_receive <= 0) // read till the end
+		return (READY_TO_WRITE);
 	throw RecvException();
 }
 
 // send the response
-Server::ConnectionStatus Server::sendResponse(int const &client_fd)
+Server::ResponseStatus Server::sendResponse(int const &client_fd)
 {
 	ssize_t bytes;
-	size_t response_len;
-	size_t bytes_sent;
 
 	std::vector<std::byte> response = clients[client_fd].getResponse();
-	response_len = response.size();
-	bytes_sent = 0;
+	size_t response_len = response.size();
+	size_t bytes_sent = 0;
 	while (bytes_sent < response_len && (bytes = send(client_fd,
-													  &(*(response.begin() + bytes_sent)), std::min(response_len - bytes_sent, static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
+																										&(*(response.begin() + bytes_sent)), std::min(response_len - bytes_sent, static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
 		bytes_sent += bytes;
-	if (bytes > 0 || errno == EWOULDBLOCK || errno == EAGAIN)
-	// finish sending response
+	// if request header = Connection: close, close connection
+	// std::cout << "Response sent from server" << std::endl;
+	// return (CLOSE_CONNECTION);
+	if (bytes_sent >= response_len || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
 	{
 		clients[client_fd].setResponse(std::vector<std::byte>{});
 		std::cout << "Response sent from server" << std::endl;
-		// keep the connection by default
-		return (ConnectionStatus::OPEN);
-		// if request header = close, close connection, remove fd and remove client
-		// return (ConnectionStatus::CLOSE);
+		return (KEEP_ALIVE); // keep the connection alive by default
 	}
-	else if (bytes == 0 || errno == ECONNRESET || errno == EINTR)
-		// client has shutdown or interrupted by a signal
-		return (ConnectionStatus::CLOSE);
+	else if (errno == EINTR) // interrupted by a signal
+		return (RESPONSE_INTERRUPTED);
+	else if (bytes == 0 || errno == ECONNRESET) // client has shutdown or
+		return (RESPONSE_CLIENT_DISCONNECTED);
 	throw SendException();
 }
 
