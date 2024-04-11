@@ -49,6 +49,7 @@ private:
 
 	// helpers
 	bool isDigitsOnly(const std::string &str) const;
+	std::string removeComments(const std::string &input) const;
 	// initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);

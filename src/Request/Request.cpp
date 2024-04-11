@@ -161,6 +161,37 @@ bool Request::isDigitsOnly(const std::string &str) const
 		{ return std::isdigit(c); });
 }
 
+std::string Request::removeComments(const std::string &input) const
+{
+	std::string res;
+	std::string currentSegment;
+	int commentLevel = 0;
+
+	for (char c : input)
+	{
+		if (c == '(')
+		{
+			commentLevel++;
+			res += currentSegment;
+			currentSegment.clear();
+		}
+		else if (c == ')')
+		{
+			if (commentLevel == 0)
+			{
+				throw BadRequestException();
+			}
+			commentLevel--;
+		}
+		else if (commentLevel == 0)
+		{
+			currentSegment += c;
+		}
+	}
+
+	return res;
+}
+
 void Request::parseContentLength()
 {
 	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("content-length");
@@ -193,10 +224,11 @@ void Request::parseHeaders()
 {
 	parseHost();
 	parseContentLength();
+	parseUserAgent();
 	/*
 	parseContentType();
 	parseAccept();
-	parseUserAgent();
+
 	parseConnection();
 	parseAcceptEncoding();
 	parseAcceptLanguage();
