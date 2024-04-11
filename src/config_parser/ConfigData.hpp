@@ -63,7 +63,7 @@ private:
     std::vector<std::string> locationBlocks;
     std::map<std::string, Location> locations;
 
-    std::string extractDirectiveValue(const std::string confBlock, const std::string &directiveKey);
+    std::string extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey);
     void extractServerPorts();
     bool validPortString(std::string &errorCodeStr);
     void extractServerName();

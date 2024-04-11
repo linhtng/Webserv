@@ -58,28 +58,27 @@ void ConfigData::printConfigData()
     }
 }
 
-void trimSpace(std::string &str)
+std::string ConfigData::extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey)
 {
-    std::regex pattern("^\\s+|\\s+$"); // Matches leading and trailing spaces
-    str = std::regex_replace(str, pattern, "");
-}
-
-std::string ConfigData::extractDirectiveValue(const std::string confBlock, const std::string &directiveKey)
-{
-    const std::string::size_type keyLength = directiveKey.length();
-
-    std::string::size_type start = confBlock.find(directiveKey);
-    if (start == std::string::npos)
-        return "";
-    int keyValueBetween = confBlock[start + keyLength];
-    if (!std::isspace(keyValueBetween))
-        throw std::runtime_error("Invalid directive: " + directiveKey);
-    std::string::size_type end = confBlock.find(";", start);
-    if (end == std::string::npos)
-        throw std::runtime_error("semicolon not found in serverBlock");
-    std::string directiveValue = confBlock.substr(start + keyLength, end - start - keyLength);
-    trimSpace(directiveValue);
-    return directiveValue;
+    std::istringstream stream(confBlock);
+    std::string line;
+    int duplicate = 0;
+    std::string returnValue = "";
+    while (std::getline(stream, line))
+    {
+        std::regex directiveRegex("^\\s*" + directiveKey + "\\s+(\\S+)?\\s*;");
+        std::smatch match;
+        if (std::regex_search(line, match, directiveRegex))
+        {
+            if (duplicate > 0)
+            {
+                throw std::runtime_error("Duplicate directive key: " + directiveKey);
+            }
+            returnValue = match[1].str();
+            duplicate++;
+        }
+    }
+    return returnValue;
 }
 
 /* Handling error:
