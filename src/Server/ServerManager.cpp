@@ -76,8 +76,8 @@ void ServerManager::createServers()
 	for (Server::configData_t &config : configs)
 	{
 		Server server(config);
-		server.setUpServerSocket();														// set up each server socket
-		servers[server.getServerFd()] = std::move(server);		// insert server
+		server.setUpServerSocket();							  // set up each server socket
+		servers[server.getServerFd()] = std::move(server);	  // insert server
 		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
 }
@@ -127,8 +127,16 @@ void ServerManager::handlePoll()
 		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
 		{
 			if (client_to_server_map.find(it->fd) != client_to_server_map.end()) // remove all client fd
+			{
+				int client_fd = it->fd;
+				int server_fd = client_to_server_map[client_fd];
+				servers[server_fd].getClient(client_fd).createResponse(); // TODO - set the response with error code
+				handleReadyToWrite(it);
 				handleClientDisconnection(it);
+			}
+
 		}
+		std::cout << "poll time out" << std::endl;
 	}
 }
 
@@ -188,7 +196,7 @@ void ServerManager::handleServerError(const int &status_code)
 	std::string error_response = "server error with status code " + std::to_string(status_code);
 	for (auto it = client_to_server_map.begin(); it != client_to_server_map.end(); ++it)
 		send(it->first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
-	for (const pollfd &fd : pollfds)																			 // close all pollfds
+	for (const pollfd &fd : pollfds)										 // close all pollfds
 		close(fd.fd);
 }
 

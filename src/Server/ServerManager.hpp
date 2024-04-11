@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include "Server.hpp"
 
-#define POLL_TIMEOUT 5000
+#define POLL_TIMEOUT 6000
 
 typedef typename std::vector<Server::configData_t> config_t;
 

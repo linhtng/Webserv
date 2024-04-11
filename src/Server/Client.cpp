@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 Client::Client()
-	: addrlen(sizeof(address))
+	: addrlen(sizeof(address)), request(NULL), response(NULL), bytes_to_receive(0)
 {
 }
 
@@ -16,13 +16,15 @@ Client &Client::operator=(Client const &rhs)
 	{
 		address = rhs.address;
 		addrlen = rhs.addrlen;
-		response = rhs.response;
 	}
 	return (*this);
 }
 
 Client::~Client()
 {
+	std::cout << "here" << std::endl;
+	delete request;
+	delete response;
 }
 
 sockaddr_in &Client::getAndSetAddress(void)
@@ -35,17 +37,44 @@ socklen_t &Client::getAndSetAddrlen(void)
 	return (addrlen);
 }
 
-std::vector<std::byte> Client::getResponse(void) const
+void Client::createRequest(std::string &request_header)
 {
-	return (response);
+	request = new Request(request_header); // Create a Request object with the provided header
 }
 
-void Client::setRequest(std::vector<std::byte> new_request_chunk)
+void Client::createResponse(void)
 {
-	request.insert(request.end(), new_request_chunk.begin(), new_request_chunk.end());
+	response = new Response(*request); // Create a Response object with the corresponding request header
 }
 
-void Client::setResponse(std::vector<std::byte> new_response)
+void Client::removeRequest(void)
 {
-	response = new_response;
+	delete request;
+	request = NULL;
+}
+
+void Client::removeResponse(void)
+{
+	delete response;
+	response = NULL;
+}
+
+Request *Client::getRequest(void)
+{
+	return request;
+}
+
+Response *Client::getResponse(void)
+{
+	return response;
+}
+
+size_t &Client::getBytesToReceive(void)
+{
+	return bytes_to_receive;
+}
+
+void Client::setBytesToReceive(size_t bytes)
+{
+	bytes_to_receive = bytes;
 }

@@ -54,7 +54,7 @@ private:
 	struct sockaddr_in address;
 
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
-	RequestStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
+	RequestStatus formRequestBody(int const &client_fd, Request &request);
 
 public:
 	Server();
@@ -69,6 +69,7 @@ public:
 	ResponseStatus sendResponse(int const &client_fd);
 
 	int const &getServerFd(void) const;
+	std::unordered_map<int, Client> &getClients(void) const;
 	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception
