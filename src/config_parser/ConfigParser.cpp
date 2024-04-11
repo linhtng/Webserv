@@ -57,6 +57,18 @@ void ConfigParser::extractServerConfigs()
         serverConfig.analyzeConfigData();
         servers.push_back(serverConfig);
     }
+    std::unordered_set<std::string> serverCombinations;
+    for (const auto &server : servers)
+    {
+        for (const auto &portNumber : server.getServerPorts())
+        {
+            std::string combination = server.getServerName() + ":" + std::to_string(portNumber);
+            if (!serverCombinations.insert(combination).second)
+            {
+                throw std::runtime_error("Duplicate server configuration: " + combination);
+            }
+        }
+    }
     int i = 0;
     for (auto &server : servers)
     {

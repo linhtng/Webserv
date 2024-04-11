@@ -125,6 +125,10 @@ void ConfigData::extractServerPorts()
                     throw std::invalid_argument("Invalid listen directive in server block " + line);
                 }
                 int portNumber = std::stoi(portString);
+                if (std::find(serverPorts.begin(), serverPorts.end(), portNumber) != serverPorts.end())
+                {
+                    throw std::invalid_argument("Duplicate port number: " + portString);
+                }
                 serverPorts.push_back(portNumber);
             }
             else
@@ -172,45 +176,45 @@ void ConfigData::extractServerHost()
     // Check if serverHostStr is a valid IP address
     struct sockaddr_in sa;
     int result = inet_pton(AF_INET, serverHostStr.c_str(), &(sa.sin_addr));
-    if (result == 1)
-    {
-        serverHost = serverHostStr;
-        return;
-    }
-    else
-    {
+    if (result != 1)
         throw std::runtime_error("Invalid server host: " + serverHostStr);
-    }
+    serverHost = serverHostStr;
 }
 
 /* Validating error codes only.
 No error page URIs validation is done here.
 The line must be in format error_page <error_code> <error_page_uri>;
-If no error page URI is provided, throw invalid number of arguments error.
-If more than 2 arguments are provided, skip it. Not error but we don't
-process it.
+If not in this format, i.e. 0 or more than one error page URI is provided in one line, throw invalid number of arguments error.
 */
 void ConfigData::extractDefaultErrorPages()
 {
-    std::regex errorPageRegex("error_page\\s+(\\S+)(\\s+(\\S+))?;");
-    std::smatch match;
-    std::string::const_iterator searchStart(serverBlock.cbegin());
-    while (std::regex_search(searchStart, serverBlock.cend(), match, errorPageRegex))
+    std::istringstream stream(serverBlock);
+    std::string line;
+    while (std::getline(stream, line))
     {
-        if (match[2].str().empty())
+        std::regex errorPageRegex("^\\s*error_page");
+        if (std::regex_search(line, errorPageRegex))
         {
-            throw std::runtime_error("Invalid number of argument: " + match.str());
+            std::regex validErrorPageRegex("error_page\\s+(\\S+)(\\s+(\\S+))?;");
+            std::smatch match;
+            if (std::regex_search(line, match, validErrorPageRegex))
+            {
+                if (match[2].str().empty())
+                {
+                    throw std::runtime_error("Invalid number of arguments: " + line);
+                }
+                std::string errorCodeStr(match[1]);
+                if (!validErrorCode(errorCodeStr))
+                {
+                    throw std::runtime_error("Invalid error page directive in server block: " + line);
+                }
+                int errorCode = std::stoi(errorCodeStr);
+                std::string errorPage = match[2];
+                defaultErrorPages[errorCode] = errorPage;
+            }
+            else
+                throw std::runtime_error("Invalid error page directive in server block: " + line);
         }
-        std::string errorCodeStr(match[1]);
-        if (!validErrorCode(errorCodeStr))
-        {
-            std::string errorLine(match[0]);
-            throw std::runtime_error("Invalid line: " + errorLine);
-        }
-        int errorCode = std::stoi(errorCodeStr);
-        std::string errorPage = match[2];
-        defaultErrorPages[errorCode] = errorPage;
-        searchStart = match.suffix().first;
     }
 }
 
@@ -324,4 +328,14 @@ void ConfigData::splitLocationBlocks()
             }
         }
     }
+}
+
+std::vector<int> ConfigData::getServerPorts() const
+{
+    return serverPorts;
+}
+
+std::string ConfigData::getServerName() const
+{
+    return serverName;
 }

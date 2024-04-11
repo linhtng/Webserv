@@ -49,6 +49,8 @@ public:
 
     void analyzeConfigData();
     void printConfigData();
+    std::vector<int> getServerPorts() const;
+    std::string getServerName() const;
 
 private:
     std::string serverBlock;
