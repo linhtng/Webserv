@@ -60,27 +60,18 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 
 void Request::extractRequestLine(const std::string &requestLine)
 {
-	std::regex requestLineRegex("^(GET|HEAD|POST)" SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$"); // nginx takes up to 3 digits for the minor version
+	std::regex requestLineRegex(REQUEST_LINE_REGEX);
 	std::smatch match;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
-		/* if (match[4].matched)
-		{
-			this->_requestLine.HTTPVersionMinor = match[4].str().substr(1);
-		}
-		else
-		{
-			this->_requestLine.HTTPVersionMinor = "0";
-		} */
 		this->_status = RequestStatus::SUCCESS;
 	}
 	else
 	{
-		this->_statusCode = HttpStatusCode::BAD_REQUEST;
-		this->_status = RequestStatus::ERROR;
+		throw BadRequestException();
 	}
 }
 
@@ -151,8 +142,7 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	}
 	else
 	{
-		this->_statusCode = HttpStatusCode::BAD_REQUEST;
-		this->_status = RequestStatus::ERROR;
+		throw BadRequestException();
 	}
 }
 

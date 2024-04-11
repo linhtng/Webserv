@@ -22,21 +22,6 @@ private:
 		When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant.
 		*/
 	};
-
-	// PROPERTIES
-
-	// for internal use only
-	std::unordered_map<std::string, std::string> _headerLines;
-	RequestLine _requestLine;
-
-	RequestStatus _status;
-	HttpStatusCode _statusCode;
-	HttpMethod _method;
-	std::string _requestTarget;
-	int _HTTPVersionMajor;
-	bool chunked;
-	size_t _contentLength;
-	std::vector<std::byte> _body;
 	/*
 	The normal procedure for parsing an HTTP message is to read the start-line
 	into a structure, read each header field line into a hash table by field
@@ -44,22 +29,35 @@ private:
 	a message body is expected.
 	*/
 
+	// PROPERTIES
+
+	// for initial data read only
+	std::unordered_map<std::string, std::string> _headerLines;
 	RequestLine _requestLine;
-
-	// CONSTRUCTORS
-
-	Request();
+	// values from headers
+	HttpMethod _method;
+	std::string _requestTarget;
+	int _HTTPVersionMajor;
+	size_t _contentLength;
+	std::vector<std::byte> _body;
+	// status values
+	RequestStatus _status;
+	HttpStatusCode _statusCode;
+	bool chunked;
 
 	// METHODS
 
+	// helpers
 	bool isDigitsOnly(const std::string &str) const;
-
+	// initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
+	// parsing
 	void parseRequestLine();
 	void parseHost();
 	void parseContentLength();
 	void parseHeaders();
+	// main function
 	void processRequest(const std::string &requestLineAndHeaders);
 
 public:
@@ -73,18 +71,19 @@ public:
 	// no it's a stupid idea because I would need to define a struct for that...
 
 	// GETTERS
+
+	// request data getters
 	std::vector<std::byte> getBody() const;
-	RequestStatus getStatus() const;
 	size_t getContentLength() const;
+	// status getters
+	RequestStatus getStatus() const;
 	HttpStatusCode getStatusCode() const;
 	bool bodyExpected() const;
 
+	// EXCEPTIONS
+
 	class BadRequestException : public std::exception
 	{
-		virtual const char *what() const throw()
-		{
-			return "Bad Request";
-		}
 	};
 };
 
