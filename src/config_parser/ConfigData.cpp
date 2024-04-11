@@ -66,16 +66,22 @@ std::string ConfigData::extractDirectiveValue(const std::string &confBlock, cons
     std::string returnValue = "";
     while (std::getline(stream, line))
     {
-        std::regex directiveRegex("^\\s*" + directiveKey + "\\s+(\\S+)?\\s*;");
-        std::smatch match;
-        if (std::regex_search(line, match, directiveRegex))
+        std::regex directiveStartRegex("^\\s*" + directiveKey);
+        if (std::regex_search(line, directiveStartRegex))
         {
-            if (duplicate > 0)
+            std::regex directiveRegex(directiveKey + "\\s+(\\S+)\\s*;");
+            std::smatch match;
+            if (std::regex_search(line, match, directiveRegex))
             {
-                throw std::runtime_error("Duplicate directive key: " + directiveKey);
+                if (duplicate > 0)
+                {
+                    throw std::runtime_error("Duplicate directive key: " + directiveKey);
+                }
+                returnValue = match[1].str();
+                duplicate++;
             }
-            returnValue = match[1].str();
-            duplicate++;
+            else
+                throw std::runtime_error("Invalid directive format: " + line);
         }
     }
     return returnValue;
