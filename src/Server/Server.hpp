@@ -36,7 +36,8 @@ public:
 		REQUEST_CLIENT_DISCONNECTED,
 		BODY_IN_CHUNK,
 		READY_TO_WRITE,
-		REQUEST_INTERRUPTED
+		REQUEST_INTERRUPTED,
+		MALFORMED_REQUEST
 	};
 
 	enum ResponseStatus
@@ -69,7 +70,7 @@ public:
 	ResponseStatus sendResponse(int const &client_fd);
 
 	int const &getServerFd(void) const;
-	std::unordered_map<int, Client> &getClients(void) const;
+	Client &getClient(int const &client_fd);
 	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception

@@ -22,7 +22,6 @@ Client &Client::operator=(Client const &rhs)
 
 Client::~Client()
 {
-	std::cout << "here" << std::endl;
 	delete request;
 	delete response;
 }
@@ -69,12 +68,17 @@ Response *Client::getResponse(void)
 	return response;
 }
 
-size_t &Client::getBytesToReceive(void)
+int &Client::getBytesToReceive(void)
 {
 	return bytes_to_receive;
 }
 
-void Client::setBytesToReceive(size_t bytes)
+void Client::setBytesToReceive(int bytes)
 {
 	bytes_to_receive = bytes;
+}
+
+void Client::addChunkSize(size_t size)
+{
+	chunk_sizes.push_back(size);
 }
