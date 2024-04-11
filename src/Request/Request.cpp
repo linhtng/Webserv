@@ -33,12 +33,7 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 
 size_t Request::getContentLength() const
 {
-	// TODO: handle exceptions, or better yet validate before calling
-	if (this->_headerLines.find("Content-Length") != this->_headerLines.end())
-	{
-		return std::stoul(this->_headerLines.at("Content-Length"));
-	}
-	return 0;
+	return this->_contentLength;
 }
 
 std::vector<std::string> splitByCRLF(const std::string &input)
@@ -49,12 +44,16 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 	while ((pos = input.find(CRLF, prev)) != std::string::npos)
 	{
 		if (pos > prev)
+		{
 			result.push_back(input.substr(prev, pos - prev));
-		prev = pos + 2; // Move past the CRLF
+		}
+		prev = pos + 2; // Move past CRLF
 	}
 	// Add the last substring if it exists
 	if (prev < input.length())
+	{
 		result.push_back(input.substr(prev, std::string::npos));
+	}
 	return result;
 }
 
@@ -75,58 +74,68 @@ void Request::extractRequestLine(const std::string &requestLine)
 	}
 }
 
-void Request::parseRequestLine()
+void Request::validateMethod()
 {
-	// METHOD validation
 	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
 	auto itValid = std::find(validMethods.begin(), validMethods.end(), this->_requestLine.method);
 	if (itValid == validMethods.end())
 	{
-		// Error for invalid methods
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
-		this->_status = RequestStatus::ERROR;
-		return;
+		throw BadRequestException();
 	}
-	// Success for implemented methods
-	if (this->_requestLine.method == "GET")
+}
+
+HttpMethod Request::matchValidMethod()
+{
+	// is method case-sensitive? TODO: check RFC
+	std::unordered_map<std::string, HttpMethod> methodMap = {
+		{"GET", HttpMethod::GET},
+		{"HEAD", HttpMethod::HEAD},
+		{"POST", HttpMethod::POST},
+		{"DELETE", HttpMethod::DELETE}};
+	auto it = methodMap.find(this->_requestLine.method);
+	if (it == methodMap.end())
 	{
-		this->_method = HttpMethod::GET;
-	}
-	else if (this->_requestLine.method == "HEAD")
-	{
-		this->_method = HttpMethod::HEAD;
-	}
-	else if (this->_requestLine.method == "POST")
-	{
-		this->_method = HttpMethod::POST;
-	}
-	else if (this->_requestLine.method == "DELETE")
-	{
-		this->_method = HttpMethod::DELETE;
-	}
-	else
-	{
-		// Error for valid but not implemented methods
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
-		this->_status = RequestStatus::ERROR;
-		return;
+		throw BadRequestException();
 	}
+	return it->second;
+}
+
+HttpMethod Request::parseMethod()
+{
+	validateMethod();
+	return matchValidMethod();
+}
+
+int Request::parseVersion()
+{
+	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
+	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
+	if (major > 1)
+	{
+		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
+		throw BadRequestException();
+	}
+	else if (major < 1)
+	{
+		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
+		throw BadRequestException();
+	}
+	return major;
+}
+
+void Request::parseRequestLine()
+{
+	// METHOD validation
+
+	this->_method = parseMethod();
 
 	// TARGET validation - is any needed?
 	this->_requestTarget = this->_requestLine.requestTarget;
 
 	// HTTP VERSION validation
-	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
-	if (major > 1)
-	{
-		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
-		this->_status = RequestStatus::ERROR;
-	}
-	else if (major < 1)
-	{
-		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
-		this->_status = RequestStatus::ERROR;
-	}
+	this->_httpVersionMajor = parseVersion();
 }
 
 void Request::extractHeaderLine(const std::string &headerLine)
@@ -192,6 +201,28 @@ std::string Request::removeComments(const std::string &input) const
 	return res;
 }
 
+size_t Request::strToSizeT(const std::string &str) const
+{
+	if (str.empty() || !isDigitsOnly(str))
+	{
+		throw BadRequestException();
+	}
+	try
+	{
+		unsigned long long value = std::stoull(str);
+		if (value > std::numeric_limits<size_t>::max())
+		{
+			throw BadRequestException();
+		}
+		return static_cast<size_t>(value);
+	}
+	// ull overflow
+	catch (const std::exception &e)
+	{
+		throw BadRequestException();
+	}
+}
+
 void Request::parseContentLength()
 {
 	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("content-length");
@@ -200,35 +231,38 @@ void Request::parseContentLength()
 		return;
 	}
 	std::string contentLengthValue = it->second;
-	if (!isDigitsOnly(contentLengthValue))
-	{
-		throw BadRequestException();
-	}
 	/*
 	Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
 	*/
-	try
+	this->_contentLength = strToSizeT(contentLengthValue);
+	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
+	if (this->_contentLength > MAX_BODY_SIZE)
 	{
-		this->_contentLength = std::stoul(contentLengthValue);
-	}
-	catch (const std::exception &e)
-	{
-		// Maybe make these 2 lines a separate function?
 		this->_statusCode = HttpStatusCode::CONTENT_TOO_LARGE;
 		throw BadRequestException();
 	}
-	// TODO: actually, overflow would be 400 and 413 should be thrown if value is bigger than configured max body size
+}
+
+void Request::parseUserAgent()
+{
+	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("user-agent");
+	if (it == this->_headerLines.end())
+	{
+		return;
+	}
+	// TODO: regex stuff
 }
 
 void Request::parseHeaders()
 {
 	parseHost();
 	parseContentLength();
+	parseTransferEncoding();
 	parseUserAgent();
 	/*
 	parseContentType();
 	parseAccept();
-
+	parseTransferEncoding();
 	parseConnection();
 	parseAcceptEncoding();
 	parseAcceptLanguage();
@@ -242,6 +276,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 		throw BadRequestException();
 	}
 	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
+	// maybe rather than keeping RequestLine _requestLine in a class, just make it local to here
 	extractRequestLine(split[0]);
 	parseRequestLine();
 	for (size_t i = 1; i < split.size(); ++i)
@@ -253,7 +288,12 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 
 Request::Request(const std::string &requestLineAndHeaders)
 	: _statusCode(HttpStatusCode::UNDEFINED),
-	  _status(RequestStatus::SUCCESS)
+	  _status(RequestStatus::SUCCESS),
+	  _contentLength(0),
+	  _chunked(false),
+	  _httpVersionMajor(0),
+	  _method(HttpMethod::UNDEFINED),
+	  _bodyExpected(false)
 {
 	try
 	{

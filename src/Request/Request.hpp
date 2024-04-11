@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <regex>
 #include <algorithm>
+#include <limits>
 
 class Request
 {
@@ -37,26 +38,35 @@ private:
 	// values from headers
 	HttpMethod _method;
 	std::string _requestTarget;
-	int _HTTPVersionMajor;
+	int _httpVersionMajor;
 	size_t _contentLength;
 	std::vector<std::byte> _body;
 	// status values
-	RequestStatus _status;
+	RequestStatus _status; // maybe not needed and status code is enough? so getStatus would just return bool based on status code value being UNDEFUNED or not
 	HttpStatusCode _statusCode;
-	bool chunked;
+	bool _chunked;
+	bool _bodyExpected;
 
 	// METHODS
 
 	// helpers
 	bool isDigitsOnly(const std::string &str) const;
+	size_t strToSizeT(const std::string &str) const;
 	std::string removeComments(const std::string &input) const;
 	// initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
 	// parsing
+	int parseVersion();
+	HttpMethod matchValidMethod();
+	HttpMethod parseMethod();
+	void validateMethod();
+
 	void parseRequestLine();
 	void parseHost();
 	void parseContentLength();
+	void parseTransferEncoding();
+	void parseUserAgent();
 	void parseHeaders();
 	// main function
 	void processRequest(const std::string &requestLineAndHeaders);

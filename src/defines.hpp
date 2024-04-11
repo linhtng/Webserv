@@ -21,7 +21,7 @@
 #define DELIMITERS_REGEX "[\"()/:;<=>?@[\\]{}]"
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
-#define MAX_BODY_SIZE_TEMP 10000
+#define MAX_BODY_SIZE 10000
 
 enum RequestStatus
 {
@@ -31,6 +31,7 @@ enum RequestStatus
 
 enum HttpMethod
 {
+	UNDEFINED,
 	GET,
 	HEAD,
 	POST,
