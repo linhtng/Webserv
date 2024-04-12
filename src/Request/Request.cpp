@@ -5,11 +5,6 @@ RequestStatus Request::getStatus() const
 	return this->_status;
 }
 
-HttpStatusCode Request::getStatusCode() const
-{
-	return this->_statusCode;
-}
-
 bool Request::bodyExpected() const
 {
 	// also consider Content-Length == "0"
@@ -21,19 +16,9 @@ bool Request::bodyExpected() const
 	return false;
 }
 
-std::vector<std::byte> Request::getBody() const
-{
-	return this->_body;
-}
-
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
-}
-
-size_t Request::getContentLength() const
-{
-	return this->_contentLength;
 }
 
 std::vector<std::string> splitByCRLF(const std::string &input)
@@ -132,7 +117,7 @@ void Request::parseRequestLine()
 	this->_method = parseMethod();
 
 	// TARGET validation - is any needed?
-	this->_requestTarget = this->_requestLine.requestTarget;
+	this->_target = this->_requestLine.requestTarget;
 
 	// HTTP VERSION validation
 	this->_httpVersionMajor = parseVersion();
@@ -250,6 +235,7 @@ void Request::parseUserAgent()
 	{
 		return;
 	}
+
 	// TODO: regex stuff
 }
 
@@ -259,14 +245,7 @@ void Request::parseHeaders()
 	parseContentLength();
 	parseTransferEncoding();
 	parseUserAgent();
-	/*
-	parseContentType();
-	parseAccept();
-	parseTransferEncoding();
 	parseConnection();
-	parseAcceptEncoding();
-	parseAcceptLanguage();
-	*/
 }
 
 void Request::processRequest(const std::string &requestLineAndHeaders)
@@ -287,12 +266,8 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 }
 
 Request::Request(const std::string &requestLineAndHeaders)
-	: _statusCode(HttpStatusCode::UNDEFINED),
+	: HttpMessage(HttpMethod::UNDEFINED, 0, 0, HttpStatusCode::UNDEFINED, false),
 	  _status(RequestStatus::SUCCESS),
-	  _contentLength(0),
-	  _chunked(false),
-	  _httpVersionMajor(0),
-	  _method(HttpMethod::UNDEFINED),
 	  _bodyExpected(false)
 {
 	try

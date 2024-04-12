@@ -1,6 +1,7 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
+// TODO: check includes
 #include "../defines.hpp"
 #include <string>
 #include <vector>
@@ -8,8 +9,9 @@
 #include <regex>
 #include <algorithm>
 #include <limits>
+#include "HttpMessage.hpp"
 
-class Request
+class Request : public HttpMessage
 {
 private:
 	// STRUCTS
@@ -36,16 +38,17 @@ private:
 	std::unordered_map<std::string, std::string> _headerLines;
 	RequestLine _requestLine;
 	// values from headers
-	HttpMethod _method;
-	std::string _requestTarget;
+	/* HttpMethod _method;
+	std::string _target;
 	int _httpVersionMajor;
 	size_t _contentLength;
-	std::vector<std::byte> _body;
+	std::vector<std::byte> _body; */
 	// status values
 	RequestStatus _status; // maybe not needed and status code is enough? so getStatus would just return bool based on status code value being UNDEFUNED or not
-	HttpStatusCode _statusCode;
-	bool _chunked;
+	/* HttpStatusCode _statusCode;
+	bool _chunked; */
 	bool _bodyExpected;
+	std::string _userAgent;
 
 	// METHODS
 
@@ -68,6 +71,7 @@ private:
 	void parseTransferEncoding();
 	void parseUserAgent();
 	void parseHeaders();
+	void parseConnection();
 	// main function
 	void processRequest(const std::string &requestLineAndHeaders);
 
@@ -84,11 +88,11 @@ public:
 	// GETTERS
 
 	// request data getters
-	std::vector<std::byte> getBody() const;
-	size_t getContentLength() const;
+	// std::vector<std::byte> getBody() const;
+	// size_t getContentLength() const;
 	// status getters
 	RequestStatus getStatus() const;
-	HttpStatusCode getStatusCode() const;
+	// HttpStatusCode getStatusCode() const;
 	bool bodyExpected() const;
 
 	// EXCEPTIONS

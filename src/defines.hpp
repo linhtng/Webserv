@@ -13,6 +13,7 @@
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
 #define RWS_REGEX "[\t ]+"
+#define PRODUCT_REGEX
 #define OBS_TEXT_REGEX "[\x80-\xFF]"
 #define QUOTED_PAIR_REGEX "\\\\(" HTAB "|" SP "|" VCHAR_REGEX "|" OBS_TEXT_REGEX ")"
 #define CTEXT_REGEX "(" HTAB "|" SP "|[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]|" OBS_TEXT_REGEX ")"
@@ -21,12 +22,19 @@
 #define DELIMITERS_REGEX "[\"()/:;<=>?@[\\]{}]"
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
+// placeholder for value from config
 #define MAX_BODY_SIZE 10000
 
 enum RequestStatus
 {
 	SUCCESS,
 	ERROR
+};
+
+enum ConnectionValue
+{
+	KEEP_ALIVE,
+	CLOSE
 };
 
 enum HttpMethod
