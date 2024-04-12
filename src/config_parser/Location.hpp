@@ -37,6 +37,7 @@ private:
     bool directoryListing;
     std::string defaultFile;
     std::string cgiExtension;
+    std::string cgiPath;
     std::string uploadPath;
     // ... other properties ...
 
@@ -47,4 +48,6 @@ private:
     void setLocationAlias();
     void setDirectoryListing();
     void setDefaultFile();
+    void setCgiExtension();
+    void setCgiPath();
 };

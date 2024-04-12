@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <regex>
+#include <unordered_set>
 
 #include "ConfigData.hpp"
 

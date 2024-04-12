@@ -9,7 +9,7 @@ ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
 {
-    extractServerPort();
+    extractServerPorts();
     extractServerName();
     extractServerHost();
     extractDefaultErrorPages();
@@ -42,12 +42,13 @@ void printVector(const std::vector<T> &vec)
 
 void ConfigData::printConfigData()
 {
-    // std::cout << "Server name: " << serverName << std::endl;
-    // std::cout << "Server port: " << serverPort << std::endl;
-    // std::cout << "Server host: " << serverHost << std::endl;
-    // std::cout << "Error pages: ";
-    // print(defaultErrorPages);
-    // std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
+    std::cout << "Server name: " << serverName << std::endl;
+    std::cout << "Server port: ";
+    printVector(serverPorts);
+    std::cout << "Server host: " << serverHost << std::endl;
+    std::cout << "Error pages: ";
+    print(defaultErrorPages);
+    std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
     // std::cout << "Location blocks: ";
     // printVector(locationBlocks);
     // std::cout << "Locations: ";
@@ -57,58 +58,92 @@ void ConfigData::printConfigData()
     }
 }
 
-void trimSpace(std::string &str)
+std::string ConfigData::extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey)
 {
-    std::regex pattern("^\\s+|\\s+$"); // Matches leading and trailing spaces
-    str = std::regex_replace(str, pattern, "");
-}
-
-std::string ConfigData::extractDirectiveValue(const std::string confBlock, const std::string &directiveKey)
-{
-    const std::string::size_type keyLength = directiveKey.length();
-
-    std::string::size_type start = confBlock.find(directiveKey);
-    if (start == std::string::npos)
-        return "";
-    int keyValueBetween = confBlock[start + keyLength];
-    if (!std::isspace(keyValueBetween))
-        throw std::runtime_error("Invalid directive: " + directiveKey);
-    std::string::size_type end = confBlock.find(";", start);
-    if (end == std::string::npos)
-        throw std::runtime_error("semicolon not found in serverBlock");
-    std::string directiveValue = confBlock.substr(start + keyLength, end - start - keyLength);
-    trimSpace(directiveValue);
-    return directiveValue;
+    std::istringstream stream(confBlock);
+    std::string line;
+    int duplicate = 0;
+    std::string returnValue = "";
+    while (std::getline(stream, line))
+    {
+        std::regex directiveStartRegex("^\\s*" + directiveKey);
+        if (std::regex_search(line, directiveStartRegex))
+        {
+            std::regex directiveRegex(directiveKey + "\\s+(\\S+)\\s*;");
+            std::smatch match;
+            if (std::regex_search(line, match, directiveRegex))
+            {
+                if (duplicate > 0)
+                {
+                    throw std::runtime_error("Duplicate directive key: " + directiveKey);
+                }
+                returnValue = match[1].str();
+                duplicate++;
+            }
+            else
+                throw std::runtime_error("Invalid directive format: " + line);
+        }
+    }
+    return returnValue;
 }
 
 /* Handling error:
 - Invalid port number: not all characters in serverPortStr are digits
-- Port number out of range: port number is not within the range 0-65535
+- Port number out of range: port number is not within the range 1024-65535
 */
-void ConfigData::extractServerPort()
+bool ConfigData::validPortString(std::string &portStr)
 {
-    std::string serverPortStr = extractDirectiveValue(serverBlock, DirectiveKeys::PORT);
-    if (serverPortStr.empty())
-    {
-        serverPort = DefaultValues::PORT;
-        return;
-    }
-    if (!std::all_of(serverPortStr.begin(), serverPortStr.end(), ::isdigit))
-    {
-        throw std::runtime_error("Invalid port number: " + serverPortStr);
-    }
-    int port = 0;
+    if (!std::all_of(portStr.begin(), portStr.end(), ::isdigit))
+        return false;
+    int errorCode = 0;
     try
     {
-        port = std::stoi(serverPortStr);
+        errorCode = std::stoi(portStr);
     }
     catch (const std::out_of_range &)
     {
-        throw std::runtime_error("Port number out of range: " + serverPortStr);
+        throw std::runtime_error("Port out of range: " + portStr);
     }
-    if (port < MIN_PORT || port > MAX_PORT)
-        throw std::runtime_error("Port number out of range: " + serverPortStr);
-    serverPort = port;
+    if (errorCode < MIN_PORT || errorCode > MAX_PORT)
+    {
+        throw std::runtime_error("Port out of range: " + portStr);
+    }
+    return true;
+}
+
+void ConfigData::extractServerPorts()
+{
+    std::istringstream stream(serverBlock);
+    std::string line;
+    while (std::getline(stream, line))
+    {
+        std::regex listenRegex("^\\s*listen");
+        if (std::regex_search(line, listenRegex))
+        {
+            std::regex serverPortRegex("listen\\s+(\\S+)\\;");
+            std::smatch match;
+            if (std::regex_search(line, match, serverPortRegex))
+            {
+                std::string portString(match[1]);
+                if (portString.empty() || !validPortString(portString))
+                {
+                    throw std::invalid_argument("Invalid listen directive in server block " + line);
+                }
+                int portNumber = std::stoi(portString);
+                if (std::find(serverPorts.begin(), serverPorts.end(), portNumber) != serverPorts.end())
+                {
+                    throw std::invalid_argument("Duplicate port number: " + portString);
+                }
+                serverPorts.push_back(portNumber);
+            }
+            else
+                throw std::invalid_argument("Invalid listen directive in server block " + line);
+        }
+    }
+    if (serverPorts.empty())
+    {
+        serverPorts.push_back(DefaultValues::PORT);
+    }
 }
 
 /* Handling error:
@@ -146,45 +181,45 @@ void ConfigData::extractServerHost()
     // Check if serverHostStr is a valid IP address
     struct sockaddr_in sa;
     int result = inet_pton(AF_INET, serverHostStr.c_str(), &(sa.sin_addr));
-    if (result == 1)
-    {
-        serverHost = serverHostStr;
-        return;
-    }
-    else
-    {
+    if (result != 1)
         throw std::runtime_error("Invalid server host: " + serverHostStr);
-    }
+    serverHost = serverHostStr;
 }
 
 /* Validating error codes only.
 No error page URIs validation is done here.
 The line must be in format error_page <error_code> <error_page_uri>;
-If no error page URI is provided, throw invalid number of arguments error.
-If more than 2 arguments are provided, skip it. Not error but we don't
-process it.
+If not in this format, i.e. 0 or more than one error page URI is provided in one line, throw invalid number of arguments error.
 */
 void ConfigData::extractDefaultErrorPages()
 {
-    std::regex errorPageRegex("error_page\\s+(\\S+)(\\s+(\\S+))?;");
-    std::smatch match;
-    std::string::const_iterator searchStart(serverBlock.cbegin());
-    while (std::regex_search(searchStart, serverBlock.cend(), match, errorPageRegex))
+    std::istringstream stream(serverBlock);
+    std::string line;
+    while (std::getline(stream, line))
     {
-        if (match[2].str().empty())
+        std::regex errorPageRegex("^\\s*error_page");
+        if (std::regex_search(line, errorPageRegex))
         {
-            throw std::runtime_error("Invalid number of argument: " + match.str());
+            std::regex validErrorPageRegex("error_page\\s+(\\S+)(\\s+(\\S+))?;");
+            std::smatch match;
+            if (std::regex_search(line, match, validErrorPageRegex))
+            {
+                if (match[2].str().empty())
+                {
+                    throw std::runtime_error("Invalid number of arguments: " + line);
+                }
+                std::string errorCodeStr(match[1]);
+                if (!validErrorCode(errorCodeStr))
+                {
+                    throw std::runtime_error("Invalid error page directive in server block: " + line);
+                }
+                int errorCode = std::stoi(errorCodeStr);
+                std::string errorPage = match[2];
+                defaultErrorPages[errorCode] = errorPage;
+            }
+            else
+                throw std::runtime_error("Invalid error page directive in server block: " + line);
         }
-        std::string errorCodeStr(match[1]);
-        if (!validErrorCode(errorCodeStr))
-        {
-            std::string errorLine(match[0]);
-            throw std::runtime_error("Invalid line: " + errorLine);
-        }
-        int errorCode = std::stoi(errorCodeStr);
-        std::string errorPage = match[2];
-        defaultErrorPages[errorCode] = errorPage;
-        searchStart = match.suffix().first;
     }
 }
 
@@ -298,4 +333,14 @@ void ConfigData::splitLocationBlocks()
             }
         }
     }
+}
+
+std::vector<int> ConfigData::getServerPorts() const
+{
+    return serverPorts;
+}
+
+std::string ConfigData::getServerName() const
+{
+    return serverName;
 }
