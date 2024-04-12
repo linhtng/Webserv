@@ -105,7 +105,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	if (!request)
 	{
 		std::string request_header;
-		std::vector<std::byte> request_body_buf;
+		std::string request_body_buf;
 
 		RequestStatus request_header_status = formRequestHeader(client_fd, request_header,
 																request_body_buf);
@@ -126,7 +126,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 		if (request->bodyExpected() && request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
 		{
-			request->appendToBody(request_body_buf);
+			appendToBodyString(request_body_buf, *request);
 			if (request_body_buf.size() > request->getContentLength())
 			{
 				clients[client_fd].createResponse();	  // create response object
@@ -135,6 +135,8 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			}
 			clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
 		}
+		else if (!request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+			return (BODY_IN_CHUNK);
 	}
 
 	if (request->bodyExpected()) 
@@ -159,7 +161,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 // read request header
 Server::RequestStatus Server::formRequestHeader(int const &client_fd,
-												std::string &request_header, std::vector<std::byte> &request_body_buf)
+												std::string &request_header, std::string &request_body_buf)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
@@ -171,8 +173,7 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd,
 		size_t delimitor_pos = request_header.find(delimitor);
 		if (delimitor_pos != std::string::npos)
 		{
-			for (char ch : request_header.substr(delimitor_pos + delimitor.length()))
-				request_body_buf.push_back(static_cast<std::byte>(ch));
+			request_body_buf = request_header.substr(delimitor_pos + delimitor.length());
 			request_header.erase(delimitor_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
@@ -196,10 +197,7 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	{
 		if (static_cast<size_t>(bytes) > clients[client_fd].getBytesToReceive())
 			return (MALFORMED_REQUEST);
-		std::vector<std::byte> new_body_chunk;
-		for (ssize_t i = 0; i < bytes; ++i)
-			new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
-		request.appendToBody(new_body_chunk);
+		appendToBodyString(buf, bytes, request);
 		clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - bytes);
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
@@ -213,67 +211,102 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	throw RecvException();
 }
 
-
 // read request body with chunked transfer encoding
 Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Request &request)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
+	clients[client_fd].setBytesToReceive(0);
 
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
+			std::string str(buf, buf + bytes);
 			if (!clients[client_fd].getBytesToReceive()) //if not yet parse the number of bytes for each chunk
 			{
-				std::string str(buf, buf + bytes);
-				if (str == "0\r\n\r\n")
-					return (READY_TO_WRITE);
-				else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\r\n$")))
-				{
-					size_t number_pos = str.find("\r\n");
-					std::string hexString = str.substr(0, number_pos);
-					clients[client_fd].setBytesToReceive(std::stoi(hexString, nullptr, 16));
-					str.erase(str.begin(), str.begin() + number_pos + 2);
-					if (str.find("\r\n"))
-					{
-						if (std::regex_match(str, std::regex("\\r\\n$")))
-						{
-							if (str.length() - 2 > clients[client_fd].getBytesToReceive())
-								return (MALFORMED_REQUEST);
-							else
-							{
-								std::vector<std::byte> new_body_chunk;
-								for (ssize_t i = number_pos + 2; i < static_cast<ssize_t>(str.length() - 2); ++i)
-									new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
-								request.appendToBody(new_body_chunk);
-								return (READY_TO_WRITE);
-							}
-						}
-						else
-							return (MALFORMED_REQUEST);
-					}
-					if (static_cast<size_t>(bytes) > clients[client_fd].getBytesToReceive())
-						return (MALFORMED_REQUEST);
-					std::vector<std::byte> new_body_chunk;
-					for (ssize_t i = 0; i < bytes; ++i)
-						new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
-					request.appendToBody(new_body_chunk);
-					clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - str.length());
-				}
-				else
-					return (MALFORMED_REQUEST); //not correct chunk format
+				RequestStatus request_status = extractByteNumberFromChunk(str, client_fd);
+				if (request_status == READY_TO_WRITE || request_status == MALFORMED_REQUEST)
+					return (request_status);
 			}
-			//TODO - else loop to read till the end
 
-			return (READY_TO_WRITE);
+			if (str.find("\r\n") != std::string::npos)
+			{
+				if (!std::regex_match(str, std::regex(".*\\r\\n$")))
+					return (MALFORMED_REQUEST);
+
+				if (str.length() > clients[client_fd].getBytesToReceive())
+					return (MALFORMED_REQUEST);
+
+				str.erase(str.end() - 2, str.end());
+				appendToBodyString(str, request);
+
+				return (BODY_IN_CHUNK);
+			}
+
+			if (str.find("\r") != std::string::npos)
+			{
+				if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+					str.append(buf, bytes);
+
+				if (!std::regex_match(str, std::regex(".*\\r\\n$")))
+					return (MALFORMED_REQUEST);
+
+				if (str.length() > clients[client_fd].getBytesToReceive())
+					return (MALFORMED_REQUEST);
+
+				str.erase(str.end() - 2, str.end());
+				appendToBodyString(str, request);
+
+				return (BODY_IN_CHUNK);		
+			}
+			if (str.length() > clients[client_fd].getBytesToReceive())
+				return (MALFORMED_REQUEST);	
+			appendToBodyString(str, request);
+			clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - str.length());
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else if (errno == EINTR) // interrupted by a signal
 		return (REQUEST_INTERRUPTED);
-	else if ((errno == EWOULDBLOCK || errno == EAGAIN))
-		return (MALFORMED_REQUEST); //TODO - check
+	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) //no delimiter
+		return (MALFORMED_REQUEST);
 	throw RecvException();
 }
+
+Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int const &client_fd)
+{
+	if (str == "0\r\n\r\n")
+		return (READY_TO_WRITE);
+	else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*$")) 
+		|| std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r\\n$"))
+		|| std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r$")))
+	{
+		size_t number_pos = str.find("\r\n");
+		clients[client_fd].setBytesToReceive(std::stoi(str.substr(0, number_pos), nullptr, 16) + 2);
+		str.erase(0, number_pos + 2);
+		return (PARSED_CHUNK_BYTE);
+	}
+	else
+		return (MALFORMED_REQUEST);
+}
+
+//--------------------------------------------------------------
+// TODO - move to request class
+void Server::appendToBodyString(std::string &str, Request &request)
+{
+		std::vector<std::byte> new_body_chunk;
+		for (std::string::iterator it = str.begin(); it != str.end(); ++it)
+				new_body_chunk.push_back(static_cast<std::byte>(*it));
+		request.appendToBody(new_body_chunk);
+}
+
+void Server::appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request)
+{
+		std::vector<std::byte> new_body_chunk;
+		for (size_t i = 0; i < bytes; ++i)
+			new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
+		request.appendToBody(new_body_chunk);
+}
+//--------------------------------------------------------------
 
 // send the response
 Server::ResponseStatus Server::sendResponse(int const &client_fd)

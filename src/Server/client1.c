@@ -36,6 +36,42 @@ int main(int argc, char const *argv[])
 		printf("\nConnection Failed \n");
 		return (-1);
 	}
+	// send(client_fd, hello, strlen(hello), 0);
+
+	// printf("Hello message sent\n");
+	// valread = read(client_fd, buffer,
+	// 							 1024 - 1); // subtract 1 for the null
+	// 													// terminator at the end
+	// printf("%s\n", buffer);
+	// memset(buffer, 0, 1024);
+
+
+
+	// sleep(2);
+	// hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 6\r\nContent-Type: text/plain\r\n\r\n123456";
+	// send(client_fd, hello, strlen(hello), 0);
+	// printf("Hello message sent\n");
+	// valread = read(client_fd, buffer,
+	// 							 1024 - 1); // subtract 1 for the null
+	// 													// terminator at the end
+	// printf("%s\n", buffer);
+	// memset(buffer, 0, 1024);
+
+
+	sleep(2);
+	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n";
+	send(client_fd, hello, strlen(hello), 0);
+
+	sleep(1);
+	hello = "5\r\nhello\r\n";
+	send(client_fd, hello, strlen(hello), 0);
+
+	sleep(1);
+	hello = "6\r\n world\r\n";
+	send(client_fd, hello, strlen(hello), 0);
+
+	sleep(1);
+	hello = "0\r\n\r\n";
 	send(client_fd, hello, strlen(hello), 0);
 
 	printf("Hello message sent\n");
@@ -45,17 +81,6 @@ int main(int argc, char const *argv[])
 	printf("%s\n", buffer);
 	memset(buffer, 0, 1024);
 
-
-
-	sleep(5);
-	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 6\r\nContent-Type: text/plain\r\n\r\n123456";
-	send(client_fd, hello, strlen(hello), 0);
-	printf("Hello message sent\n");
-	valread = read(client_fd, buffer,
-								 1024 - 1); // subtract 1 for the null
-														// terminator at the end
-	printf("%s\n", buffer);
-	memset(buffer, 0, 1024);
 	sleep(5);
 	// closing the connected socket
 	close(client_fd);

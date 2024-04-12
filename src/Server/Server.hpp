@@ -2,7 +2,7 @@
 #define SERVER_HPP
 
 #define BACKLOG 100
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 1024
 
 #include <vector>
 #include <unordered_map>
@@ -40,7 +40,8 @@ public:
 		READY_TO_WRITE,
 		REQUEST_INTERRUPTED,
 		MALFORMED_REQUEST,
-		END_OF_CHUNK
+		END_OF_CHUNK,
+		PARSED_CHUNK_BYTE
 	};
 
 	enum ResponseStatus
@@ -57,9 +58,12 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
+	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
+	RequestStatus extractByteNumberFromChunk(std::string &str, int const &client_fd);
+	void appendToBodyString(std::string &str, Request &request); //TODO - move to request class
+	void appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request); //TODO - move to request class
 
 public:
 	Server();
