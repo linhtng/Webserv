@@ -100,7 +100,6 @@ std::vector<int> Server::acceptNewConnections()
 // receive the request
 Server::RequestStatus Server::receiveRequest(int const &client_fd)
 {
-
 	Request *request = clients[client_fd].getRequest();
 
 	if (!request)
@@ -120,21 +119,32 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (READY_TO_WRITE);
 		}
 
+		std::cout << "request_header: " << request_header << std::endl;
+
 		clients[client_fd].createRequest(request_header); // create request object
 		request = clients[client_fd].getRequest();
 
-		//TODO - add check for 'if the request has content length'
-		if (request->bodyExpected())
+		if (request->bodyExpected() && request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+		{
 			request->appendToBody(request_body_buf);
-		clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
-
-		std::cout << "request_header: " << request_header << std::endl;
+			if (request_body_buf.size() > request->getContentLength())
+			{
+				clients[client_fd].createResponse();	  // create response object
+				std::cout << "body size is larger than content-length" << std::endl;
+				return (READY_TO_WRITE);
+			}
+			clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
+		}
 	}
 
-	if (request->bodyExpected())
+	if (request->bodyExpected()) 
 	{
-		RequestStatus request_body_status = formRequestBody(client_fd, *request);
-		if (request_body_status == REQUEST_CLIENT_DISCONNECTED || request_body_status == REQUEST_INTERRUPTED || request_body_status == BODY_IN_CHUNK)
+		RequestStatus request_body_status;
+		if (request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+			request_body_status = formRequestBodyWithContentLength(client_fd, *request);
+		else
+			request_body_status = formRequestBodyWithChunk(client_fd, *request);
+		if (request_body_status == REQUEST_CLIENT_DISCONNECTED || request_body_status == REQUEST_INTERRUPTED || request_body_status == BODY_IN_CHUNK || request_body_status == BODY_IN_PART)
 			return (request_body_status);
 		if (request_body_status == MALFORMED_REQUEST)
 		{
@@ -143,7 +153,6 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (READY_TO_WRITE);
 		}
 	}
-
 	clients[client_fd].createResponse(); // create response object
 	return (READY_TO_WRITE);
 }
@@ -178,36 +187,91 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd,
 }
 
 // read request body
-Server::RequestStatus Server::formRequestBody(int const &client_fd, Request &request)
+Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd, Request &request)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-		//TODO - handle chunk
-		//check for hexadecimal and CRLF, save the hexadecimal in chunk_sizes and ignore hexadecimal and CRLF
-		//check for 0 and two CRLF, add status of END_OF_CHUNK
+		if (static_cast<size_t>(bytes) > clients[client_fd].getBytesToReceive())
+			return (MALFORMED_REQUEST);
 		std::vector<std::byte> new_body_chunk;
 		for (ssize_t i = 0; i < bytes; ++i)
 			new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
 		request.appendToBody(new_body_chunk);
-		clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - bytes); //TODO - only for request with content length
+		clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - bytes);
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else if (errno == EINTR) // interrupted by a signal
 		return (REQUEST_INTERRUPTED);
 	else if ((errno == EWOULDBLOCK || errno == EAGAIN) && clients[client_fd].getBytesToReceive() > 0) // request body send in chunk
-		return (BODY_IN_CHUNK);
+		return (BODY_IN_PART);
 	else if ((errno == EWOULDBLOCK || errno == EAGAIN) && clients[client_fd].getBytesToReceive() == 0) // read till the end
 		return (READY_TO_WRITE);
-	else if ((errno == EWOULDBLOCK || errno == EAGAIN) && clients[client_fd].getBytesToReceive() < 0) // body size is larger than content-length
-		return (MALFORMED_REQUEST);
+	throw RecvException();
+}
 
-	//TODO - handle chunk
-	//if the status of not END_OF_CHUNK, check if the hexadecimal matches the actual data size, return BODY_IN_CHUNK
-	//if the status is END_OF_CHUNK, return READY_TO_WRITE
+
+// read request body with chunked transfer encoding
+Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Request &request)
+{
+	ssize_t bytes;
+	char buf[BUFFER_SIZE];
+
+	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	{
+			if (!clients[client_fd].getBytesToReceive()) //if not yet parse the number of bytes for each chunk
+			{
+				std::string str(buf, buf + bytes);
+				if (str == "0\r\n\r\n")
+					return (READY_TO_WRITE);
+				else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\r\n$")))
+				{
+					size_t number_pos = str.find("\r\n");
+					std::string hexString = str.substr(0, number_pos);
+					clients[client_fd].setBytesToReceive(std::stoi(hexString, nullptr, 16));
+					str.erase(str.begin(), str.begin() + number_pos + 2);
+					if (str.find("\r\n"))
+					{
+						if (std::regex_match(str, std::regex("\\r\\n$")))
+						{
+							if (str.length() - 2 > clients[client_fd].getBytesToReceive())
+								return (MALFORMED_REQUEST);
+							else
+							{
+								std::vector<std::byte> new_body_chunk;
+								for (ssize_t i = number_pos + 2; i < static_cast<ssize_t>(str.length() - 2); ++i)
+									new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
+								request.appendToBody(new_body_chunk);
+								return (READY_TO_WRITE);
+							}
+						}
+						else
+							return (MALFORMED_REQUEST);
+					}
+					if (static_cast<size_t>(bytes) > clients[client_fd].getBytesToReceive())
+						return (MALFORMED_REQUEST);
+					std::vector<std::byte> new_body_chunk;
+					for (ssize_t i = 0; i < bytes; ++i)
+						new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
+					request.appendToBody(new_body_chunk);
+					clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - str.length());
+				}
+				else
+					return (MALFORMED_REQUEST); //not correct chunk format
+			}
+			//TODO - else loop to read till the end
+
+			return (READY_TO_WRITE);
+	}
+	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+		return (REQUEST_CLIENT_DISCONNECTED);
+	else if (errno == EINTR) // interrupted by a signal
+		return (REQUEST_INTERRUPTED);
+	else if ((errno == EWOULDBLOCK || errno == EAGAIN))
+		return (MALFORMED_REQUEST); //TODO - check
 	throw RecvException();
 }
 

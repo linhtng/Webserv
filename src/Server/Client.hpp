@@ -14,9 +14,9 @@ class Client
 private:
 	struct sockaddr_in address;
 	socklen_t addrlen;
-  Request *request;
-  Response *response;
-	int bytes_to_receive;
+	Request *request;
+	Response *response;
+	size_t bytes_to_receive;
 	std::vector<size_t> chunk_sizes;
 
 public:
@@ -36,9 +36,9 @@ public:
 
 	Request *getRequest(void);
 	Response *getResponse(void);
-	int &getBytesToReceive(void);
+	size_t &getBytesToReceive(void);
 
-	void setBytesToReceive(int bytes);
+	void setBytesToReceive(size_t bytes);
 	void addChunkSize(size_t size);
 };
 

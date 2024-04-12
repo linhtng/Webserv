@@ -2,7 +2,7 @@
 #define SERVER_HPP
 
 #define BACKLOG 100
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 5
 
 #include <vector>
 #include <unordered_map>
@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <algorithm>
 #include <unistd.h>
+#include <regex>
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
@@ -34,10 +35,12 @@ public:
 		HEADER_DELIMITER_FOUND,
 		HEADER_NO_DELIMITER,
 		REQUEST_CLIENT_DISCONNECTED,
+		BODY_IN_PART,
 		BODY_IN_CHUNK,
 		READY_TO_WRITE,
 		REQUEST_INTERRUPTED,
-		MALFORMED_REQUEST
+		MALFORMED_REQUEST,
+		END_OF_CHUNK
 	};
 
 	enum ResponseStatus
@@ -55,7 +58,8 @@ private:
 	struct sockaddr_in address;
 
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
-	RequestStatus formRequestBody(int const &client_fd, Request &request);
+	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
+	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
 
 public:
 	Server();

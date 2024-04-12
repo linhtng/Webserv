@@ -56,6 +56,7 @@ int main(int argc, char const *argv[])
 														// terminator at the end
 	printf("%s\n", buffer);
 	memset(buffer, 0, 1024);
+	sleep(5);
 	// closing the connected socket
 	close(client_fd);
 	return (0);

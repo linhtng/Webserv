@@ -39,6 +39,7 @@ socklen_t &Client::getAndSetAddrlen(void)
 void Client::createRequest(std::string &request_header)
 {
 	request = new Request(request_header); // Create a Request object with the provided header
+	bytes_to_receive = 0;
 }
 
 void Client::createResponse(void)
@@ -68,12 +69,12 @@ Response *Client::getResponse(void)
 	return response;
 }
 
-int &Client::getBytesToReceive(void)
+size_t &Client::getBytesToReceive(void)
 {
 	return bytes_to_receive;
 }
 
-void Client::setBytesToReceive(int bytes)
+void Client::setBytesToReceive(size_t bytes)
 {
 	bytes_to_receive = bytes;
 }
