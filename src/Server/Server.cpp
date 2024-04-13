@@ -228,8 +228,16 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 					return (request_status);
 			}
 
-			if (str.find("\r\n") != std::string::npos)
+			if (str.find("\r") != std::string::npos)
 			{
+				if (str.find("\n") == std::string::npos)
+				{
+						if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+							str.append(buf, bytes);
+						else
+							break;
+				}
+
 				if (!std::regex_match(str, std::regex(".*\\r\\n$")))
 					return (MALFORMED_REQUEST);
 
@@ -242,22 +250,6 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 				return (BODY_IN_CHUNK);
 			}
 
-			if (str.find("\r") != std::string::npos)
-			{
-				if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
-					str.append(buf, bytes);
-
-				if (!std::regex_match(str, std::regex(".*\\r\\n$")))
-					return (MALFORMED_REQUEST);
-
-				if (str.length() > clients[client_fd].getBytesToReceive())
-					return (MALFORMED_REQUEST);
-
-				str.erase(str.end() - 2, str.end());
-				appendToBodyString(str, request);
-
-				return (BODY_IN_CHUNK);		
-			}
 			if (str.length() > clients[client_fd].getBytesToReceive())
 				return (MALFORMED_REQUEST);	
 			appendToBodyString(str, request);
