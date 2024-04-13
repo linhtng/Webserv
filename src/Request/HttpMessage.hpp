@@ -13,15 +13,23 @@ protected:
 	int _httpVersionMajor;
 	size_t _contentLength;
 	std::vector<std::byte> _body;
+	ConnectionValue _connection;
 
 	HttpStatusCode _statusCode;
 	bool _chunked;
 
-	HttpMessage(HttpMethod method, int httpVersionMajor, size_t contentLength, HttpStatusCode statusCode, bool chunked) : _method(method), _httpVersionMajor(httpVersionMajor), _contentLength(contentLength), _statusCode(statusCode), _chunked(chunked){};
+	HttpMessage()
+		: _method(HttpMethod::UNDEFINED),
+		  _httpVersionMajor(1),
+		  _contentLength(0),
+		  _statusCode(HttpStatusCode::UNDEFINED),
+		  _chunked(false),
+		  _connection(KEEP_ALIVE){};
 
 public:
 	std::vector<std::byte> getBody() const;
 	HttpStatusCode getStatusCode() const;
+	ConnectionValue getConnection() const;
 	size_t getContentLength() const;
 };
 

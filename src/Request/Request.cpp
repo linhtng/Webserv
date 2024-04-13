@@ -27,6 +27,27 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 
 // UTILITIES
 
+std::vector<std::string> splitByDelimiter(const std::string &input, const std::string &delimiter)
+{
+	std::vector<std::string> result;
+	size_t pos = 0;
+	size_t prev = 0;
+	while ((pos = input.find(delimiter, prev)) != std::string::npos)
+	{
+		if (pos > prev)
+		{
+			result.push_back(input.substr(prev, pos - prev));
+		}
+		prev = pos + delimiter.length(); // Move past delimiter
+	}
+	// Add the last substring if it exists
+	if (prev < input.length())
+	{
+		result.push_back(input.substr(prev, std::string::npos));
+	}
+	return result;
+}
+
 std::vector<std::string> splitByCRLF(const std::string &input)
 {
 	std::vector<std::string> result;
@@ -39,6 +60,27 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 			result.push_back(input.substr(prev, pos - prev));
 		}
 		prev = pos + 2; // Move past CRLF
+	}
+	// Add the last substring if it exists
+	if (prev < input.length())
+	{
+		result.push_back(input.substr(prev, std::string::npos));
+	}
+	return result;
+}
+
+std::vector<std::string> splitCommaSeparatedList(const std::string &input)
+{
+	std::vector<std::string> result;
+	size_t pos = 0;
+	size_t prev = 0;
+	while ((pos = input.find(",", prev)) != std::string::npos)
+	{
+		if (pos > prev)
+		{
+			result.push_back(input.substr(prev, pos - prev));
+		}
+		prev = pos + 1; // Move past comma
 	}
 	// Add the last substring if it exists
 	if (prev < input.length())
@@ -214,6 +256,39 @@ void Request::parseContentLength()
 	}
 }
 
+void Request::parseTransferEncoding()
+{
+
+	/*
+	chunking an already chunked message is not allowed
+	If any transfer coding other than chunked is applied to a request's content, the sender MUST apply chunked as the final transfer coding to ensure that the message is properly framed.
+	If any transfer coding other than chunked is applied to a response's content, the sender MUST either apply chunked as the final transfer coding or terminate the message by closing the connection.
+	 */
+
+	auto it = this->_headerLines.find("transfer-encoding");
+	if (it == this->_headerLines.end())
+	{
+		return;
+	}
+	// protection from request smuggling
+	if (this->_headerLines.find("content-length") != this->_headerLines.end())
+	{
+		throw BadRequestException();
+	}
+	std::string transferEncodingValue = it->second;
+	std::transform(transferEncodingValue.begin(), transferEncodingValue.end(), transferEncodingValue.begin(), ::tolower);
+	if (transferEncodingValue == "chunked")
+	{
+		this->_chunked = true;
+	}
+	else
+	{
+		// should I check for valid values and throw 400 if there's some invalid bs? or is this enough
+		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
+		throw BadRequestException();
+	}
+}
+
 void Request::parseUserAgent()
 {
 	auto it = this->_headerLines.find("user-agent");
@@ -221,9 +296,34 @@ void Request::parseUserAgent()
 	{
 		return;
 	}
-
-	// TODO: regex stuff
+	std::regex userAgentRegex(USER_AGENT_REGEX);
+	if (!std::regex_match(it->second, userAgentRegex))
+	{
+		throw BadRequestException();
+	}
+	this->_userAgent = it->second;
 }
+
+void Request::parseConnection()
+{
+	auto it = this->_headerLines.find("connection");
+	if (it == this->_headerLines.end())
+	{
+		return;
+	}
+	std::string connectionValue = it->second;
+	std::transform(connectionValue.begin(), connectionValue.end(), connectionValue.begin(), ::tolower);
+	if (connectionValue == "close")
+	{
+		this->_connection = ConnectionValue::CLOSE;
+	}
+	else if (connectionValue != "keep-alive")
+	{
+		throw BadRequestException();
+	}
+}
+
+// HEADERS GENERAL
 
 void Request::parseHeaders()
 {
@@ -272,7 +372,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 }
 
 Request::Request(const std::string &requestLineAndHeaders)
-	: HttpMessage(HttpMethod::UNDEFINED, 0, 0, HttpStatusCode::UNDEFINED, false),
+	: HttpMessage(),
 	  _status(RequestStatus::SUCCESS),
 	  _bodyExpected(false)
 {

@@ -14,3 +14,8 @@ size_t HttpMessage::getContentLength() const
 {
 	return this->_contentLength;
 }
+
+ConnectionValue HttpMessage::getConnection() const
+{
+	return this->_connection;
+}
