@@ -1,5 +1,7 @@
 #include "Request.hpp"
 
+// GETTERS
+
 RequestStatus Request::getStatus() const
 {
 	return this->_status;
@@ -16,10 +18,14 @@ bool Request::bodyExpected() const
 	return false;
 }
 
+// MODIFIERS
+
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
 }
+
+// UTILITIES
 
 std::vector<std::string> splitByCRLF(const std::string &input)
 {
@@ -42,6 +48,69 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 	return result;
 }
 
+bool Request::isDigitsOnly(const std::string &str) const
+{
+	return std::all_of(
+		str.begin(), str.end(), [](unsigned char c)
+		{ return std::isdigit(c); });
+}
+
+std::string Request::removeComments(const std::string &input) const
+{
+	std::string res;
+	std::string currentSegment;
+	int commentLevel = 0;
+
+	for (char c : input)
+	{
+		if (c == '(')
+		{
+			commentLevel++;
+			res += currentSegment;
+			currentSegment.clear();
+		}
+		else if (c == ')')
+		{
+			if (commentLevel == 0)
+			{
+				throw BadRequestException();
+			}
+			commentLevel--;
+		}
+		else if (commentLevel == 0)
+		{
+			currentSegment += c;
+		}
+	}
+	return res;
+}
+
+size_t Request::strToSizeT(const std::string &str) const
+{
+	if (str.empty() || !isDigitsOnly(str))
+	{
+		throw BadRequestException();
+	}
+	try
+	{
+		unsigned long long value = std::stoull(str);
+		if (value > std::numeric_limits<size_t>::max())
+		{
+			throw BadRequestException();
+		}
+		return static_cast<size_t>(value);
+	}
+	// ull overflow
+	catch (const std::exception &e)
+	{
+		throw BadRequestException();
+	}
+}
+
+// PARSING
+
+// REQUEST LINE
+
 void Request::extractRequestLine(const std::string &requestLine)
 {
 	std::regex requestLineRegex(REQUEST_LINE_REGEX);
@@ -51,7 +120,6 @@ void Request::extractRequestLine(const std::string &requestLine)
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
-		this->_status = RequestStatus::SUCCESS;
 	}
 	else
 	{
@@ -72,7 +140,6 @@ void Request::validateMethod()
 
 HttpMethod Request::matchValidMethod()
 {
-	// is method case-sensitive? TODO: check RFC
 	std::unordered_map<std::string, HttpMethod> methodMap = {
 		{"GET", HttpMethod::GET},
 		{"HEAD", HttpMethod::HEAD},
@@ -112,33 +179,12 @@ int Request::parseVersion()
 
 void Request::parseRequestLine()
 {
-	// METHOD validation
-
 	this->_method = parseMethod();
-
-	// TARGET validation - is any needed?
 	this->_target = this->_requestLine.requestTarget;
-
-	// HTTP VERSION validation
 	this->_httpVersionMajor = parseVersion();
 }
 
-void Request::extractHeaderLine(const std::string &headerLine)
-{
-	std::string forbiddenChars = CR LF NUL;
-	std::regex headerLineRegex("^([^" + forbiddenChars + "]+):" SP "([^" + forbiddenChars + "]+)$");
-	std::smatch match;
-	if (std::regex_match(headerLine, match, headerLineRegex))
-	{
-		std::string fieldName = match[1];
-		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
-		this->_headerLines[fieldName] = match[2];
-	}
-	else
-	{
-		throw BadRequestException();
-	}
-}
+// HEADERS
 
 void Request::parseHost()
 {
@@ -148,69 +194,9 @@ void Request::parseHost()
 	}
 }
 
-bool Request::isDigitsOnly(const std::string &str) const
-{
-	return std::all_of(
-		str.begin(), str.end(), [](unsigned char c)
-		{ return std::isdigit(c); });
-}
-
-std::string Request::removeComments(const std::string &input) const
-{
-	std::string res;
-	std::string currentSegment;
-	int commentLevel = 0;
-
-	for (char c : input)
-	{
-		if (c == '(')
-		{
-			commentLevel++;
-			res += currentSegment;
-			currentSegment.clear();
-		}
-		else if (c == ')')
-		{
-			if (commentLevel == 0)
-			{
-				throw BadRequestException();
-			}
-			commentLevel--;
-		}
-		else if (commentLevel == 0)
-		{
-			currentSegment += c;
-		}
-	}
-
-	return res;
-}
-
-size_t Request::strToSizeT(const std::string &str) const
-{
-	if (str.empty() || !isDigitsOnly(str))
-	{
-		throw BadRequestException();
-	}
-	try
-	{
-		unsigned long long value = std::stoull(str);
-		if (value > std::numeric_limits<size_t>::max())
-		{
-			throw BadRequestException();
-		}
-		return static_cast<size_t>(value);
-	}
-	// ull overflow
-	catch (const std::exception &e)
-	{
-		throw BadRequestException();
-	}
-}
-
 void Request::parseContentLength()
 {
-	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("content-length");
+	auto it = this->_headerLines.find("content-length");
 	if (it == this->_headerLines.end())
 	{
 		return;
@@ -230,7 +216,7 @@ void Request::parseContentLength()
 
 void Request::parseUserAgent()
 {
-	std::unordered_map<std::string, std::string>::iterator it = this->_headerLines.find("user-agent");
+	auto it = this->_headerLines.find("user-agent");
 	if (it == this->_headerLines.end())
 	{
 		return;
@@ -248,6 +234,25 @@ void Request::parseHeaders()
 	parseConnection();
 }
 
+void Request::extractHeaderLine(const std::string &headerLine)
+{
+	std::string forbiddenChars = CR LF NUL;
+	std::regex headerLineRegex("^([^" + forbiddenChars + "]+):" SP "([^" + forbiddenChars + "]+)$");
+	std::smatch match;
+	if (std::regex_match(headerLine, match, headerLineRegex))
+	{
+		std::string fieldName = match[1];
+		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
+		this->_headerLines[fieldName] = match[2];
+	}
+	else
+	{
+		throw BadRequestException();
+	}
+}
+
+// GENERAL
+
 void Request::processRequest(const std::string &requestLineAndHeaders)
 {
 	if (requestLineAndHeaders.empty())
@@ -255,9 +260,10 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 		throw BadRequestException();
 	}
 	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
-	// maybe rather than keeping RequestLine _requestLine in a class, just make it local to here
+	// handle request line
 	extractRequestLine(split[0]);
 	parseRequestLine();
+	// handle headers
 	for (size_t i = 1; i < split.size(); ++i)
 	{
 		extractHeaderLine(split[i]);
