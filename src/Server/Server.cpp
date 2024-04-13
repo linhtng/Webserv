@@ -119,6 +119,12 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (READY_TO_WRITE);
 		}
 
+		/*
+		------------------------------------------------------------------
+			Logger - print out the request header and from which client
+		------------------------------------------------------------------
+		*/
+
 		std::cout << "request_header: " << request_header << std::endl;
 
 		clients[client_fd].createRequest(request_header); // create request object
@@ -314,13 +320,10 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	full_response.insert(full_response.end(), body.begin(), body.end());
 	//--------------------------------------------------------------
 
-	//--------------------------------------------------------------
-	// for printing
 	std::cout << "full response: ";
 	for (auto &ch : full_response)
 		std::cout << static_cast<char>(ch);
 	std::cout << std::endl;
-	//--------------------------------------------------------------
 
 	ssize_t bytes;
 	size_t response_len = full_response.size();
@@ -334,6 +337,13 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// return (CLOSE_CONNECTION);
 	if (bytes_sent >= response_len || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
 	{
+
+		/*
+		------------------------------------------------------------------
+			Logger - print out the response and to which client
+		------------------------------------------------------------------
+		*/
+
 		clients[client_fd].removeRequest();
 		clients[client_fd].removeResponse();
 		std::cout << "Response sent from server" << std::endl;

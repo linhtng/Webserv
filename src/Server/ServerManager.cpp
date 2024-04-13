@@ -59,12 +59,26 @@ int ServerManager::runServer()
 		createServers();
 		startServerLoop();
 		handleServerError(503);
+		
+		/*
+		------------------------------------------------------------------
+			Logger - print out server shutting down
+		------------------------------------------------------------------
+		*/
+
 		std::cout << "server shutting down..." << std::endl;
 		return EXIT_SUCCESS;
 	}
 	catch (std::exception &e)
 	{
 		handleServerError(500);
+
+		/*
+		------------------------------------------------------------------
+			Logger - print out internal server error and the reasons
+		------------------------------------------------------------------
+		*/
+
 		std::cout << "internal server error" << std::endl;
 		std::cout << e.what() << std::endl;
 		return EXIT_FAILURE;
@@ -77,6 +91,13 @@ void ServerManager::createServers()
 	{
 		Server server(config);
 		server.setUpServerSocket();							  // set up each server socket
+
+		/*
+		------------------------------------------------------------------
+			Logger - print out the host and port of each server
+		------------------------------------------------------------------
+		*/
+
 		servers[server.getServerFd()] = std::move(server);	  // insert server
 		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
@@ -134,8 +155,14 @@ void ServerManager::handlePoll()
 				handleReadyToWrite(it);
 				handleClientDisconnection(it);
 			}
-
 		}
+
+		/*
+		------------------------------------------------------------------
+			Logger - print out poll time out
+		------------------------------------------------------------------
+		*/
+
 		std::cout << "poll time out" << std::endl;
 	}
 }
@@ -189,6 +216,12 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	close(client_fd);
 	client_to_server_map.erase(client_fd);
 	it = pollfds.erase(it);
+
+	/*
+	------------------------------------------------------------------
+		Logger - print out the address of client that has disconnected
+	------------------------------------------------------------------
+	*/
 }
 
 void ServerManager::handleServerError(const int &status_code)
