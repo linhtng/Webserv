@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -20,13 +21,13 @@ class ConfigParser
 {
 public:
     ConfigParser(std::string &fileName);
-    ConfigParser(const ConfigParser &other);
-    ConfigParser &operator=(const ConfigParser &other);
     ~ConfigParser();
 
     bool isValidFile(const std::string &filename);
     void readConfigFile(const std::string &fileName);
     void extractServerConfigs();
+    void printCluster();
+    std::vector<ConfigData> getServerConfigs();
 
 private:
     std::string fileContent;

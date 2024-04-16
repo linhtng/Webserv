@@ -1,18 +1,14 @@
 #include "Server.hpp"
+#include "../config_parser/ConfigParser.hpp"
 #include <cstring>
 
 Server::Server() : server_fd(0)
 {
 }
 
-Server::Server(configData_t &config)
+Server::Server(ConfigData &config)
 	: server_fd(0), config(config)
 {
-}
-
-Server::Server(Server const &src)
-{
-	*this = src;
 }
 
 Server &Server::operator=(Server const &rhs)
@@ -47,10 +43,15 @@ void Server::setUpServerSocket()
 		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 			throw SocketSetNonBlockingException();
 		address.sin_family = AF_INET;
-		address.sin_port = htons(config.serverPort);
-		address.sin_addr.s_addr = inet_addr(config.serverHost.c_str());
+		std::cout << "server port: " << config.getServerPort() << std::endl;
+		address.sin_port = htons(config.getServerPort());
+		std::cout << "server host: " << config.getServerHost() << std::endl;
+		address.sin_addr.s_addr = inet_addr(config.getServerHost().c_str());
 		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
+		{
+			std::cerr << "bind failed: " << strerror(errno) << std::endl;
 			throw SocketBindingException();
+		}
 		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
 			throw SocketListenException();
 	}
@@ -114,7 +115,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		else if (request_header_status == HEADER_NO_DELIMITER)
 		{
 			clients[client_fd].createRequest(request_header);
-			clients[client_fd].createResponse();	  // create response object
+			clients[client_fd].createResponse();						// create response object
 			std::cout << "no delimiter in request header" << std::endl; // TODO - set the response with error code
 			return (READY_TO_WRITE);
 		}
@@ -130,25 +131,25 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		clients[client_fd].createRequest(request_header); // create request object
 		request = clients[client_fd].getRequest();
 
-		if (request->bodyExpected() && request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+		if (request->bodyExpected() && request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 		{
 			appendToBodyString(request_body_buf, *request);
 			if (request_body_buf.size() > request->getContentLength())
 			{
-				clients[client_fd].createResponse();	  // create response object
+				clients[client_fd].createResponse(); // create response object
 				std::cout << "body size is larger than content-length" << std::endl;
 				return (READY_TO_WRITE);
 			}
 			clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
 		}
-		else if (!request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+		else if (!request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 			return (BODY_IN_CHUNK);
 	}
 
-	if (request->bodyExpected()) 
+	if (request->bodyExpected())
 	{
 		RequestStatus request_body_status;
-		if (request->getContentLength()) //TODO - check the function for checking 'if the request has content length'
+		if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 			request_body_status = formRequestBodyWithContentLength(client_fd, *request);
 		else
 			request_body_status = formRequestBodyWithChunk(client_fd, *request);
@@ -156,7 +157,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (request_body_status);
 		if (request_body_status == MALFORMED_REQUEST)
 		{
-			clients[client_fd].createResponse();	  // create response object
+			clients[client_fd].createResponse(); // create response object
 			std::cout << "body size is larger than content-length" << std::endl;
 			return (READY_TO_WRITE);
 		}
@@ -226,46 +227,46 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-			std::string str(buf, buf + bytes);
-			if (!clients[client_fd].getBytesToReceive()) //if not yet parse the number of bytes for each chunk
+		std::string str(buf, buf + bytes);
+		if (!clients[client_fd].getBytesToReceive()) // if not yet parse the number of bytes for each chunk
+		{
+			RequestStatus request_status = extractByteNumberFromChunk(str, client_fd);
+			if (request_status == READY_TO_WRITE || request_status == MALFORMED_REQUEST)
+				return (request_status);
+		}
+
+		if (str.find("\r") != std::string::npos)
+		{
+			if (str.find("\n") == std::string::npos)
 			{
-				RequestStatus request_status = extractByteNumberFromChunk(str, client_fd);
-				if (request_status == READY_TO_WRITE || request_status == MALFORMED_REQUEST)
-					return (request_status);
+				if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+					str.append(buf, bytes);
+				else
+					break;
 			}
 
-			if (str.find("\r") != std::string::npos)
-			{
-				if (str.find("\n") == std::string::npos)
-				{
-						if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
-							str.append(buf, bytes);
-						else
-							break;
-				}
-
-				if (!std::regex_match(str, std::regex(".*\\r\\n$")))
-					return (MALFORMED_REQUEST);
-
-				if (str.length() > clients[client_fd].getBytesToReceive())
-					return (MALFORMED_REQUEST);
-
-				str.erase(str.end() - 2, str.end());
-				appendToBodyString(str, request);
-
-				return (BODY_IN_CHUNK);
-			}
+			if (!std::regex_match(str, std::regex(".*\\r\\n$")))
+				return (MALFORMED_REQUEST);
 
 			if (str.length() > clients[client_fd].getBytesToReceive())
-				return (MALFORMED_REQUEST);	
+				return (MALFORMED_REQUEST);
+
+			str.erase(str.end() - 2, str.end());
 			appendToBodyString(str, request);
-			clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - str.length());
+
+			return (BODY_IN_CHUNK);
+		}
+
+		if (str.length() > clients[client_fd].getBytesToReceive())
+			return (MALFORMED_REQUEST);
+		appendToBodyString(str, request);
+		clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - str.length());
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else if (errno == EINTR) // interrupted by a signal
 		return (REQUEST_INTERRUPTED);
-	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) //no delimiter
+	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) // no delimiter
 		return (MALFORMED_REQUEST);
 	throw RecvException();
 }
@@ -274,9 +275,7 @@ Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int c
 {
 	if (str == "0\r\n\r\n")
 		return (READY_TO_WRITE);
-	else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*$")) 
-		|| std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r\\n$"))
-		|| std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r$")))
+	else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*$")) || std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r\\n$")) || std::regex_match(str, std::regex("^([0-9A-Fa-f]+)\\r\\n.*\\r$")))
 	{
 		size_t number_pos = str.find("\r\n");
 		clients[client_fd].setBytesToReceive(std::stoi(str.substr(0, number_pos), nullptr, 16) + 2);
@@ -291,18 +290,18 @@ Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int c
 // TODO - move to request class
 void Server::appendToBodyString(std::string &str, Request &request)
 {
-		std::vector<std::byte> new_body_chunk;
-		for (std::string::iterator it = str.begin(); it != str.end(); ++it)
-				new_body_chunk.push_back(static_cast<std::byte>(*it));
-		request.appendToBody(new_body_chunk);
+	std::vector<std::byte> new_body_chunk;
+	for (std::string::iterator it = str.begin(); it != str.end(); ++it)
+		new_body_chunk.push_back(static_cast<std::byte>(*it));
+	request.appendToBody(new_body_chunk);
 }
 
 void Server::appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request)
 {
-		std::vector<std::byte> new_body_chunk;
-		for (size_t i = 0; i < bytes; ++i)
-			new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
-		request.appendToBody(new_body_chunk);
+	std::vector<std::byte> new_body_chunk;
+	for (size_t i = 0; i < bytes; ++i)
+		new_body_chunk.push_back(static_cast<std::byte>(buf[i]));
+	request.appendToBody(new_body_chunk);
 }
 //--------------------------------------------------------------
 
@@ -365,7 +364,6 @@ Client &Server::getClient(int const &client_fd)
 {
 	return clients[client_fd];
 }
-
 
 void Server::removeClient(int const &client_fd)
 {

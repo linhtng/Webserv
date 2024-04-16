@@ -1,15 +1,33 @@
 #include "ConfigData.hpp"
 
+ConfigData::ConfigData() {}
+
 ConfigData::ConfigData(std::string &input)
 {
     serverBlock = input;
+}
+
+ConfigData &ConfigData::operator=(const ConfigData &rhs)
+{
+    if (this != &rhs)
+    {
+        serverBlock = rhs.serverBlock;
+        serverPort = rhs.serverPort;
+        serverHost = rhs.serverHost;
+        serverName = rhs.serverName;
+        defaultErrorPages = rhs.defaultErrorPages;
+        maxClientBodySize = rhs.maxClientBodySize;
+        locationBlocks = rhs.locationBlocks;
+        locations = rhs.locations;
+    }
+    return *this;
 }
 
 ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
 {
-    extractServerPorts();
+    extractServerPort();
     extractServerName();
     extractServerHost();
     extractDefaultErrorPages();
@@ -43,8 +61,7 @@ void printVector(const std::vector<T> &vec)
 void ConfigData::printConfigData()
 {
     std::cout << "Server name: " << serverName << std::endl;
-    std::cout << "Server port: ";
-    printVector(serverPorts);
+    std::cout << "Server port: " << serverPort << std::endl;
     std::cout << "Server host: " << serverHost << std::endl;
     std::cout << "Error pages: ";
     print(defaultErrorPages);
@@ -56,6 +73,11 @@ void ConfigData::printConfigData()
     {
         location.second.printLocationData();
     }
+}
+
+std::string ConfigData::getServerHost() const
+{
+    return serverHost;
 }
 
 std::string ConfigData::extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey)
@@ -95,55 +117,40 @@ bool ConfigData::validPortString(std::string &portStr)
 {
     if (!std::all_of(portStr.begin(), portStr.end(), ::isdigit))
         return false;
-    int errorCode = 0;
+    int portNumber = 0;
     try
     {
-        errorCode = std::stoi(portStr);
+        portNumber = std::stoi(portStr);
     }
     catch (const std::out_of_range &)
     {
         throw std::runtime_error("Port out of range: " + portStr);
     }
-    if (errorCode < MIN_PORT || errorCode > MAX_PORT)
+    if (portNumber < MIN_PORT || portNumber > MAX_PORT)
     {
         throw std::runtime_error("Port out of range: " + portStr);
     }
     return true;
 }
 
-void ConfigData::extractServerPorts()
+void ConfigData::extractServerPort()
 {
-    std::istringstream stream(serverBlock);
-    std::string line;
-    while (std::getline(stream, line))
+    std::string serverPortStr = extractDirectiveValue(serverBlock, DirectiveKeys::PORT);
+    if (serverPortStr.empty())
     {
-        std::regex listenRegex("^\\s*listen");
-        if (std::regex_search(line, listenRegex))
-        {
-            std::regex serverPortRegex("listen\\s+(\\S+)\\;");
-            std::smatch match;
-            if (std::regex_search(line, match, serverPortRegex))
-            {
-                std::string portString(match[1]);
-                if (portString.empty() || !validPortString(portString))
-                {
-                    throw std::invalid_argument("Invalid listen directive in server block " + line);
-                }
-                int portNumber = std::stoi(portString);
-                if (std::find(serverPorts.begin(), serverPorts.end(), portNumber) != serverPorts.end())
-                {
-                    throw std::invalid_argument("Duplicate port number: " + portString);
-                }
-                serverPorts.push_back(portNumber);
-            }
-            else
-                throw std::invalid_argument("Invalid listen directive in server block " + line);
-        }
+        serverPort = DefaultValues::PORT;
+        return;
     }
-    if (serverPorts.empty())
+    if (!validPortString(serverPortStr))
     {
-        serverPorts.push_back(DefaultValues::PORT);
+        throw std::runtime_error("Invalid port number: " + serverPortStr);
     }
+    serverPort = std::stoi(serverPortStr);
+}
+
+int ConfigData::getServerPort() const
+{
+    return serverPort;
 }
 
 /* Handling error:
@@ -333,11 +340,6 @@ void ConfigData::splitLocationBlocks()
             }
         }
     }
-}
-
-std::vector<int> ConfigData::getServerPorts() const
-{
-    return serverPorts;
 }
 
 std::string ConfigData::getServerName() const

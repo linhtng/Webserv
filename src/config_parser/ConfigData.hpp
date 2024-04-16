@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -44,17 +45,22 @@ namespace DefaultValues
 class ConfigData
 {
 public:
+    ConfigData();
     ConfigData(std::string &input);
+    ConfigData &operator=(const ConfigData &rhs);
     ~ConfigData();
 
     void analyzeConfigData();
     void printConfigData();
-    std::vector<int> getServerPorts() const;
+    // std::vector<int> getServerPorts() const;
+    int getServerPort() const;
     std::string getServerName() const;
+    std::string getServerHost() const;
 
 private:
     std::string serverBlock;
-    std::vector<int> serverPorts;
+    // std::vector<int> serverPorts;
+    int serverPort;
     std::string serverHost;
     std::string serverName;
     std::unordered_map<int, std::string> defaultErrorPages;
@@ -64,7 +70,8 @@ private:
     std::map<std::string, Location> locations;
 
     std::string extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey);
-    void extractServerPorts();
+    // void extractServerPorts();
+    void extractServerPort();
     bool validPortString(std::string &errorCodeStr);
     void extractServerName();
     void extractServerHost();

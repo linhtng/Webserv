@@ -5,17 +5,6 @@ ConfigParser::ConfigParser(std::string &fileName) : serverCount(0)
     this->readConfigFile(fileName);
 }
 
-ConfigParser::ConfigParser(const ConfigParser &other) : serverCount(other.serverCount) {}
-
-ConfigParser &ConfigParser::operator=(const ConfigParser &other)
-{
-    if (this != &other)
-    {
-        serverCount = other.serverCount;
-    }
-    return *this;
-}
-
 ConfigParser::~ConfigParser() {}
 
 bool ConfigParser::isValidFile(const std::string &filename)
@@ -60,7 +49,7 @@ void ConfigParser::extractServerConfigs()
     std::unordered_set<std::string> serverCombinations;
     for (const auto &server : servers)
     {
-        for (const auto &portNumber : server.getServerPorts())
+        int portNumber = server.getServerPort();
         {
             std::string combination = server.getServerName() + ":" + std::to_string(portNumber);
             if (!serverCombinations.insert(combination).second)
@@ -69,6 +58,10 @@ void ConfigParser::extractServerConfigs()
             }
         }
     }
+}
+
+void ConfigParser::printCluster()
+{
     int i = 0;
     for (auto &server : servers)
     {
@@ -76,6 +69,11 @@ void ConfigParser::extractServerConfigs()
         server.printConfigData();
         std::cout << "//////////////////////" << std::endl;
     }
+}
+
+std::vector<ConfigData> ConfigParser::getServerConfigs()
+{
+    return servers;
 }
 
 std::string ConfigParser::removeComments(std::string &fullFileContent)

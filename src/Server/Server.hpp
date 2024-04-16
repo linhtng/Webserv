@@ -19,6 +19,7 @@
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
+#include "../config_parser/ConfigParser.hpp"
 
 class Server
 {
@@ -54,7 +55,8 @@ public:
 
 private:
 	int server_fd;
-	configData_t config;
+	// configData_t config;
+	ConfigData config;
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
@@ -62,14 +64,13 @@ private:
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
 	RequestStatus extractByteNumberFromChunk(std::string &str, int const &client_fd);
-	void appendToBodyString(std::string &str, Request &request); //TODO - move to request class
-	void appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request); //TODO - move to request class
+	void appendToBodyString(std::string &str, Request &request);					// TODO - move to request class
+	void appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request); // TODO - move to request class
 
 public:
 	Server();
-	Server(configData_t &config);
+	Server(ConfigData &config);
 	~Server();
-	Server(Server const &src);
 	Server &operator=(Server const &rhs);
 
 	void setUpServerSocket();

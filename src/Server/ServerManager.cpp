@@ -17,7 +17,7 @@ ServerManager &ServerManager::operator=(ServerManager const &rhs)
 {
 	if (this != &rhs)
 	{
-		configs = rhs.configs;
+		serverConfigs = rhs.serverConfigs;
 		servers = rhs.servers;
 		pollfds = rhs.pollfds;
 	}
@@ -35,6 +35,11 @@ void signalHandler(int signum)
 	shutdown_flag = 1;
 }
 
+void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
+{
+	serverConfigs = sparsedConfigs;
+}
+
 // run the server
 int ServerManager::runServer()
 {
@@ -42,13 +47,13 @@ int ServerManager::runServer()
 	//--------------------------------------------------------------
 	// TODO - create Config object and to be replaced by config file
 
-	Server::configData_t config;
-	config.serverPort = 8080;
-	config.serverHost = "127.0.0.1";
-	configs.push_back(config);
-	config.serverPort = 8081;
-	config.serverHost = "127.0.0.1";
-	configs.push_back(config);
+	// Server::configData_t config;
+	// config.serverPort = 8080;
+	// config.serverHost = "127.0.0.1";
+	// configs.push_back(config);
+	// config.serverPort = 8081;
+	// config.serverHost = "127.0.0.1";
+	// configs.push_back(config);
 
 	//-------------------------------------------------------------
 
@@ -59,7 +64,7 @@ int ServerManager::runServer()
 		createServers();
 		startServerLoop();
 		handleServerError(503);
-		
+
 		/*
 		------------------------------------------------------------------
 			Logger - print out server shutting down
@@ -87,10 +92,10 @@ int ServerManager::runServer()
 
 void ServerManager::createServers()
 {
-	for (Server::configData_t &config : configs)
+	for (ConfigData &config : serverConfigs)
 	{
 		Server server(config);
-		server.setUpServerSocket();							  // set up each server socket
+		server.setUpServerSocket(); // set up each server socket
 
 		/*
 		------------------------------------------------------------------

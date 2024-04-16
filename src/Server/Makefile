@@ -5,7 +5,11 @@ SRCS = main.cpp \
 		ServerManager.cpp \
 		Client.cpp \
 		../Request/Request.cpp \
-		../Response/Response.cpp
+		../Response/Response.cpp \
+		../config_parser/ConfigParser.cpp \
+		../config_parser/ConfigData.cpp \
+		../config_parser/Location.cpp \
+		
 
 CC = c++
 
