@@ -4,30 +4,6 @@
 
 volatile sig_atomic_t shutdown_flag = 0; // flag for shutting down the server
 
-ServerManager::ServerManager()
-{
-}
-
-ServerManager::ServerManager(ServerManager const &src)
-{
-	*this = src;
-}
-
-ServerManager &ServerManager::operator=(ServerManager const &rhs)
-{
-	if (this != &rhs)
-	{
-		configs = rhs.configs;
-		servers = rhs.servers;
-		pollfds = rhs.pollfds;
-	}
-	return *this;
-}
-
-ServerManager::~ServerManager()
-{
-}
-
 // signal handler for shutting down the server
 void signalHandler(int signum)
 {
@@ -58,7 +34,7 @@ int ServerManager::runServer()
 	{
 		createServers();
 		startServerLoop();
-		handleServerError(503);
+		CleanUpForServerShutdown(503);
 		
 		/*
 		------------------------------------------------------------------
@@ -71,7 +47,7 @@ int ServerManager::runServer()
 	}
 	catch (std::exception &e)
 	{
-		handleServerError(500);
+		CleanUpForServerShutdown(500);
 
 		/*
 		------------------------------------------------------------------
@@ -98,7 +74,7 @@ void ServerManager::createServers()
 		------------------------------------------------------------------
 		*/
 
-		servers[server.getServerFd()] = std::move(server);	  // insert server
+		servers[server.getServerFd()] = std::move(server);	  // insert server into map
 		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
 }
@@ -109,11 +85,9 @@ void ServerManager::startServerLoop()
 	while (!shutdown_flag)
 	{
 		handlePoll();
-		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it) // loop through all pollfds to check which events have occurred
+		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end() && !shutdown_flag; ++it) // loop through all pollfds to check which events have occurred
 		{
-			if (shutdown_flag)
-				break;
-			else if (!it->revents)
+			if (!it->revents)
 				continue;
 			else if (it->revents & POLLIN)
 				handleReadyToRead(it);
@@ -149,10 +123,8 @@ void ServerManager::handlePoll()
 		{
 			if (client_to_server_map.find(it->fd) != client_to_server_map.end()) // remove all client fd
 			{
-				int client_fd = it->fd;
-				int server_fd = client_to_server_map[client_fd];
-				servers[server_fd].getClient(client_fd).createResponse(); // TODO - set the response with error code
-				handleReadyToWrite(it);
+				std::string error_response = "poll time out";
+				send(it->fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
 				handleClientDisconnection(it);
 			}
 		}
@@ -172,7 +144,8 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 	if (servers.find(it->fd) != servers.end()) // if the fd is server fd, accept new connection
 	{
 		int server_fd = it->fd;
-		for (const int &client_fd : servers[server_fd].acceptNewConnections())
+		std::vector<int> clients_fds = servers[server_fd].acceptNewConnections();
+		for (const int &client_fd : clients_fds)
 		{
 			pollfds.push_back({client_fd, POLLIN, 0});	 // add the new fd to poll fd
 			client_to_server_map[client_fd] = server_fd; // add client fd to client to server map
@@ -183,13 +156,11 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 		int client_fd = it->fd;
 		int server_fd = client_to_server_map[client_fd];
 		Server::RequestStatus request_status = servers[server_fd].receiveRequest(client_fd);
-		if (request_status == Server::BODY_IN_CHUNK) // if the request body will be sent in chunk
-			*it = {client_fd, POLLIN, 0};
-		else if (request_status == Server::REQUEST_CLIENT_DISCONNECTED) // if connection has been closed by the client
+		if (request_status == Server::REQUEST_CLIENT_DISCONNECTED)
 			handleClientDisconnection(it);
 		else if (request_status == Server::REQUEST_INTERRUPTED)
 			return;
-		else // if the client is ready to write
+		else if (request_status == Server::READY_TO_WRITE)
 			*it = {client_fd, POLLOUT, 0};
 	}
 }
@@ -199,11 +170,11 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 	int client_fd = it->fd;
 	int server_fd = client_to_server_map[client_fd];
 	Server::ResponseStatus response_status = servers[server_fd].sendResponse(client_fd);
-	if (response_status == Server::KEEP_ALIVE) // keep the connection alive by default
+	if (response_status == Server::KEEP_ALIVE)
 		*it = {client_fd, POLLIN, 0};
 	else if (response_status == Server::RESPONSE_INTERRUPTED)
 		return;
-	else // if request header is close connect or client has shutdown
+	else
 		handleClientDisconnection(it);
 }
 
@@ -224,11 +195,12 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	*/
 }
 
-void ServerManager::handleServerError(const int &status_code)
+//if the server shutdown, send error response to all clients and close all clients 
+void ServerManager::CleanUpForServerShutdown(const int &status_code)
 {
 	std::string error_response = "server error with status code " + std::to_string(status_code);
-	for (auto it = client_to_server_map.begin(); it != client_to_server_map.end(); ++it)
-		send(it->first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+	for (auto &client : client_to_server_map)
+		send(client.first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
 	for (const pollfd &fd : pollfds)										 // close all pollfds
 		close(fd.fd);
 }

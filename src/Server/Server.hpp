@@ -19,6 +19,7 @@
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
+#include "../defines.hpp"
 
 class Server
 {
@@ -33,22 +34,21 @@ public:
 	enum RequestStatus
 	{
 		HEADER_DELIMITER_FOUND,
-		HEADER_NO_DELIMITER,
 		REQUEST_CLIENT_DISCONNECTED,
 		BODY_IN_PART,
 		BODY_IN_CHUNK,
 		READY_TO_WRITE,
 		REQUEST_INTERRUPTED,
-		MALFORMED_REQUEST,
-		END_OF_CHUNK,
-		PARSED_CHUNK_BYTE
+		PARSED_CHUNK_BYTE,
+		BAD_REQUEST,
+		BODY_EXPECTED,
+		NO_REQUEST_BODY
 	};
 
 	enum ResponseStatus
 	{
 		RESPONSE_CLIENT_DISCONNECTED,
 		KEEP_ALIVE,
-		CLOSE_CONNECTION,
 		RESPONSE_INTERRUPTED
 	};
 
@@ -58,6 +58,7 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
+	RequestStatus createRequestWithHeader(int const &client_fd);
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
@@ -67,10 +68,7 @@ private:
 
 public:
 	Server();
-	Server(configData_t &config);
-	~Server();
-	Server(Server const &src);
-	Server &operator=(Server const &rhs);
+	Server(configData_t config);
 
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
@@ -78,7 +76,6 @@ public:
 	ResponseStatus sendResponse(int const &client_fd);
 
 	int const &getServerFd(void) const;
-	Client &getClient(int const &client_fd);
 	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception

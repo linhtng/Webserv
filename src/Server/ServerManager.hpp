@@ -35,13 +35,9 @@ private:
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
 	void handleClientDisconnection(std::list<pollfd>::iterator &it);
-	void handleServerError(const int &status_code);
+	void CleanUpForServerShutdown(const int &status_code);
 
 public:
-	ServerManager();
-	ServerManager(ServerManager const &src);
-	ServerManager &operator=(ServerManager const &rhs);
-	~ServerManager();
 
 	int runServer();
 

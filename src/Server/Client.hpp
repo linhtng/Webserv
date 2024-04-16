@@ -17,12 +17,9 @@ private:
 	Request *request;
 	Response *response;
 	size_t bytes_to_receive;
-	std::vector<size_t> chunk_sizes;
 
 public:
 	Client();
-	Client(Client const &src);
-	Client &operator=(Client const &rhs);
 	~Client();
 
 	struct sockaddr_in &getAndSetAddress(void);
@@ -38,8 +35,9 @@ public:
 	Response *getResponse(void);
 	size_t &getBytesToReceive(void);
 
+	bool isNewRequest(void) const;
+
 	void setBytesToReceive(size_t bytes);
-	void addChunkSize(size_t size);
 };
 
 #endif
