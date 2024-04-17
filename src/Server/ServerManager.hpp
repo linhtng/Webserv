@@ -29,7 +29,7 @@ private:
 	std::unordered_map<int, Server> servers;
 	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
-	std::unordered_map<int, std::chrono::steady_clock::time_point> last_active_time;
+	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;
 
 	void createServers();
 	void startServerLoop();
@@ -39,10 +39,9 @@ private:
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
 	void handleClientDisconnection(std::list<pollfd>::iterator &it);
-	void CleanUpForServerShutdown(const int &status_code);
+	void cleanUpForServerShutdown(const int &status_code);
 
 public:
-
 	int runServer();
 
 	class PollException : public std::exception
