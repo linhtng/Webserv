@@ -1,6 +1,4 @@
 #include "ServerManager.hpp"
-#include <cstring>
-#include <algorithm>
 
 volatile sig_atomic_t shutdown_flag = 0; // flag for shutting down the server
 
@@ -89,7 +87,8 @@ void ServerManager::startServerLoop()
 		{
 			if (!it->revents)
 				continue;
-			else if (it->revents & POLLIN)
+
+			if (it->revents & POLLIN)
 				handleReadyToRead(it);
 			else if (it->revents & POLLOUT)
 				handleReadyToWrite(it);
@@ -97,6 +96,9 @@ void ServerManager::startServerLoop()
 				handleClientDisconnection(it);
 			else
 				throw ReventErrorFlagException();
+			
+			if (client_to_server_map.find(it->fd) != client_to_server_map.end())
+				last_active_time[it->fd] = std::chrono::steady_clock::now();
 		}
 	}
 }
@@ -106,7 +108,7 @@ void ServerManager::handlePoll()
 {
 	std::vector<pollfd> pollfds_tmp(pollfds.begin(), pollfds.end()); // create a vector to hold the pollfds temporarily
 
-	int ready = poll(pollfds_tmp.data(), pollfds_tmp.size(), POLL_TIMEOUT); // call poll using the vector's data
+	int ready = poll(pollfds_tmp.data(), pollfds_tmp.size(), TIMEOUT); // call poll using the vector's data
 
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfds_tmp.begin(), pollfds_tmp.end()); // move the contents back from the vector
@@ -118,24 +120,56 @@ void ServerManager::handlePoll()
 		throw PollException();
 	}
 	else if (ready == 0) // timeout occur for all socket
+		handlePollTimeout();
+	else //check timeout for each client socket
+		checkClientTimeout();
+}
+
+//if poll timeout, disconnect all client sockets
+void ServerManager::handlePollTimeout()
+{
+	for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
 	{
-		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
+		if (client_to_server_map.find(it->fd) != client_to_server_map.end()) // remove all client fd
 		{
-			if (client_to_server_map.find(it->fd) != client_to_server_map.end()) // remove all client fd
+			std::string error_response = "poll timeout";
+			send(it->fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+			handleClientDisconnection(it);
+		}
+	}
+
+	/*
+	------------------------------------------------------------------
+		Logger - print out poll time out
+	------------------------------------------------------------------
+	*/
+
+	std::cout << "poll time out" << std::endl;
+}
+
+//disconnect client socket if it timeout
+void ServerManager::checkClientTimeout()
+{
+	for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
+	{
+		if (client_to_server_map.find(it->fd) != client_to_server_map.end())
+		{
+			std::chrono::duration<double> elapsed_seconds = std::chrono::steady_clock::now() - last_active_time[it->fd];
+			if (elapsed_seconds.count() > TIMEOUT / 1000)
 			{
-				std::string error_response = "poll time out";
+				std::string error_response = "timeout";
 				send(it->fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
 				handleClientDisconnection(it);
+
+				/*
+				------------------------------------------------------------------
+					Logger - print out which client time out
+				------------------------------------------------------------------
+				*/
+
+				std::cout << "client " << it->fd << " timeout" << std::endl;
 			}
 		}
-
-		/*
-		------------------------------------------------------------------
-			Logger - print out poll time out
-		------------------------------------------------------------------
-		*/
-
-		std::cout << "poll time out" << std::endl;
 	}
 }
 
@@ -149,6 +183,7 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 		{
 			pollfds.push_back({client_fd, POLLIN, 0});	 // add the new fd to poll fd
 			client_to_server_map[client_fd] = server_fd; // add client fd to client to server map
+			last_active_time[client_fd] = std::chrono::steady_clock::now();
 		}
 	}
 	else // if the fd is client fd, parse and build response
@@ -186,7 +221,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	servers[server_fd].removeClient(client_fd);
 	close(client_fd);
 	client_to_server_map.erase(client_fd);
-	it = pollfds.erase(it);
+	pollfds.erase(it);
 
 	/*
 	------------------------------------------------------------------

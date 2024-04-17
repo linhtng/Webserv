@@ -75,7 +75,7 @@ std::vector<int> Server::acceptNewConnections()
 
 Server::RequestStatus Server::receiveRequest(int const &client_fd)
 {
-	RequestStatus request_status;
+	RequestStatus request_status = BODY_EXPECTED;
 
 	if (clients[client_fd].isNewRequest()) //if the request is not created yet, create the request with the request header
 	{
