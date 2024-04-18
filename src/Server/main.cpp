@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 	}
 	catch (std::exception &e)
 	{
-		std::cerr << e.what() << std::endl;
+		std::cerr << RED "[Invalid config file] " << e.what() << RESET << std::endl;
 		return 1;
 	}
 	return server_manager.runServer();

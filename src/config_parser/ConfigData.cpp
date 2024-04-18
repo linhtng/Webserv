@@ -7,22 +7,6 @@ ConfigData::ConfigData(std::string &input)
     serverBlock = input;
 }
 
-ConfigData &ConfigData::operator=(const ConfigData &rhs)
-{
-    if (this != &rhs)
-    {
-        serverBlock = rhs.serverBlock;
-        serverPort = rhs.serverPort;
-        serverHost = rhs.serverHost;
-        serverName = rhs.serverName;
-        defaultErrorPages = rhs.defaultErrorPages;
-        maxClientBodySize = rhs.maxClientBodySize;
-        locationBlocks = rhs.locationBlocks;
-        locations = rhs.locations;
-    }
-    return *this;
-}
-
 ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
