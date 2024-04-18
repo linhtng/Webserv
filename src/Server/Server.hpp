@@ -15,9 +15,11 @@
 #include <sys/socket.h>
 #include <algorithm>
 #include <unistd.h>
+#include <regex>
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
+#include "../config_parser/ConfigParser.hpp"
 
 class Server
 {
@@ -29,37 +31,56 @@ public:
 		std::string serverHost;
 	} configData_t;
 
+	enum RequestStatus
+	{
+		HEADER_DELIMITER_FOUND,
+		HEADER_NO_DELIMITER,
+		REQUEST_CLIENT_DISCONNECTED,
+		BODY_IN_PART,
+		BODY_IN_CHUNK,
+		READY_TO_WRITE,
+		REQUEST_INTERRUPTED,
+		MALFORMED_REQUEST,
+		END_OF_CHUNK,
+		PARSED_CHUNK_BYTE
+	};
+
+	enum ResponseStatus
+	{
+		RESPONSE_CLIENT_DISCONNECTED,
+		KEEP_ALIVE,
+		CLOSE_CONNECTION,
+		RESPONSE_INTERRUPTED
+	};
+
 private:
 	int server_fd;
-	configData_t config;
+	// configData_t config;
+	ConfigData config;
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	Server();
+	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
+	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
+	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
+	RequestStatus extractByteNumberFromChunk(std::string &str, int const &client_fd);
+	void appendToBodyString(std::string &str, Request &request);					// TODO - move to request class
+	void appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request); // TODO - move to request class
 
 public:
-	enum ConnectionStatus
-	{
-		OPEN,
-		CLOSE
-	};
-
-	Server(configData_t &config);
+	Server();
+	Server(ConfigData &config);
 	~Server();
-	Server(Server const &src);
 	Server &operator=(Server const &rhs);
 
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
-	ConnectionStatus receiveRequest(int const &client_fd);
-	ConnectionStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &body_message_buf);
-	ConnectionStatus formRequestBody(int const &client_fd, std::vector<std::byte> &request_body_buf, Request &request);
-	ConnectionStatus sendResponse(int const &client_fd);
-
-	bool isClient(int const &client_fd) const;
+	RequestStatus receiveRequest(int const &client_fd);
+	ResponseStatus sendResponse(int const &client_fd);
 
 	int const &getServerFd(void) const;
-	std::vector<int> getClinetsFd(void) const;
+	Client &getClient(int const &client_fd);
+	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception
 	{

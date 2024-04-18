@@ -2,7 +2,11 @@
 #define CLIENT_HPP
 
 #include <netinet/in.h>
-#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include "../Request/Request.hpp"
+#include "../Response/Response.hpp"
 
 class Client
 {
@@ -10,7 +14,10 @@ class Client
 private:
 	struct sockaddr_in address;
 	socklen_t addrlen;
-	std::string response;
+	Request *request;
+	Response *response;
+	size_t bytes_to_receive;
+	std::vector<size_t> chunk_sizes;
 
 public:
 	Client();
@@ -20,9 +27,19 @@ public:
 
 	struct sockaddr_in &getAndSetAddress(void);
 	socklen_t &getAndSetAddrlen(void);
-	std::string getResponse(void) const;
 
-	void setResponse(std::string new_response);
+	void createRequest(std::string &request_header);
+	void createResponse(void);
+
+	void removeRequest(void);
+	void removeResponse(void);
+
+	Request *getRequest(void);
+	Response *getResponse(void);
+	size_t &getBytesToReceive(void);
+
+	void setBytesToReceive(size_t bytes);
+	void addChunkSize(size_t size);
 };
 
 #endif

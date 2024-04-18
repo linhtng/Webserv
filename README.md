@@ -42,6 +42,7 @@ __HTTP__
 __General__
 - https://github.com/Bima42/webserv
 - https://github.com/Kaydooo/Webserv_42
+- https://stackoverflow.com/questions/10631933/nginx-static-file-serving-confusion-with-root-alias
 
 __CGI__
 - [C++ Web Programming](https://www.tutorialspoint.com/cplusplus/cpp_web_programming.htm)

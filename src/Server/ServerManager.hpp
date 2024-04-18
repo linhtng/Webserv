@@ -11,6 +11,9 @@
 #include <list>
 #include <unistd.h>
 #include "Server.hpp"
+#include "../config_parser/ConfigParser.hpp"
+
+#define POLL_TIMEOUT 100000
 
 typedef typename std::vector<Server::configData_t> config_t;
 
@@ -20,10 +23,12 @@ class ServerManager
 private:
 	//--------------------------------------------------------------
 	// TODO - to be replaced by config file
-	config_t configs;
+	std::vector<ConfigData> serverConfigs;
 	//--------------------------------------------------------------
 
-	std::vector<Server> servers;
+	std::unordered_map<int, Server>
+		servers;
+	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
 
 	void createServers();
@@ -31,6 +36,8 @@ private:
 	void handlePoll();
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
+	void handleClientDisconnection(std::list<pollfd>::iterator &it);
+	void handleServerError(const int &status_code);
 
 public:
 	ServerManager();
@@ -38,6 +45,7 @@ public:
 	ServerManager &operator=(ServerManager const &rhs);
 	~ServerManager();
 
+	void initServer(const std::vector<ConfigData> &parsedConfigs);
 	int runServer();
 
 	class PollException : public std::exception
