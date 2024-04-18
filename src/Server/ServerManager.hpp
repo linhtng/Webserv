@@ -16,19 +16,12 @@
 
 #define TIMEOUT 10000
 
-typedef typename std::vector<Server::configData_t> config_t;
-
 class ServerManager
 {
 
 private:
-	//--------------------------------------------------------------
-	// TODO - to be replaced by config file
 	std::vector<ConfigData> serverConfigs;
-	//--------------------------------------------------------------
-
-	std::unordered_map<int, Server>
-		servers;
+	std::unordered_map<int, Server> servers;
 	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
 	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;
@@ -44,11 +37,6 @@ private:
 	void cleanUpForServerShutdown(const int &status_code);
 
 public:
-	ServerManager();
-	ServerManager(ServerManager const &src);
-	ServerManager &operator=(ServerManager const &rhs);
-	~ServerManager();
-
 	void initServer(const std::vector<ConfigData> &parsedConfigs);
 	int runServer();
 

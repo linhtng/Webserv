@@ -11,10 +11,6 @@ Server::Server(ConfigData &config)
 {
 }
 
-Server::~Server()
-{
-}
-
 // set up server socket
 void Server::setUpServerSocket()
 {
@@ -36,10 +32,7 @@ void Server::setUpServerSocket()
 		std::cout << "server host: " << config.getServerHost() << std::endl;
 		address.sin_addr.s_addr = inet_addr(config.getServerHost().c_str());
 		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
-		{
-			std::cerr << "bind failed: " << strerror(errno) << std::endl;
 			throw SocketBindingException();
-		}
 		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
 			throw SocketListenException();
 	}
