@@ -10,10 +10,11 @@
 #include <iostream>
 #include <list>
 #include <unistd.h>
+#include <chrono>
 #include "Server.hpp"
 #include "../config_parser/ConfigParser.hpp"
 
-#define POLL_TIMEOUT 100000
+#define TIMEOUT 10000
 
 typedef typename std::vector<Server::configData_t> config_t;
 
@@ -30,14 +31,17 @@ private:
 		servers;
 	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
+	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;
 
 	void createServers();
 	void startServerLoop();
 	void handlePoll();
+	void handlePollTimeout();
+	void checkClientTimeout();
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
 	void handleClientDisconnection(std::list<pollfd>::iterator &it);
-	void handleServerError(const int &status_code);
+	void cleanUpForServerShutdown(const int &status_code);
 
 public:
 	ServerManager();

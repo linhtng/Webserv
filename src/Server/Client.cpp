@@ -5,21 +5,6 @@ Client::Client()
 {
 }
 
-Client::Client(Client const &src)
-{
-	*this = src;
-}
-
-Client &Client::operator=(Client const &rhs)
-{
-	if (this != &rhs)
-	{
-		address = rhs.address;
-		addrlen = rhs.addrlen;
-	}
-	return (*this);
-}
-
 Client::~Client()
 {
 	delete request;
@@ -44,19 +29,25 @@ void Client::createRequest(std::string &request_header)
 
 void Client::createResponse(void)
 {
-	response = new Response(*request); // Create a Response object with the corresponding request header
+	response = new Response(*request); // Create a Response object with the corresponding request
 }
 
 void Client::removeRequest(void)
 {
-	delete request;
-	request = NULL;
+	if (request)
+	{
+		delete request;
+		request = NULL;
+	}
 }
 
 void Client::removeResponse(void)
 {
-	delete response;
-	response = NULL;
+	if (response)
+	{
+		delete response;
+		response = NULL;
+	}
 }
 
 Request *Client::getRequest(void)
@@ -74,12 +65,14 @@ size_t &Client::getBytesToReceive(void)
 	return bytes_to_receive;
 }
 
+bool Client::isNewRequest(void) const
+{
+	if (!request)
+		return (true);
+	return (false);
+}
+
 void Client::setBytesToReceive(size_t bytes)
 {
 	bytes_to_receive = bytes;
-}
-
-void Client::addChunkSize(size_t size)
-{
-	chunk_sizes.push_back(size);
 }
