@@ -4,20 +4,17 @@
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
 
-#include <vector>
 #include <string>
+#include <chrono>
 
-class Response
+class Response : public HttpMessage
 {
 private:
-	Response(){};
-	std::vector<std::byte> _body;
+	std::string _serverHeader;
 
 public:
 	Response(const Request &request);
-	~Response(){};
 	std::string getHeader() const;
-	std::vector<std::byte> getBody() const;
 };
 
 #endif

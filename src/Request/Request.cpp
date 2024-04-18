@@ -371,9 +371,8 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	parseHeaders();
 }
 
-Request::Request(const std::string &requestLineAndHeaders)
-	: HttpMessage(),
-	  _status(RequestStatus::SUCCESS),
+Request::Request(const std::string &requestLineAndHeaders, const Server &server)
+	: HttpMessage(server),
 	  _bodyExpected(false)
 {
 	try
@@ -386,11 +385,9 @@ Request::Request(const std::string &requestLineAndHeaders)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
-		this->_status = RequestStatus::ERROR;
 	}
 	catch (const std::exception &e)
 	{
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-		this->_status = RequestStatus::ERROR;
 	}
 }

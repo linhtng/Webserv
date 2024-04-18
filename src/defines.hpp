@@ -16,7 +16,7 @@
 #define OBS_TEXT_REGEX "[\x80-\xFF]"
 #define QUOTED_PAIR_REGEX "\\\\(" HTAB "|" SP "|" VCHAR_REGEX "|" OBS_TEXT_REGEX ")"
 #define CTEXT_REGEX "(" HTAB "|" SP "|[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]|" OBS_TEXT_REGEX ")"
-#define COMMENT_REGEX "\\((QUOTED_PAIR_REGEX|CTEXT_REGEX)*\\)"
+#define COMMENT_REGEX "\\((" QUOTED_PAIR_REGEX "|" CTEXT_REGEX ")*\\)"
 #define TCHAR_REGEX "[!#$%&'*+-.^_`|~0-9A-Za-z]"
 #define TOKEN_REGEX TCHAR_REGEX "+"
 #define PRODUCT_REGEX TOKEN_REGEX "(?:/" TOKEN_REGEX ")?"
@@ -26,14 +26,14 @@
 
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
+
+#define PARAMETER_REGEX TOKEN_REGEX "=" TOKEN_REGEX // in theory, parameter value can be token or quoted-string, but who cares
+#define OWS_REGEX "[" HTAB SP "]*"
+#define PARAMETERS_REGEX "(" OWS_REGEX ";" OWS_REGEX "(" PARAMETER_REGEX ")?)*"
+#define MEDIA_TYPE_REGEX TOKEN_REGEX "/" TOKEN_REGEX PARAMETERS_REGEX
+
 // placeholder for value from config
 #define MAX_BODY_SIZE 10000
-
-enum RequestStatus
-{
-	SUCCESS,
-	ERROR
-};
 
 enum ConnectionValue
 {
@@ -53,7 +53,23 @@ enum HttpMethod
 enum ContentCoding
 {
 	CHUNKED,
+	OTHER
+};
 
+enum ContentType
+{
+	TEXT_PLAIN,
+	TEXT_HTML,
+	TEXT_CSS,
+	TEXT_JAVASCRIPT,
+	IMAGE_JPEG,
+	IMAGE_PNG,
+	IMAGE_GIF,
+	IMAGE_SVG,
+	IMAGE_WEBP,
+	IMAGE_ICO,
+	IMAGE_BMP,
+	IMAGE_TIFF
 };
 
 #define VALID_HTTP_METHODS                          \

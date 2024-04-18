@@ -4,7 +4,6 @@
 // TODO: check includes
 #include "../defines.hpp"
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <regex>
 #include <algorithm>
@@ -24,6 +23,7 @@ private:
 		/*
 		When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant.
 		*/
+		// What about version 1.0 - do we need to ask to upgrade?
 	};
 	/*
 	The normal procedure for parsing an HTTP message is to read the start-line
@@ -38,13 +38,6 @@ private:
 	std::unordered_map<std::string, std::string> _headerLines;
 	RequestLine _requestLine;
 	// values from headers
-	/* HttpMethod _method;
-	std::string _target;
-	int _httpVersionMajor;
-	size_t _contentLength;
-	std::vector<std::byte> _body; */
-	// status values
-	RequestStatus _status; // maybe not needed and status code is enough? so getStatus would just return bool based on status code value being UNDEFUNED or not
 	/* HttpStatusCode _statusCode;
 	bool _chunked; */
 	bool _bodyExpected;
@@ -72,27 +65,19 @@ private:
 	void parseUserAgent();
 	void parseHeaders();
 	void parseConnection();
+
 	// main function
 	void processRequest(const std::string &requestLineAndHeaders);
 
 public:
-	Request(const std::string &requestLineAndHeaders);
-	~Request(){};
+	Request(const std::string &requestLineAndHeaders, const Server &server);
 
 	// SETTERS
 
 	void appendToBody(const std::vector<std::byte> &newBodyChunk);
-	// Also add getters for all the info - or maybe a single getter?
-	// no it's a stupid idea because I would need to define a struct for that...
 
 	// GETTERS
 
-	// request data getters
-	// std::vector<std::byte> getBody() const;
-	// size_t getContentLength() const;
-	// status getters
-	RequestStatus getStatus() const;
-	// HttpStatusCode getStatusCode() const;
 	bool bodyExpected() const;
 
 	// EXCEPTIONS
