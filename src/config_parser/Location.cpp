@@ -9,6 +9,10 @@ Location::Location(const std::string &input)
     alias = "";
     directoryListing = false;
     defaultFile = "index.html";
+    cgiExtension = "";
+    cgiPath = "";
+    redirectionRoute = "";
+    acceptedMethods = {"POST", "GET"};
 }
 
 Location::~Location() {}
@@ -107,8 +111,13 @@ void Location::setAcceptedMethods()
         std::string method;
         while (iss >> method)
         {
-            acceptedMethods.push_back(method);
+            if (std::find(acceptedMethods.begin(), acceptedMethods.end(), method) == acceptedMethods.end())
+                acceptedMethods.push_back(method);
         }
+    }
+    else if (locationBlock.find("limit_except") != std::string::npos)
+    {
+        throw std::runtime_error("Invalid limit_except syntax");
     }
 }
 
@@ -153,63 +162,113 @@ void Location::setDirectoryListing()
     }
 }
 
+std::string Location::extractDirectiveValue(const std::string &directiveKey)
+{
+    std::istringstream stream(locationBlock);
+    std::string line;
+    int duplicate = 0;
+    std::string returnValue = "";
+    while (std::getline(stream, line))
+    {
+        std::regex directiveStartRegex("^\\s*" + directiveKey);
+        if (std::regex_search(line, directiveStartRegex))
+        {
+            std::regex directiveRegex(directiveKey + "\\s+(\\S+)\\s*;");
+            std::smatch match;
+            if (std::regex_search(line, match, directiveRegex))
+            {
+                if (duplicate > 0)
+                {
+                    throw std::runtime_error("Duplicate directive key: " + directiveKey);
+                }
+                returnValue = match[1].str();
+                duplicate++;
+            }
+            else
+                throw std::runtime_error("Invalid directive format: " + line);
+        }
+    }
+    return returnValue;
+}
+
+void Location::checkValidCharacters(const std::string &value, const std::regex &regexPattern)
+{
+    if (std::regex_search(value, regexPattern))
+    {
+        throw std::invalid_argument("Invalid character in value " + value);
+    }
+}
+
 void Location::setDefaultFile()
 {
-    std::regex defaultFileRegex("\\bindex\\s+(\\S*\\s*)?\\;"); // work for normal case and detect if no argument ok. Not work for case with multiple arguments
-
-    std::smatch match;
-    if (std::regex_search(locationBlock, match, defaultFileRegex))
+    std::string defaultFileValue = extractDirectiveValue("index");
+    if (!defaultFileValue.empty())
     {
-        if (match[1].length() == 0)
-        {
-            throw std::invalid_argument("Missing argument for index directive in route " + locationRoute);
-        }
-        defaultFile = match[1].str();
-        // Check for invalid characters
         std::regex invalidCharRegex("[\\\\/;:*?<>|]");
-        if (std::regex_search(defaultFile, invalidCharRegex))
-        {
-            throw std::invalid_argument("Invalid character in default file name " + defaultFile);
-        }
+        checkValidCharacters(defaultFileValue, invalidCharRegex);
+        defaultFile.clear();
+        defaultFile = defaultFileValue;
     }
 }
 
 void Location::setCgiExtension()
 {
-    std::regex cgiExtensionRegex("\\bcgi-exten\\s+(\\S+\\s*)?\\;");
-    std::smatch match;
-    if (std::regex_search(locationBlock, match, cgiExtensionRegex))
+    std::string cgiExtenValue = extractDirectiveValue("cgi-exten");
+    if (!cgiExtenValue.empty())
     {
-        if (match[1].length() == 0)
-        {
-            throw std::invalid_argument("Missing argument for cgi-exten directive in route " + locationRoute);
-        }
-        cgiExtension = match[1].str();
-        // Check for invalid characters
         std::regex invalidCharRegex("[\\\\/;:*?<>|]");
-        if (std::regex_search(cgiExtension, invalidCharRegex))
-        {
-            throw std::invalid_argument("Invalid character for cgi-exten " + cgiExtension);
-        }
+        checkValidCharacters(cgiExtenValue, invalidCharRegex);
+        cgiExtension = cgiExtenValue;
     }
 }
 
 void Location::setCgiPath()
 {
-    std::regex cgiPathRegex("\\bcgi-path\\s+(\\S+\\s*)?\\;");
-    std::smatch match;
-    if (std::regex_search(locationBlock, match, cgiPathRegex))
+    std::string cgiPathValue = extractDirectiveValue("cgi-path");
+    if (!cgiPathValue.empty())
     {
-        if (match[1].length() == 0)
-        {
-            throw std::invalid_argument("Missing argument for cgi-exten directive in route " + locationRoute);
-        }
-        cgiPath = match[1].str();
-        // Check for invalid characters
         std::regex invalidCharRegex("[;:*?<>|]");
-        if (std::regex_search(cgiPath, invalidCharRegex))
-        {
-            throw std::invalid_argument("Invalid character for cgi-exten " + cgiPath);
-        }
+        checkValidCharacters(cgiPathValue, invalidCharRegex);
+        cgiExtension = cgiPathValue;
     }
+}
+
+std::vector<std::string> Location::getAcceptedMethods()
+{
+    return acceptedMethods;
+}
+
+std::string Location::getRedirectionRoute()
+{
+    return redirectionRoute;
+}
+
+std::string Location::getLocationRoot()
+{
+    return root;
+}
+
+std::string Location::getLocationAlias()
+{
+    return alias;
+}
+
+bool Location::getDirectoryListing()
+{
+    return directoryListing;
+}
+
+std::string Location::getDefaultFile()
+{
+    return defaultFile;
+}
+
+std::string Location::getCgiExtension()
+{
+    return cgiExtension;
+}
+
+std::string Location::getCgiPath()
+{
+    return cgiPath;
 }

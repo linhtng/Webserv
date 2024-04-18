@@ -330,3 +330,18 @@ std::string ConfigData::getServerName() const
 {
     return serverName;
 }
+
+std::unordered_map<int, std::string> ConfigData::getDefaultErrorPages() const
+{
+    return defaultErrorPages;
+}
+
+long long ConfigData::getMaxClientBodySize() const
+{
+    return maxClientBodySize;
+}
+
+std::map<std::string, Location> ConfigData::getLocations() const
+{
+    return locations;
+}
