@@ -23,25 +23,19 @@ private:
 		/*
 		When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant.
 		*/
-		// What about version 1.0 - do we need to ask to upgrade?
+		// What about version 1.0 - do we need to ask to upgrade? probably yes
 	};
-	/*
-	The normal procedure for parsing an HTTP message is to read the start-line
-	into a structure, read each header field line into a hash table by field
-	name until the empty line, and then use the parsed data to determine if
-	a message body is expected.
-	*/
 
 	// PROPERTIES
 
-	// for initial data read only
+	// Helper properties for initial data read
 	std::unordered_map<std::string, std::string> _headerLines;
 	RequestLine _requestLine;
-	// values from headers
-	/* HttpStatusCode _statusCode;
-	bool _chunked; */
+
+	// Properties unique to Request
 	bool _bodyExpected;
 	std::string _userAgent;
+	// OPTIONAL: handle Expect header
 
 	// METHODS
 
@@ -49,6 +43,9 @@ private:
 	bool isDigitsOnly(const std::string &str) const;
 	size_t strToSizeT(const std::string &str) const;
 	std::string removeComments(const std::string &input) const;
+	std::vector<std::string> splitByCRLF(const std::string &input) const;
+	std::vector<std::string> splitByDelimiter(const std::string &input, const std::string &delimiter) const;
+	std::vector<std::string> splitCommaSeparatedList(const std::string &input) const;
 	// initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
@@ -71,6 +68,7 @@ private:
 
 public:
 	Request(const std::string &requestLineAndHeaders, const Server &server);
+	Request(HttpStatusCode statusCode, const Server &server);
 
 	// SETTERS
 

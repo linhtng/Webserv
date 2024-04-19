@@ -2,11 +2,6 @@
 
 // GETTERS
 
-RequestStatus Request::getStatus() const
-{
-	return this->_status;
-}
-
 bool Request::bodyExpected() const
 {
 	// also consider Content-Length == "0"
@@ -27,7 +22,7 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 
 // UTILITIES
 
-std::vector<std::string> splitByDelimiter(const std::string &input, const std::string &delimiter)
+std::vector<std::string> Request::splitByDelimiter(const std::string &input, const std::string &delimiter) const
 {
 	std::vector<std::string> result;
 	size_t pos = 0;
@@ -48,7 +43,7 @@ std::vector<std::string> splitByDelimiter(const std::string &input, const std::s
 	return result;
 }
 
-std::vector<std::string> splitByCRLF(const std::string &input)
+std::vector<std::string> Request::splitByCRLF(const std::string &input) const
 {
 	std::vector<std::string> result;
 	size_t pos = 0;
@@ -69,7 +64,7 @@ std::vector<std::string> splitByCRLF(const std::string &input)
 	return result;
 }
 
-std::vector<std::string> splitCommaSeparatedList(const std::string &input)
+std::vector<std::string> Request::splitCommaSeparatedList(const std::string &input) const
 {
 	std::vector<std::string> result;
 	size_t pos = 0;
@@ -215,6 +210,18 @@ int Request::parseVersion()
 	{
 		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
 		throw BadRequestException();
+
+		/*
+		ERROR PAGE EXAMPLE:
+
+		HTTP/1.1 426 Upgrade Required
+		Upgrade: HTTP/2.0
+		Connection: Upgrade
+		Content-Length: 53
+		Content-Type: text/plain
+
+		This service requires use of the HTTP/2.0 protocol
+		*/
 	}
 	return major;
 }
@@ -378,6 +385,10 @@ Request::Request(const std::string &requestLineAndHeaders, const Server &server)
 	try
 	{
 		processRequest(requestLineAndHeaders);
+		if (this->_statusCode == UNDEFINED)
+		{
+			this->_statusCode = HttpStatusCode::OK;
+		}
 	}
 	catch (const BadRequestException &e)
 	{
@@ -390,4 +401,11 @@ Request::Request(const std::string &requestLineAndHeaders, const Server &server)
 	{
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 	}
+}
+
+Request::Request(HttpStatusCode statusCode, const Server &server)
+	: HttpMessage(server),
+	  _bodyExpected(false)
+{
+	this->_statusCode = statusCode;
 }
