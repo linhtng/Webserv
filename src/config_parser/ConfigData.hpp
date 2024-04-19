@@ -4,7 +4,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
-#include <filesystem>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -47,15 +46,17 @@ class ConfigData
 public:
     ConfigData();
     ConfigData(std::string &input);
-    ConfigData &operator=(const ConfigData &rhs);
     ~ConfigData();
 
     void analyzeConfigData();
     void printConfigData();
-    // std::vector<int> getServerPorts() const;
+
     int getServerPort() const;
     std::string getServerName() const;
     std::string getServerHost() const;
+    std::unordered_map<int, std::string> getDefaultErrorPages() const;
+    long long getMaxClientBodySize() const;
+    std::map<std::string, Location> getLocations() const;
 
 private:
     std::string serverBlock;
@@ -70,7 +71,6 @@ private:
     std::map<std::string, Location> locations;
 
     std::string extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey);
-    // void extractServerPorts();
     void extractServerPort();
     bool validPortString(std::string &errorCodeStr);
     void extractServerName();

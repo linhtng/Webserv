@@ -4,7 +4,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
-#include <filesystem>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -26,7 +25,17 @@ public:
 
     void analyzeLocationData();
     void printLocationData();
+
+    /* Getters */
     std::string getLocationRoute();
+    std::vector<std::string> getAcceptedMethods();
+    std::string getRedirectionRoute();
+    std::string getLocationRoot();
+    std::string getLocationAlias();
+    bool getDirectoryListing();
+    std::string getDefaultFile();
+    std::string getCgiExtension();
+    std::string getCgiPath();
 
 private:
     std::string locationBlock;
@@ -39,9 +48,10 @@ private:
     std::string defaultFile;
     std::string cgiExtension;
     std::string cgiPath;
-    std::string uploadPath;
     // ... other properties ...
 
+    std::string extractDirectiveValue(const std::string &directiveKey);
+    void checkValidCharacters(const std::string &value, const std::regex &regexPattern);
     void setLocationRoute();
     void setAcceptedMethods();
     void setRedirection();

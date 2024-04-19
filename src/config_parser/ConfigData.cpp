@@ -7,22 +7,6 @@ ConfigData::ConfigData(std::string &input)
     serverBlock = input;
 }
 
-ConfigData &ConfigData::operator=(const ConfigData &rhs)
-{
-    if (this != &rhs)
-    {
-        serverBlock = rhs.serverBlock;
-        serverPort = rhs.serverPort;
-        serverHost = rhs.serverHost;
-        serverName = rhs.serverName;
-        defaultErrorPages = rhs.defaultErrorPages;
-        maxClientBodySize = rhs.maxClientBodySize;
-        locationBlocks = rhs.locationBlocks;
-        locations = rhs.locations;
-    }
-    return *this;
-}
-
 ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
@@ -345,4 +329,19 @@ void ConfigData::splitLocationBlocks()
 std::string ConfigData::getServerName() const
 {
     return serverName;
+}
+
+std::unordered_map<int, std::string> ConfigData::getDefaultErrorPages() const
+{
+    return defaultErrorPages;
+}
+
+long long ConfigData::getMaxClientBodySize() const
+{
+    return maxClientBodySize;
+}
+
+std::map<std::string, Location> ConfigData::getLocations() const
+{
+    return locations;
 }

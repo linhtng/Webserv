@@ -7,15 +7,10 @@ ConfigParser::ConfigParser(std::string &fileName) : serverCount(0)
 
 ConfigParser::~ConfigParser() {}
 
-bool ConfigParser::isValidFile(const std::string &filename)
-{
-    return std::filesystem::is_regular_file(filename);
-}
-
 void ConfigParser::readConfigFile(const std::string &fileName)
 {
     std::ifstream inputFile(fileName);
-    if (!inputFile || !isValidFile(fileName))
+    if (!inputFile)
     {
         throw std::runtime_error("Error: unable to open input file " + fileName);
     }
