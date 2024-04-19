@@ -19,6 +19,7 @@ void Server::setUpServerSocket()
 	opt = 1;
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // create socket file descriptor
 		throw SocketCreationException();
+	std::cout << "server_fd: " << server_fd << std::endl;
 	try
 	{
 		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
@@ -55,6 +56,7 @@ std::vector<int> Server::acceptNewConnections()
 			int client_fd = accept(server_fd,
 								   (struct sockaddr *)&(client.getAndSetAddress()),
 								   &(client.getAndSetAddrlen()));
+			std::cout << "client_fd: " << client_fd << std::endl;
 			if (client_fd < 0)
 			{
 				if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR) // listen() queue is empty or interrupted by a signal
