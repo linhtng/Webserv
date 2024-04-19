@@ -11,10 +11,6 @@ Server::Server(ConfigData &config)
 {
 }
 
-Server::~Server()
-{
-}
-
 // set up server socket
 void Server::setUpServerSocket()
 {
@@ -36,10 +32,7 @@ void Server::setUpServerSocket()
 		std::cout << "server host: " << config.getServerHost() << std::endl;
 		address.sin_addr.s_addr = inet_addr(config.getServerHost().c_str());
 		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
-		{
-			std::cerr << "bind failed: " << strerror(errno) << std::endl;
 			throw SocketBindingException();
-		}
 		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
 			throw SocketListenException();
 	}
@@ -93,7 +86,10 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	{
 		request_status = createRequestWithHeader(client_fd);
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK)
+		{
+			std::cout << "request_status: " << request_status << std::endl;
 			return request_status;
+		}
 	}
 
 	if (request_status != NO_REQUEST_BODY && request_status != BAD_REQUEST)
@@ -104,11 +100,22 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		else
 			request_status = formRequestBodyWithChunk(client_fd, *request);
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK || request_status == BODY_IN_PART)
+		{
+			std::cout << "request_status 1: " << request_status << std::endl;
 			return (request_status);
+		}
 	}
 
 	if (request_status == BAD_REQUEST)
 		std::cout << "bad request" << std::endl;
+
+	// Request *request = clients[client_fd].getRequest();
+	// std::vector<std::byte> body = request->getBody();
+	// std::cout << "-----body-----" << std::endl;
+	// for (auto ch : body)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
+	// std::cout << "-----body end-----" << std::endl;
 
 	clients[client_fd].createResponse(); // create response object
 	return (READY_TO_WRITE);
@@ -130,23 +137,27 @@ Server::RequestStatus Server::createRequestWithHeader(int const &client_fd)
 	------------------------------------------------------------------
 	*/
 
-	std::cout << "request_header: " << request_header << std::endl;
+	std::cout << std::endl;
+	std::cout << "----request_header---- " << std::endl;
+	std::cout << request_header << std::endl;
+	std::cout << "----request_header end---- " << std::endl;
+	std::cout << std::endl;
 
 	clients[client_fd].createRequest(request_header); // create request object
 	Request *request = clients[client_fd].getRequest();
 
 	if (request->bodyExpected())
 	{
-		if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
-		{
-			appendToBodyString(request_body_buf, *request);
-			if (request_body_buf.size() > request->getContentLength())
-				return (BAD_REQUEST);
-			clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
-			return (BODY_EXPECTED);
-		}
-		else
-			return (BODY_IN_CHUNK);
+		// if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
+		// {
+		appendToBodyString(request_body_buf, *request);
+		if (request_body_buf.size() > request->getContentLength())
+			return (BAD_REQUEST);
+		clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
+		return (BODY_EXPECTED);
+		// }
+		// else
+		// 	return (BODY_IN_CHUNK);
 	}
 	return (NO_REQUEST_BODY);
 }
@@ -164,6 +175,7 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd,
 		if (delimiter_pos != std::string::npos)
 		{
 			request_body_buf = request_header.substr(delimiter_pos + sizeof(CRLF CRLF) - 1);
+			// std::cout << "request_body_buf" << request_body_buf << std::endl;
 			request_header.erase(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
@@ -278,21 +290,50 @@ void Server::appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &re
 
 Server::ResponseStatus Server::sendResponse(int const &client_fd)
 {
-	Response *response = clients[client_fd].getResponse();
+	// Response *response = clients[client_fd].getResponse();
 
 	//--------------------------------------------------------------
 	// TODO - to combine response header and response body in Response class
-	std::vector<std::byte> full_response;
-	for (char ch : response->getHeader())
-		full_response.push_back(static_cast<std::byte>(ch));
-	std::vector<std::byte> body = response->getBody();
-	full_response.insert(full_response.end(), body.begin(), body.end());
+	// std::vector<std::byte> full_response;
+	// for (char ch : response->getHeader())
+	// 	full_response.push_back(static_cast<std::byte>(ch));
+	// std::vector<std::byte> body = response->getBody();
+	// full_response.insert(full_response.end(), body.begin(), body.end());
 	//--------------------------------------------------------------
 
-	std::cout << "full response: ";
-	for (auto &ch : full_response)
-		std::cout << static_cast<char>(ch);
-	std::cout << std::endl;
+	//--------------------------------------------------------------
+	// sample response to be sent to browser
+	std::vector<std::byte> full_response;
+	std::string sample_response = "HTTP/1.1 200 OK\r\n"
+								  "Content-Type: text/html\r\n"
+								  "Content-Length: 431\r\n"
+								  "\r\n"
+								  "<!DOCTYPE html>\n"
+								  "<html lang=\"en\">\n"
+								  "<head>\n"
+								  "    <meta charset=\"UTF-8\">\n"
+								  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+								  "    <title>File Upload Example</title>\n"
+								  "</head>\n"
+								  "<body>\n"
+								  "    <h2>Upload a File</h2>\n"
+								  "    <form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\n"
+								  "        <input type=\"file\" name=\"fileUpload\" id=\"fileUpload\">\n"
+								  "        <button type=\"submit\">Upload</button>\n"
+								  "    </form>\n"
+								  "</body>\n"
+								  "</html>\n";
+
+	for (char ch : sample_response)
+		full_response.push_back(static_cast<std::byte>(ch));
+
+	// std::cout << std::endl;
+	// std::cout << "-----full response-----" << std::endl;
+	// for (auto &ch : full_response)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
+	// std::cout << "-----full response end-----" << std::endl;
+	// std::cout << std::endl;
 
 	ssize_t bytes;
 	size_t response_len = full_response.size();

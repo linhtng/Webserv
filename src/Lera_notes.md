@@ -1,5 +1,36 @@
 TODO:
 
+POST /upload HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+Content-Length: 274
+Cache-Control: max-age=0
+sec-ch-ua: "Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "macOS"
+Upgrade-Insecure-Requests: 1
+Origin: http://localhost:8081
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohNq0PAELV5YFbkJ
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://localhost:8081/upload
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+------WebKitFormBoundaryohNq0PAELV5YFbkJ
+Content-Disposition: form-data; name="fileUpload"; filename="test.sh"
+Content-Type: text/x-sh
+
+#!/bin/bash
+for i in {1..100}; do
+    curl -s -o /dev/null http://localhost:8080/ &
+done
+------WebKitFormBoundaryohNq0PAELV5YFbkJ--
+
 - default error pages (pass messages as params)
 
 {method_token} 
