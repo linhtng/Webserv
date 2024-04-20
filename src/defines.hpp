@@ -43,7 +43,7 @@ enum ConnectionValue
 
 enum HttpMethod
 {
-	UNDEFINED,
+	UNDEFINED_METHOD,
 	GET,
 	HEAD,
 	POST,
@@ -90,7 +90,7 @@ enum ContentType
 
 enum HttpStatusCode
 {
-	UNDEFINED = 0,
+	UNDEFINED_STATUS = 0,
 	CONTINUE = 100,			   // response to Expect: 100-continue in the headers
 	SWITCHING_PROTOCOLS = 101, // only needed for protocol upgrades
 	PROCESSING = 102,		   // deprecated

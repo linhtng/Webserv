@@ -1,32 +1,32 @@
-#ifndef MESSAGE_HPP
-#define MESSAGE_HPP
+#ifndef HTTP_MESSAGE_HPP
+#define HTTP_MESSAGE_HPP
 
 #include "../defines.hpp"
 #include <string>
 #include <vector>
-#include "../Server/Server.hpp"
+#include "../config_parser/ConfigData.hpp"
 
 class HttpMessage
 {
 protected:
+	ConfigData const &_config;
+
 	HttpMethod _method;
-	std::string _target;
-	int _httpVersionMajor;
+	HttpStatusCode _statusCode;
 	size_t _contentLength;
-	std::vector<std::byte> _body;
+	bool _chunked;
 	ConnectionValue _connection;
+	int _httpVersionMajor;
+	std::string _target;
+	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
 	ContentType _contentType;
 
-	HttpStatusCode _statusCode;
-	bool _chunked;
-	Server const &_server;
-
 	HttpMessage(const HttpMessage &other) = delete;
 
-	HttpMessage(Server const &server,
-				HttpMethod method = HttpMethod::UNDEFINED,
-				HttpStatusCode statusCode = HttpStatusCode::UNDEFINED,
+	HttpMessage(ConfigData const &_config,
+				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
+				HttpStatusCode statusCode = HttpStatusCode::UNDEFINED_STATUS,
 				size_t contentLength = 0,
 				bool chunked = false,
 				ConnectionValue connection = KEEP_ALIVE,
@@ -35,7 +35,7 @@ protected:
 public:
 	virtual ~HttpMessage() = default;
 
-	Server const &getServer() const;
+	ConfigData const &getConfig() const;
 	HttpMethod getMethod() const;
 	std::string getTarget() const;
 	int getHttpVersionMajor() const;

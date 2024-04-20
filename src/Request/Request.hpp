@@ -67,8 +67,8 @@ private:
 	void processRequest(const std::string &requestLineAndHeaders);
 
 public:
-	Request(const std::string &requestLineAndHeaders, const Server &server);
-	Request(HttpStatusCode statusCode, const Server &server);
+	Request(const std::string &requestLineAndHeaders, const ConfigData &config);
+	Request(HttpStatusCode statusCode, const ConfigData &config);
 
 	// SETTERS
 

@@ -7,6 +7,7 @@
 #include <iostream>
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
+#include "../config_parser/ConfigData.hpp"
 
 class Client
 {
@@ -25,7 +26,7 @@ public:
 	struct sockaddr_in &getAndSetAddress(void);
 	socklen_t &getAndSetAddrlen(void);
 
-	void createRequest(std::string &request_header);
+	void createRequest(std::string const &request_header, ConfigData const &config);
 	void createResponse(void);
 
 	void removeRequest(void);

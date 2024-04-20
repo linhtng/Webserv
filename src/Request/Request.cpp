@@ -4,13 +4,7 @@
 
 bool Request::bodyExpected() const
 {
-	// also consider Content-Length == "0"
-	if (this->_headerLines.find("Content-Length") != this->_headerLines.end() ||
-		this->_headerLines.find("Transfer-Encoding") != this->_headerLines.end())
-	{
-		return true;
-	}
-	return false;
+	return this->_bodyExpected;
 }
 
 // MODIFIERS
@@ -378,21 +372,21 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	parseHeaders();
 }
 
-Request::Request(const std::string &requestLineAndHeaders, const Server &server)
-	: HttpMessage(server),
+Request::Request(const std::string &requestLineAndHeaders, const ConfigData &config)
+	: HttpMessage(config),
 	  _bodyExpected(false)
 {
 	try
 	{
 		processRequest(requestLineAndHeaders);
-		if (this->_statusCode == UNDEFINED)
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::OK;
 		}
 	}
 	catch (const BadRequestException &e)
 	{
-		if (this->_statusCode == UNDEFINED)
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
@@ -403,8 +397,8 @@ Request::Request(const std::string &requestLineAndHeaders, const Server &server)
 	}
 }
 
-Request::Request(HttpStatusCode statusCode, const Server &server)
-	: HttpMessage(server),
+Request::Request(HttpStatusCode statusCode, const ConfigData &config)
+	: HttpMessage(config),
 	  _bodyExpected(false)
 {
 	this->_statusCode = statusCode;

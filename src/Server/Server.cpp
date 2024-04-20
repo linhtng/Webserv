@@ -132,7 +132,7 @@ Server::RequestStatus Server::createRequestWithHeader(int const &client_fd)
 
 	std::cout << "request_header: " << request_header << std::endl;
 
-	clients[client_fd].createRequest(request_header); // create request object
+	clients[client_fd].createRequest(request_header, this->config); // create request object
 	Request *request = clients[client_fd].getRequest();
 
 	if (request->bodyExpected())

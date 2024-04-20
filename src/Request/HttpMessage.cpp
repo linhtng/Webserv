@@ -1,23 +1,25 @@
 #include "HttpMessage.hpp"
 
-HttpMessage::HttpMessage(Server const &server,
+HttpMessage::HttpMessage(ConfigData const &config,
 						 HttpMethod method,
 						 HttpStatusCode statusCode,
 						 size_t contentLength,
 						 bool chunked,
 						 ConnectionValue connection,
 						 int httpVersionMajor)
-	: _method(method),
-	  _httpVersionMajor(httpVersionMajor),
-	  _contentLength(contentLength),
+	: _config(config),
+	  _method(method),
 	  _statusCode(statusCode),
+	  _contentLength(contentLength),
 	  _chunked(chunked),
 	  _connection(connection),
-	  _server(server) {}
-
-Server const &HttpMessage::getServer() const
+	  _httpVersionMajor(httpVersionMajor)
 {
-	return this->_server;
+}
+
+ConfigData const &HttpMessage::getConfig() const
+{
+	return this->_config;
 }
 
 std::vector<std::byte> HttpMessage::getBody() const
