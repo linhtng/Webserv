@@ -2,30 +2,6 @@
 
 volatile sig_atomic_t shutdown_flag = 0; // flag for shutting down the server
 
-ServerManager::ServerManager()
-{
-}
-
-ServerManager::ServerManager(ServerManager const &src)
-{
-	*this = src;
-}
-
-ServerManager &ServerManager::operator=(ServerManager const &rhs)
-{
-	if (this != &rhs)
-	{
-		serverConfigs = rhs.serverConfigs;
-		servers = rhs.servers;
-		pollfds = rhs.pollfds;
-	}
-	return *this;
-}
-
-ServerManager::~ServerManager()
-{
-}
-
 // signal handler for shutting down the server
 void signalHandler(int signum)
 {
@@ -41,20 +17,6 @@ void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
 // run the server
 int ServerManager::runServer()
 {
-
-	//--------------------------------------------------------------
-	// TODO - create Config object and to be replaced by config file
-
-	// Server::configData_t config;
-	// config.serverPort = 8080;
-	// config.serverHost = "127.0.0.1";
-	// configs.push_back(config);
-	// config.serverPort = 8081;
-	// config.serverHost = "127.0.0.1";
-	// configs.push_back(config);
-
-	//-------------------------------------------------------------
-
 	signal(SIGINT, signalHandler);
 
 	try

@@ -26,13 +26,6 @@ class Server
 {
 
 public:
-	// I think typedef is not needed here
-	typedef struct configData
-	{
-		int serverPort;
-		std::string serverHost;
-	} configData_t;
-
 	enum RequestStatus
 	{
 		HEADER_DELIMITER_FOUND,
@@ -56,7 +49,6 @@ public:
 
 private:
 	int server_fd;
-	// configData_t config;
 	ConfigData config;
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
@@ -72,7 +64,6 @@ private:
 public:
 	Server();
 	Server(ConfigData &config);
-	~Server();
 
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();
