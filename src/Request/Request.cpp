@@ -151,6 +151,9 @@ void Request::extractRequestLine(const std::string &requestLine)
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
+		std::cout << "Method: " << this->_requestLine.method << std::endl;
+		std::cout << "Request target: " << this->_requestLine.requestTarget << std::endl;
+		std::cout << "HTTP version major: " << this->_requestLine.HTTPVersionMajor << std::endl;
 	}
 	else
 	{
@@ -225,6 +228,9 @@ void Request::parseRequestLine()
 	this->_method = parseMethod();
 	this->_target = this->_requestLine.requestTarget;
 	this->_httpVersionMajor = parseVersion();
+	std::cout << "Method: " << this->_method << std::endl;
+	std::cout << "Request target: " << this->_target << std::endl;
+	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
 }
 
 // HEADERS

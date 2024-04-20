@@ -26,6 +26,7 @@ class Server
 {
 
 public:
+	// I think typedef is not needed here
 	typedef struct configData
 	{
 		int serverPort;
