@@ -146,7 +146,7 @@ Server::RequestStatus Server::createRequestWithHeader(int const &client_fd)
 	clients[client_fd].createRequest(request_header, this->config); // create request object
 	Request *request = clients[client_fd].getRequest();
 
-	if (request->bodyExpected())
+	if (request->isBodyExpected())
 	{
 		// if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 		// {

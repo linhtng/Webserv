@@ -35,6 +35,8 @@ private:
 	// Properties unique to Request
 	bool _bodyExpected;
 	std::string _userAgent;
+	std::string _host;
+	std::string _transferEncoding;
 	// OPTIONAL: handle Expect header
 
 	// METHODS
@@ -76,13 +78,19 @@ public:
 
 	// GETTERS
 
-	bool bodyExpected() const;
+	std::string getHost() const;
+	std::string getUserAgent() const;
+	bool isBodyExpected() const;
+	std::string getTransferEncoding() const;
 
 	// EXCEPTIONS
 
 	class BadRequestException : public std::exception
 	{
 	};
+
+	// DEBUG
+	void printRequestProperties() const;
 };
 
 #endif

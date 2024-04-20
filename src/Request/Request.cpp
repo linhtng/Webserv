@@ -1,10 +1,39 @@
 #include "Request.hpp"
+#include <iostream>
+
+void Request::printRequestProperties() const
+{
+	std::cout << "Method: " << this->_method << std::endl;
+	std::cout << "Request target: " << this->_target << std::endl;
+	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
+	std::cout << "Status code: " << this->_statusCode << std::endl;
+	std::cout << "Host: " << this->_host << std::endl;
+	std::cout << "Content-Length: " << this->_contentLength << std::endl;
+	std::cout << "Transfer-Encoding: " << this->_transferEncoding << std::endl;
+	std::cout << "User-Agent: " << this->_userAgent << std::endl;
+	std::cout << "Connection: " << this->_connection << std::endl;
+}
 
 // GETTERS
 
-bool Request::bodyExpected() const
+bool Request::isBodyExpected() const
 {
 	return this->_bodyExpected;
+}
+
+std::string Request::getUserAgent() const
+{
+	return this->_userAgent;
+}
+
+std::string Request::getHost() const
+{
+	return this->_host;
+}
+
+std::string Request::getTransferEncoding() const
+{
+	return this->_transferEncoding;
 }
 
 // MODIFIERS
@@ -151,9 +180,6 @@ void Request::extractRequestLine(const std::string &requestLine)
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
-		std::cout << "Method: " << this->_requestLine.method << std::endl;
-		std::cout << "Request target: " << this->_requestLine.requestTarget << std::endl;
-		std::cout << "HTTP version major: " << this->_requestLine.HTTPVersionMajor << std::endl;
 	}
 	else
 	{
@@ -228,9 +254,6 @@ void Request::parseRequestLine()
 	this->_method = parseMethod();
 	this->_target = this->_requestLine.requestTarget;
 	this->_httpVersionMajor = parseVersion();
-	std::cout << "Method: " << this->_method << std::endl;
-	std::cout << "Request target: " << this->_target << std::endl;
-	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
 }
 
 // HEADERS
@@ -303,9 +326,11 @@ void Request::parseUserAgent()
 	{
 		return;
 	}
-	std::regex userAgentRegex(USER_AGENT_REGEX);
+	// std::regex userAgentRegex(ALLOWED_CHARS_REGEX);
+	std::regex userAgentRegex(R"(^[^\x00-\x1F\x7F()<>@,;:\\\\"/[\]?={} \x20\x7E]*$)");
 	if (!std::regex_match(it->second, userAgentRegex))
 	{
+		std::cout << "bad user-agent: " << it->second << std::endl;
 		throw BadRequestException();
 	}
 	this->_userAgent = it->second;
@@ -350,6 +375,7 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	{
 		std::string fieldName = match[1];
 		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
+		// std::cout << "fieldName: " << fieldName << ", value: " << match[2] << std::endl;
 		this->_headerLines[fieldName] = match[2];
 	}
 	else

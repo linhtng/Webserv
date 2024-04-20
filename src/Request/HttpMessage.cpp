@@ -66,3 +66,8 @@ bool HttpMessage::isChunked() const
 {
 	return this->_chunked;
 }
+
+ContentType HttpMessage::getContentType() const
+{
+	return this->_contentType;
+}
