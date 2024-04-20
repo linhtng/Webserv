@@ -8,6 +8,7 @@ void Request::printRequestProperties() const
 	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
 	std::cout << "Status code: " << this->_statusCode << std::endl;
 	std::cout << "Host: " << this->_host << std::endl;
+	std::cout << "Port: " << this->_port << std::endl;
 	std::cout << "Content-Length: " << this->_contentLength << std::endl;
 	std::cout << "Transfer-Encoding: " << this->_transferEncoding << std::endl;
 	std::cout << "User-Agent: " << this->_userAgent << std::endl;
@@ -264,6 +265,15 @@ void Request::parseHost()
 	{
 		throw BadRequestException();
 	}
+	std::regex hostRegex(HOST_REGEX);
+	std::smatch match;
+	if (!std::regex_match(this->_headerLines["host"], match, hostRegex))
+	{
+		throw BadRequestException();
+	}
+	this->_host = match[1];
+	this->_port = std::stoi(match[2]);
+	// TODO: handle exceptionss
 }
 
 void Request::parseContentLength()
@@ -325,13 +335,6 @@ void Request::parseUserAgent()
 	if (it == this->_headerLines.end())
 	{
 		return;
-	}
-	// std::regex userAgentRegex(ALLOWED_CHARS_REGEX);
-	std::regex userAgentRegex(R"(^[^\x00-\x1F\x7F()<>@,;:\\\\"/[\]?={} \x20\x7E]*$)");
-	if (!std::regex_match(it->second, userAgentRegex))
-	{
-		std::cout << "bad user-agent: " << it->second << std::endl;
-		throw BadRequestException();
 	}
 	this->_userAgent = it->second;
 }

@@ -13,10 +13,10 @@
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
 #define RWS_REGEX "[\t ]+"
-#define ALLOWED_CHARS_REGEX R"(^[^\x00-\x1F\x7F()<>@,;:\\\\"/[\]?={} \x20\x7E]*$)"
 
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
+#define HOST_REGEX "([^:]+):(\\d+)"
 
 // placeholder for value from config
 #define MAX_BODY_SIZE 10000

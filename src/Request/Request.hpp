@@ -36,6 +36,7 @@ private:
 	bool _bodyExpected;
 	std::string _userAgent;
 	std::string _host;
+	int _port;
 	std::string _transferEncoding;
 	// OPTIONAL: handle Expect header
 
