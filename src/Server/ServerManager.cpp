@@ -232,6 +232,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	client_to_server_map.erase(client_fd);
 	client_last_active_time.erase(client_fd);
 	it = pollfds.erase(it);
+	it--;
 
 	/*
 	------------------------------------------------------------------
