@@ -14,7 +14,7 @@
 #include "Server.hpp"
 #include "../config_parser/ConfigParser.hpp"
 
-#define TIMEOUT 1000000
+#define TIMEOUT 100000
 
 class ServerManager
 {

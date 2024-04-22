@@ -59,11 +59,7 @@ int main(int argc, char const *argv[])
 
 
 	sleep(2);
-	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n";
-	send(client_fd, hello, strlen(hello), 0);
-
-	sleep(1);
-	hello = "5\r\nhello\r\n";
+	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n5\r\nhello\r\n";
 	send(client_fd, hello, strlen(hello), 0);
 
 	sleep(1);

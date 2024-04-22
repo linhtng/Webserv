@@ -79,17 +79,32 @@ void ServerManager::startServerLoop()
 {
 	while (!shutdown_flag)
 	{
+		std::cout << "before poll" << std::endl;
 		handlePoll();
+		std::cout << "after poll" << std::endl;
 		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end() && !shutdown_flag; ++it) // loop through all pollfds to check which events have occurred
 		{
+			std::cout << "poll loop fd:" << it->fd << std::endl;
 			if (!it->revents)
+			{
+				std::cout << "no revent" << std::endl;
 				continue;
+			}
 			else if (it->revents & POLLIN)
+			{
+				std::cout << "POLLIN" << std::endl;
 				handleReadyToRead(it);
+			}
 			else if (it->revents & POLLOUT)
+			{
+				std::cout << "POLLOUT" << std::endl;
 				handleReadyToWrite(it);
+			}
 			else if (it->revents & POLLHUP || it->revents & POLLERR)
+			{
+				std::cout << "POLLERR" << std::endl;
 				handleClientDisconnection(it);
+			}
 			else
 				throw ReventErrorFlagException();
 		}
@@ -105,6 +120,11 @@ void ServerManager::handlePoll()
 
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfds_tmp.begin(), pollfds_tmp.end()); // move the contents back from the vector
+
+	std::cout << "fds: ";
+	for (auto &pollfd: pollfds)
+		std::cout << pollfd.fd << " ";
+	std::cout << std::endl;
 
 	if (ready < 0)
 	{
@@ -213,12 +233,12 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 {
 	int client_fd = it->fd;
 	int server_fd = client_to_server_map[client_fd];
-
 	servers[server_fd].removeClient(client_fd);
 	close(client_fd);
 	client_to_server_map.erase(client_fd);
 	client_last_active_time.erase(client_fd);
-	pollfds.erase(it);
+	it = pollfds.erase(it);
+	it--;
 
 	/*
 	------------------------------------------------------------------

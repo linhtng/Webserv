@@ -53,10 +53,11 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	RequestStatus createRequestWithHeader(int const &client_fd);
+	RequestStatus createRequestWithHeader(int const &client_fd, std::string &request_body_buf);
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::string &body_message_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd, Request &request);
-	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request);
+	RequestStatus formRequestBodyWithChunk(int const &client_fd, Request &request, std::string &request_body_buf);
+	RequestStatus formRequestBodyWithChunkLoop(int const &client_fd, Request &request, std::string &body_buf, std::string &body);
 	RequestStatus extractByteNumberFromChunk(std::string &str, int const &client_fd);
 	void appendToBodyString(std::string &str, Request &request);					// TODO - move to request class
 	void appendToBodyString(char buf[BUFFER_SIZE], size_t bytes, Request &request); // TODO - move to request class
