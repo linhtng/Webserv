@@ -81,3 +81,11 @@ enctype= multipart/form-data
 even if request is not chunked, it still may come in several reads
 
 if response is really large, it may not go through on school macs. we should either send in chunks or throw error
+
+
+chunk size is in HEX
+chunks can contain CRLF
+
+
+
+HTTP/1.1 does not define any means to limit the size of a chunked response such that an intermediary can be assured of buffering the entire response. Additionally, very large chunk sizes may cause overflows or loss of precision if their values are not represented accurately in a receiving implementation. Therefore, recipients MUST anticipate potentially large hexadecimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer representation.

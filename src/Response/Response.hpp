@@ -3,21 +3,24 @@
 
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
+#include "../Request/HttpMessage.hpp"
 
-#include <vector>
 #include <string>
+#include <chrono>
 
-class Response
+class Request;
+
+class HttpMessage;
+
+class Response : public HttpMessage
 {
 private:
-	Response(){};
-	std::vector<std::byte> _body;
+	std::string _serverHeader;
+	Request const &_request;
 
 public:
 	Response(const Request &request);
-	~Response(){};
 	std::string getHeader() const;
-	std::vector<std::byte> getBody() const;
 };
 
 #endif

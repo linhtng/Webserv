@@ -143,10 +143,10 @@ Server::RequestStatus Server::createRequestWithHeader(int const &client_fd)
 	std::cout << "----request_header end---- " << std::endl;
 	std::cout << std::endl;
 
-	clients[client_fd].createRequest(request_header); // create request object
+	clients[client_fd].createRequest(request_header, this->config); // create request object
 	Request *request = clients[client_fd].getRequest();
 
-	if (request->bodyExpected())
+	if (request->isBodyExpected())
 	{
 		// if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 		// {

@@ -1,30 +1,82 @@
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
 
+#define DEFAULT_TIMEOUT 1000
+
 #define CR "\r"
 #define LF "\n"
 #define NUL "\0"
 #define CRLF "\r\n"
 #define SP " "
-#define DEFAULT_TIMEOUT 1000
+#define HTAB "\t"
+#define VCHAR_REGEX "[[:print:]]"
+#define DIGIT_REGEX "[0-9]"
+#define ALPHA_REGEX "[A-Za-z]"
+#define RWS_REGEX "[\t ]+"
 
-enum RequestStatus
+#define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
+#define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
+#define HOST_REGEX "([^:]+):(\\d+)"
+
+// placeholder for value from config
+#define MAX_BODY_SIZE 10000
+
+enum ConnectionValue
 {
-	SUCCESS,
-	ERROR
+	KEEP_ALIVE,
+	CLOSE
 };
 
-enum Method
+enum HttpMethod
 {
+	UNDEFINED_METHOD,
 	GET,
 	HEAD,
 	POST,
-	DELETE
+	DELETE,
 };
+
+enum ContentCoding
+{
+	CHUNKED,
+	OTHER
+};
+
+enum ContentType
+{
+	TEXT_PLAIN,
+	TEXT_HTML,
+	TEXT_CSS,
+	TEXT_JAVASCRIPT,
+	IMAGE_JPEG,
+	IMAGE_PNG,
+	IMAGE_GIF,
+	IMAGE_SVG,
+	IMAGE_WEBP,
+	IMAGE_ICO,
+	IMAGE_BMP,
+	IMAGE_TIFF
+};
+
+#define VALID_HTTP_METHODS                          \
+	{                                               \
+		"GET", "HEAD", "POST", "DELETE", "OPTIONS", \
+			"PUT", "PATCH", "TRACE", "CONNECT"      \
+	}
+
+#define VALID_CONTENT_CODINGS                     \
+	{                                             \
+		"chunked", "compress", "deflate", "gzip", \
+	}
+
+#define IMPLEMENTED_HTTP_METHODS        \
+	{                                   \
+		"GET", "HEAD", "POST", "DELETE" \
+	}
 
 enum HttpStatusCode
 {
-	UNDEFINED = 0,
+	UNDEFINED_STATUS = 0,
 	CONTINUE = 100,			   // response to Expect: 100-continue in the headers
 	SWITCHING_PROTOCOLS = 101, // only needed for protocol upgrades
 	PROCESSING = 102,		   // deprecated

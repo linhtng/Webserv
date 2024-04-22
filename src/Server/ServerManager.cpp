@@ -9,6 +9,12 @@ void signalHandler(int signum)
 	shutdown_flag = 1;
 }
 
+// Not sure if needed, but as an idea we could use this to safeguard from crashes
+void segfaultHandler(int signum)
+{
+	// TODO: return 500 response, cut connections, shut down gracefully
+}
+
 void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
 {
 	serverConfigs = sparsedConfigs;
@@ -18,7 +24,7 @@ void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
 int ServerManager::runServer()
 {
 	signal(SIGINT, signalHandler);
-
+	signal(SIGSEGV, segfaultHandler);
 	try
 	{
 		createServers();

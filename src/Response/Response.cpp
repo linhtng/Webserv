@@ -1,16 +1,11 @@
 #include "Response.hpp"
 
-Response::Response(const Request &request)
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getMethod(), request.getStatusCode(), request.getContentLength(), request.isChunked(), request.getConnection(), request.getHttpVersionMajor()), _request(request)
 {
-	this->_body = request.getBody();
+	(void)_request;
 }
 
 std::string Response::getHeader() const
 {
 	return "header!";
-}
-
-std::vector<std::byte> Response::getBody() const
-{
-	return this->_body;
 }
