@@ -65,6 +65,16 @@ size_t &Client::getBytesToReceive(void)
 	return bytes_to_receive;
 }
 
+std::string &Client::getRequestBodyBuf(void)
+{
+	return request_body_buf;
+}
+
+void Client::setRequestBodyBuf(std::string const &buf)
+{
+	request_body_buf = buf;
+}
+
 bool Client::isNewRequest(void) const
 {
 	if (!request)

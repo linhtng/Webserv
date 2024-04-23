@@ -4,6 +4,7 @@ SRCS = main.cpp \
 		Server.cpp \
 		ServerManager.cpp \
 		Client.cpp \
+		../Request/HttpMessage.cpp \
 		../Request/Request.cpp \
 		../Response/Response.cpp \
 		../config_parser/ConfigParser.cpp \

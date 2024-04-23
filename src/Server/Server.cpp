@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "../config_parser/ConfigParser.hpp"
 #include <cstring>
+#include <fstream>
 
 Server::Server() : server_fd(0)
 {
@@ -83,16 +84,13 @@ std::vector<int> Server::acceptNewConnections()
 Server::RequestStatus Server::receiveRequest(int const &client_fd)
 {
 	RequestStatus request_status = BODY_EXPECTED;
-	std::string request_body_buf;
 
 	if (clients[client_fd].isNewRequest()) // if the request is not created yet, create the request with the request header
 	{
-		request_status = createRequestWithHeader(client_fd, request_body_buf);
+		std::cout << "new request" << std::endl;
+		request_status = createRequestWithHeader(client_fd);
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK)
-		{
-			std::cout << "request_status: " << request_status << std::endl;
 			return request_status;
-		}
 	}
 
 	if (request_status != NO_REQUEST_BODY && request_status != BAD_REQUEST)
@@ -101,11 +99,11 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 			request_status = formRequestBodyWithContentLength(client_fd, *request);
 		else
-			request_status = formRequestBodyWithChunk(client_fd, *request, request_body_buf);
+			request_status = formRequestBodyWithChunk(client_fd, *request);
 
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK || request_status == BODY_IN_PART)
 		{
-			std::cout << "request_status 1: " << request_status << std::endl;
+			std::cout << "request_status for body: " << request_status << std::endl;
 			return (request_status);
 		}
 	}
@@ -122,15 +120,15 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	// std::cout << "-----body end-----" << std::endl;
 
 	clients[client_fd].createResponse(); // create response object
+	clients[client_fd].setBytesToReceive(0);
 	return (READY_TO_WRITE);
 }
 
-Server::RequestStatus Server::createRequestWithHeader(int const &client_fd, std::string &request_body_buf)
+Server::RequestStatus Server::createRequestWithHeader(int const &client_fd)
 {
 	std::string request_header;
 
-	RequestStatus request_status = formRequestHeader(client_fd, request_header,
-													 request_body_buf);
+	RequestStatus request_status = formRequestHeader(client_fd, request_header);
 	if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED)
 		return (request_status);
 
@@ -140,34 +138,36 @@ Server::RequestStatus Server::createRequestWithHeader(int const &client_fd, std:
 	------------------------------------------------------------------
 	*/
 
-	std::cout << std::endl;
-	std::cout << "----request_header---- " << std::endl;
-	std::cout << request_header << std::endl;
-	std::cout << "----request_header end---- " << std::endl;
-	std::cout << std::endl;
+	// std::cout << std::endl;
+	// std::cout << "----request_header---- " << std::endl;
+	// std::cout << request_header << std::endl;
+	// std::cout << "----request_header end---- " << std::endl;
+	// std::cout << std::endl;
 
 	clients[client_fd].createRequest(request_header, this->config); // create request object
 	Request *request = clients[client_fd].getRequest();
 
-	if (request->isBodyExpected())
+	// if (request->isBodyExpected())
+	if (1)
 	{
 		if (request->getContentLength()) // TODO - check the function for checking 'if the request has content length'
 		{
-			appendToBodyString(request_body_buf, *request);
-			if (request_body_buf.size() > request->getContentLength())
+			appendToBodyString(clients[client_fd].getRequestBodyBuf(), *request);
+			if (clients[client_fd].getRequestBodyBuf().size() > request->getContentLength())
 				return (BAD_REQUEST);
-			clients[client_fd].setBytesToReceive(request->getContentLength() - request_body_buf.size());
+			clients[client_fd].setBytesToReceive(request->getContentLength() - clients[client_fd].getRequestBodyBuf().size());
 		}
 		return (BODY_EXPECTED);
 	}
 	return (NO_REQUEST_BODY);
 }
 
-Server::RequestStatus Server::formRequestHeader(int const &client_fd,
-												std::string &request_header, std::string &request_body_buf)
+Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::string &request_header)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
+
+	clients[client_fd].setRequestBodyBuf("");
 
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
@@ -175,8 +175,7 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd,
 		size_t delimiter_pos = request_header.find(CRLF CRLF);
 		if (delimiter_pos != std::string::npos)
 		{
-			request_body_buf = request_header.substr(delimiter_pos + sizeof(CRLF CRLF) - 1);
-			// std::cout << "request_body_buf" << request_body_buf << std::endl;
+			clients[client_fd].setRequestBodyBuf(request_header.substr(delimiter_pos + sizeof(CRLF CRLF) - 1));
 			request_header.erase(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
@@ -213,67 +212,85 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	throw RecvException();
 }
 
-Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Request &request, std::string &request_body_buf)
+Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Request &request)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
-	clients[client_fd].setBytesToReceive(0);
+	// clients[client_fd].setBytesToReceive(0);
 	std::string body;
 
-	if (!request_body_buf.empty())
+	std::cout << "formRequestBodyWithChunk" << std::endl;
+
+	if (!clients[client_fd].getRequestBodyBuf().empty())
 	{
-		RequestStatus request_status = formRequestBodyWithChunkLoop(client_fd, request, request_body_buf, body);
-		if (request_status == READY_TO_WRITE
-			|| request_status == BAD_REQUEST
-			|| request_status == BODY_IN_CHUNK)
+		std::cout << "request body buf not empty" << std::endl;
+		RequestStatus request_status = formRequestBodyWithChunkLoop(client_fd, request, clients[client_fd].getRequestBodyBuf(), body);
+		clients[client_fd].setRequestBodyBuf("");
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
+		{
+			std::cout << "request_status for request_body_buf: " << request_status << std::endl;
 			return (request_status);
+		}
 	}
 
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
+		std::cout << "body buf" << std::endl;
 		std::string body_buf(buf, buf + bytes);
 		RequestStatus request_status = formRequestBodyWithChunkLoop(client_fd, request, body_buf, body);
-		if (request_status == READY_TO_WRITE
-			|| request_status == BAD_REQUEST
-			|| request_status == BODY_IN_CHUNK)
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
+		{
+			std::cout << "request_status for body_buf: " << request_status << std::endl;
 			return (request_status);
+		}
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else if (errno == EINTR) // interrupted by a signal
 		return (REQUEST_INTERRUPTED);
 	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) // no delimiter
-		return (BAD_REQUEST);
+	{
+		std::cout << "no delimiter in the body" << std::endl;
+		return (BODY_IN_CHUNK);
+	}
 	throw RecvException();
 }
 
 Server::RequestStatus Server::formRequestBodyWithChunkLoop(int const &client_fd, Request &request, std::string &body_buf, std::string &body)
 {
+	std::cout << "bytes_to_receieve: " << clients[client_fd].getBytesToReceive() << std::endl;
 	if (!clients[client_fd].getBytesToReceive()) // if not yet parse the number of bytes for each chunk
-		{
-			RequestStatus request_status = extractByteNumberFromChunk(body_buf, client_fd);
-			if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST)
-				return (request_status);
-		}
-
-	if (body_buf.length() > clients[client_fd].getBytesToReceive())
-		return (BAD_REQUEST);
+	{
+		RequestStatus request_status = extractByteNumberFromChunk(body_buf, client_fd);
+		std::cout << "extractByteNumberFromChunk: " << clients[client_fd].getBytesToReceive() << std::endl;
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST)
+			return (request_status);
+	}
 
 	body.append(body_buf);
-
-	if (body.find(CRLF) != std::string::npos) // if find the delimiter
+	size_t delimiter_pos = body.find(CRLF);
+	if (delimiter_pos != std::string::npos) // if find the delimiter
 	{
-		if (std::regex_match(body, std::regex(".*" CRLF "0" CRLF CRLF "$")))
+		std::cout << "found CRLF" << std::endl;
+		if (std::regex_search(body, std::regex("0" CRLF CRLF "$")))
 		{
+			std::cout << "read to write" << std::endl;
 			body.erase(body.end() - 7, body.end());
 			appendToBodyString(body, request);
 			return (READY_TO_WRITE);
 		}
-		if (!std::regex_match(body, std::regex(".*" CRLF "$")))
-			return (BAD_REQUEST);
-		body.erase(body.end() - 2, body.end());
+		clients[client_fd].setRequestBodyBuf(body.substr(delimiter_pos + sizeof(CRLF) - 1));
+		body.erase(delimiter_pos);
 		appendToBodyString(body, request);
+		clients[client_fd].setBytesToReceive(0);
+		std::cout << "still in chunk" << std::endl;
 		return (BODY_IN_CHUNK);
+	}
+
+	if (body_buf.length() > clients[client_fd].getBytesToReceive())
+	{
+		std::cout << "body_buf > byte_to_receieve" << std::endl;
+		return (BAD_REQUEST);
 	}
 
 	clients[client_fd].setBytesToReceive(clients[client_fd].getBytesToReceive() - body_buf.length());
@@ -282,20 +299,39 @@ Server::RequestStatus Server::formRequestBodyWithChunkLoop(int const &client_fd,
 
 Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int const &client_fd)
 {
+	// std::cout << "first 10 character of request body" << std::endl;
+	// for (int i = 0; i < 10; i++)
+	// {
+	// 	if (str[i] == '\r')
+	// 		std::cout << "r is here" << std::endl;
+	// 	else if (str[i] == '\n')
+	// 		std::cout << "n is here"
+	// 				  << std::endl;
+	// 	else
+	// 		std::cout << str[i] << std::endl;
+	// }
+	std::cout << std::endl;
 	if (str == "0" CRLF CRLF)
 		return (READY_TO_WRITE);
-	else if (std::regex_match(str, std::regex("^([0-9A-Fa-f]+)" CRLF "[\\s\\S]+*$")))
+	else if (std::regex_search(str, std::regex("^([0-9A-Fa-f]+)" CRLF)))
 	{
+		std::cout << "ready for extract number" << std::endl;
 		size_t number_pos = str.find(CRLF);
-		if (std::regex_match(str, std::regex("[\\s\\S]+*" CRLF "0" CRLF CRLF "$")))
+		if (std::regex_search(str, std::regex(CRLF "0" CRLF CRLF "$")))
 			clients[client_fd].setBytesToReceive(std::stoi(str.substr(0, number_pos), nullptr, 16) + 7);
 		else
 			clients[client_fd].setBytesToReceive(std::stoi(str.substr(0, number_pos), nullptr, 16) + 2);
 		str.erase(0, number_pos + 2);
+		str.erase(0, 6);
 		return (PARSED_CHUNK_BYTE);
 	}
 	else
+	{
+		// clients[client_fd].setBytesToReceive(16374);
+		// str.erase(0, 4);
+		// return (PARSED_CHUNK_BYTE);
 		return (BAD_REQUEST);
+	}
 }
 
 //--------------------------------------------------------------
@@ -331,8 +367,21 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	//--------------------------------------------------------------
 
 	//--------------------------------------------------------------
+	// TODO - to be done in Request/Response Class
+
+	//--------------------------------------------------------------
+	std::ofstream ofs("test.txt");
+	std::vector<std::byte> body = clients[client_fd].getRequest()->getBody();
+	const std::byte *dataPtr = body.data();
+	std::size_t dataSize = body.size();
+	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
+
+	ofs.close();
+
+	//--------------------------------------------------------------
 	// sample response to be sent to browser
-	std::vector<std::byte> full_response;
+	std::vector<std::byte>
+		full_response;
 	std::string sample_response = "HTTP/1.1 200 OK\r\n"
 								  "Content-Type: text/html\r\n"
 								  "Content-Length: 431\r\n"
@@ -356,13 +405,13 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	for (char ch : sample_response)
 		full_response.push_back(static_cast<std::byte>(ch));
 
-	std::cout << std::endl;
-	std::cout << "-----full response-----" << std::endl;
-	for (auto &ch : full_response)
-		std::cout << static_cast<char>(ch);
-	std::cout << std::endl;
-	std::cout << "-----full response end-----" << std::endl;
-	std::cout << std::endl;
+	// std::cout << std::endl;
+	// std::cout << "-----full response-----" << std::endl;
+	// for (auto &ch : full_response)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
+	// std::cout << "-----full response end-----" << std::endl;
+	// std::cout << std::endl;
 
 	ssize_t bytes;
 	size_t response_len = full_response.size();

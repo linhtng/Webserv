@@ -18,6 +18,7 @@ private:
 	Request *request;
 	Response *response;
 	size_t bytes_to_receive;
+	std::string request_body_buf;
 
 public:
 	Client();
@@ -35,6 +36,9 @@ public:
 	Request *getRequest(void);
 	Response *getResponse(void);
 	size_t &getBytesToReceive(void);
+
+	std::string &getRequestBodyBuf(void);
+	void setRequestBodyBuf(std::string const &buf);
 
 	bool isNewRequest(void) const;
 

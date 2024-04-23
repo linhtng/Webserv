@@ -12,6 +12,7 @@ void signalHandler(int signum)
 // Not sure if needed, but as an idea we could use this to safeguard from crashes
 void segfaultHandler(int signum)
 {
+	(void)signum;
 	// TODO: return 500 response, cut connections, shut down gracefully
 }
 
@@ -122,7 +123,7 @@ void ServerManager::handlePoll()
 	pollfds.insert(pollfds.end(), pollfds_tmp.begin(), pollfds_tmp.end()); // move the contents back from the vector
 
 	std::cout << "fds: ";
-	for (auto &pollfd: pollfds)
+	for (auto &pollfd : pollfds)
 		std::cout << pollfd.fd << " ";
 	std::cout << std::endl;
 
