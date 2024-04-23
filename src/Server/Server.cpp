@@ -258,34 +258,56 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 
 Server::RequestStatus Server::formRequestBodyWithChunkLoop(int const &client_fd, Request &request, std::string &body_buf, std::string &body)
 {
+	body.append(body_buf);
+	
 	std::cout << "bytes_to_receieve: " << clients[client_fd].getBytesToReceive() << std::endl;
 	if (!clients[client_fd].getBytesToReceive()) // if not yet parse the number of bytes for each chunk
 	{
-		RequestStatus request_status = extractByteNumberFromChunk(body_buf, client_fd);
+		RequestStatus request_status = extractByteNumberFromChunk(body, client_fd);
 		std::cout << "extractByteNumberFromChunk: " << clients[client_fd].getBytesToReceive() << std::endl;
 		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST)
 			return (request_status);
+		if (request_status == DELIMITER_NOT_FOUND)
+		{
+			std::cout << "append body here" << std::endl;
+			return (request_status);
+		}
 	}
 
-	body.append(body_buf);
-	size_t delimiter_pos = body.find(CRLF);
-	if (delimiter_pos != std::string::npos) // if find the delimiter
+	if (clients[client_fd].getBytesToReceive() < BUFFER_SIZE) //last buf
 	{
-		std::cout << "found CRLF" << std::endl;
-		if (std::regex_search(body, std::regex("0" CRLF CRLF "$")))
+		std::cout << "body_buf[clients[client_fd].getBytesToReceive()]: " << body_buf[clients[client_fd].getBytesToReceive()] << std::endl;
+		std::cout << "body_buf" << body_buf << std::endl;
+		size_t delimiter_pos = body.find(CRLF);
+		if (delimiter_pos != std::string::npos) // if find the delimiter
 		{
-			std::cout << "read to write" << std::endl;
-			body.erase(body.end() - 7, body.end());
+			std::cout << "bytes-to-receive: " << clients[client_fd].getBytesToReceive() << std::endl;
+			std::cout << "body_buf.length()" << body_buf.length() << std::endl;
+			std::cout << "found CRLF" << std::endl;
+			if (std::regex_search(body, std::regex("0" CRLF CRLF "$")))
+			{
+				std::cout << "read to write" << std::endl;
+				body.erase(body.end() - 7, body.end());
+				appendToBodyString(body, request);
+				return (READY_TO_WRITE);
+			}
+			clients[client_fd].setRequestBodyBuf(body.substr(delimiter_pos + sizeof(CRLF) - 1));
+			std::cout << "request_body_buf: " << clients[client_fd].getRequestBodyBuf() << std::endl;
+			body.erase(delimiter_pos);
+			// sleep(10);
 			appendToBodyString(body, request);
-			return (READY_TO_WRITE);
+			clients[client_fd].setBytesToReceive(0);
+			std::cout << "still in chunk" << std::endl;
+			return (BODY_IN_CHUNK);
 		}
-		clients[client_fd].setRequestBodyBuf(body.substr(delimiter_pos + sizeof(CRLF) - 1));
-		body.erase(delimiter_pos);
-		appendToBodyString(body, request);
-		clients[client_fd].setBytesToReceive(0);
-		std::cout << "still in chunk" << std::endl;
-		return (BODY_IN_CHUNK);
+		else
+		{
+			std::cout << "no delimiter in the body" << std::endl;
+			return (BAD_REQUEST);
+		}
 	}
+
+
 
 	if (body_buf.length() > clients[client_fd].getBytesToReceive())
 	{
@@ -299,17 +321,18 @@ Server::RequestStatus Server::formRequestBodyWithChunkLoop(int const &client_fd,
 
 Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int const &client_fd)
 {
-	// std::cout << "first 10 character of request body" << std::endl;
-	// for (int i = 0; i < 10; i++)
-	// {
-	// 	if (str[i] == '\r')
-	// 		std::cout << "r is here" << std::endl;
-	// 	else if (str[i] == '\n')
-	// 		std::cout << "n is here"
-	// 				  << std::endl;
-	// 	else
-	// 		std::cout << str[i] << std::endl;
-	// }
+	// std::cout << "str: " << str << std::endl;
+	std::cout << "first 8 character of request body" << std::endl;
+	for (int i = 0; i < 9; i++)
+	{
+		if (str[i] == '\r')
+			std::cout << "r is here" << std::endl;
+		else if (str[i] == '\n')
+			std::cout << "n is here"
+					  << std::endl;
+		else
+			std::cout << str[i] << std::endl;
+	}
 	std::cout << std::endl;
 	if (str == "0" CRLF CRLF)
 		return (READY_TO_WRITE);
@@ -322,16 +345,16 @@ Server::RequestStatus Server::extractByteNumberFromChunk(std::string &str, int c
 		else
 			clients[client_fd].setBytesToReceive(std::stoi(str.substr(0, number_pos), nullptr, 16) + 2);
 		str.erase(0, number_pos + 2);
-		str.erase(0, 6);
 		return (PARSED_CHUNK_BYTE);
 	}
-	else
+	else if (!std::regex_search(str, std::regex("^([0-9A-Fa-f]+)")))
 	{
-		// clients[client_fd].setBytesToReceive(16374);
-		// str.erase(0, 4);
-		// return (PARSED_CHUNK_BYTE);
+		std::cout << "cannot extract number" << std::endl;
 		return (BAD_REQUEST);
 	}
+
+	else
+		return (DELIMITER_NOT_FOUND);
 }
 
 //--------------------------------------------------------------
