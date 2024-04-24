@@ -1,6 +1,6 @@
 #include "Response.hpp"
 
-Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getMethod(), request.getStatusCode()), _request(request)
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod()), _request(request)
 {
 	if (this->_statusCode >= HttpStatusCode::MULTIPLE_CHOICES)
 	{

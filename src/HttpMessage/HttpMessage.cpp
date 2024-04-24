@@ -1,16 +1,16 @@
 #include "HttpMessage.hpp"
 
 HttpMessage::HttpMessage(ConfigData const &config,
-						 HttpMethod method,
 						 HttpStatusCode statusCode,
+						 HttpMethod method,
 						 size_t contentLength,
 						 bool chunked,
 						 ConnectionValue connection,
 						 int httpVersionMajor,
 						 int httpVersionMinor)
 	: _config(config),
-	  _method(method),
 	  _statusCode(statusCode),
+	  _method(method),
 	  _contentLength(contentLength),
 	  _chunked(chunked),
 	  _connection(connection),

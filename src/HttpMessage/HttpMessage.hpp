@@ -11,8 +11,8 @@ class HttpMessage
 protected:
 	ConfigData const &_config;
 
-	HttpMethod _method;
 	HttpStatusCode _statusCode;
+	HttpMethod _method;
 	size_t _contentLength;
 	bool _chunked;
 	ConnectionValue _connection;
@@ -26,8 +26,8 @@ protected:
 	HttpMessage(const HttpMessage &other) = delete;
 
 	HttpMessage(ConfigData const &_config,
-				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
 				HttpStatusCode statusCode = HttpStatusCode::UNDEFINED_STATUS,
+				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
 				size_t contentLength = 0,
 				bool chunked = false,
 				ConnectionValue connection = KEEP_ALIVE,

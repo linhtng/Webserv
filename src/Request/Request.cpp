@@ -407,7 +407,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	parseHeaders();
 }
 
-Request::Request(const std::string &requestLineAndHeaders, const ConfigData &config)
+Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
 	: HttpMessage(config),
 	  _bodyExpected(false)
 {
@@ -432,7 +432,7 @@ Request::Request(const std::string &requestLineAndHeaders, const ConfigData &con
 	}
 }
 
-Request::Request(HttpMethod method, HttpStatusCode statusCode, const ConfigData &config)
-	: HttpMessage(config, method, statusCode)
+Request::Request(const ConfigData &config, HttpStatusCode statusCode)
+	: HttpMessage(config, statusCode)
 {
 }
