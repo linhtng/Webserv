@@ -432,9 +432,7 @@ Request::Request(const std::string &requestLineAndHeaders, const ConfigData &con
 	}
 }
 
-Request::Request(HttpStatusCode statusCode, const ConfigData &config)
-	: HttpMessage(config),
-	  _bodyExpected(false)
+Request::Request(HttpMethod method, HttpStatusCode statusCode, const ConfigData &config)
+	: HttpMessage(config, method, statusCode)
 {
-	this->_statusCode = statusCode;
 }

@@ -21,6 +21,9 @@ private:
 public:
 	Response(const Request &request);
 	std::string getHeader() const;
+	std::string formStatusLine() const;
+	std::string formHeaders() const;
+	std::string formBody() const;
 };
 
 #endif

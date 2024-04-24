@@ -71,7 +71,7 @@ private:
 
 public:
 	Request(const std::string &requestLineAndHeaders, const ConfigData &config);
-	Request(HttpStatusCode statusCode, const ConfigData &config);
+	Request(HttpMethod method, HttpStatusCode statusCode, const ConfigData &config);
 
 	// SETTERS
 
