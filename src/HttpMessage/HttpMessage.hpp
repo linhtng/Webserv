@@ -17,6 +17,7 @@ protected:
 	bool _chunked;
 	ConnectionValue _connection;
 	int _httpVersionMajor;
+	int _httpVersionMinor;
 	std::string _target;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
@@ -30,7 +31,8 @@ protected:
 				size_t contentLength = 0,
 				bool chunked = false,
 				ConnectionValue connection = KEEP_ALIVE,
-				int httpVersionMajor = 1);
+				int httpVersionMajor = 1,
+				int httpVersionMinor = 1);
 
 public:
 	virtual ~HttpMessage() = default;
@@ -39,6 +41,7 @@ public:
 	HttpMethod getMethod() const;
 	std::string getTarget() const;
 	int getHttpVersionMajor() const;
+	int getHttpVersionMinor() const;
 	size_t getContentLength() const;
 	std::vector<std::byte> getBody() const;
 	ConnectionValue getConnection() const;

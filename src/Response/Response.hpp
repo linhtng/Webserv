@@ -3,7 +3,7 @@
 
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
-#include "../Request/HttpMessage.hpp"
+#include "../HttpMessage/HttpMessage.hpp"
 
 #include <string>
 #include <chrono>

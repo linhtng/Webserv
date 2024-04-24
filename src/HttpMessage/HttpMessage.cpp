@@ -6,14 +6,16 @@ HttpMessage::HttpMessage(ConfigData const &config,
 						 size_t contentLength,
 						 bool chunked,
 						 ConnectionValue connection,
-						 int httpVersionMajor)
+						 int httpVersionMajor,
+						 int httpVersionMinor)
 	: _config(config),
 	  _method(method),
 	  _statusCode(statusCode),
 	  _contentLength(contentLength),
 	  _chunked(chunked),
 	  _connection(connection),
-	  _httpVersionMajor(httpVersionMajor)
+	  _httpVersionMajor(httpVersionMajor),
+	  _httpVersionMinor(httpVersionMinor)
 {
 }
 
@@ -60,6 +62,11 @@ std::string HttpMessage::getTarget() const
 int HttpMessage::getHttpVersionMajor() const
 {
 	return this->_httpVersionMajor;
+}
+
+int HttpMessage::getHttpVersionMinor() const
+{
+	return this->_httpVersionMinor;
 }
 
 bool HttpMessage::isChunked() const
