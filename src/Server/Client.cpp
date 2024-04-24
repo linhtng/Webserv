@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 Client::Client()
-	: addrlen(sizeof(address)), request(NULL), response(NULL), bytes_to_receive(0)
+	: addrlen(sizeof(address)), request(NULL), response(NULL), chunk_size(0)
 {
 }
 
@@ -11,12 +11,12 @@ Client::~Client()
 	delete response;
 }
 
-sockaddr_in &Client::getAndSetAddress(void)
+sockaddr_in &Client::getAndSetAddress()
 {
 	return (address);
 }
 
-socklen_t &Client::getAndSetAddrlen(void)
+socklen_t &Client::getAndSetAddrlen()
 {
 	return (addrlen);
 }
@@ -24,15 +24,15 @@ socklen_t &Client::getAndSetAddrlen(void)
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
 	request = new Request(request_header, config); // Create a Request object with the provided header
-	bytes_to_receive = 0;
+	chunk_size = 0;
 }
 
-void Client::createResponse(void)
+void Client::createResponse()
 {
 	response = new Response(*request); // Create a Response object with the corresponding request
 }
 
-void Client::removeRequest(void)
+void Client::removeRequest()
 {
 	if (request)
 	{
@@ -41,7 +41,7 @@ void Client::removeRequest(void)
 	}
 }
 
-void Client::removeResponse(void)
+void Client::removeResponse()
 {
 	if (response)
 	{
@@ -50,24 +50,34 @@ void Client::removeResponse(void)
 	}
 }
 
-Request *Client::getRequest(void)
+bool Client::isNewRequest() const
 {
-	return request;
+	return request ? false : true; 
 }
 
-Response *Client::getResponse(void)
+Request *Client::getRequest() const
 {
-	return response;
+	return (request);
 }
 
-size_t &Client::getBytesToReceive(void)
+Response *Client::getResponse() const
 {
-	return bytes_to_receive;
+	return (response);
 }
 
-std::string &Client::getRequestBodyBuf(void)
+size_t const &Client::getChunkSize() const
 {
-	return request_body_buf;
+	return (chunk_size);
+}
+
+std::string const &Client::getRequestBodyBuf() const
+{
+	return (request_body_buf);
+}
+
+void Client::setChunkSize(size_t const &bytes)
+{
+	chunk_size = bytes;
 }
 
 void Client::setRequestBodyBuf(std::string const &buf)
@@ -75,14 +85,4 @@ void Client::setRequestBodyBuf(std::string const &buf)
 	request_body_buf = buf;
 }
 
-bool Client::isNewRequest(void) const
-{
-	if (!request)
-		return (true);
-	return (false);
-}
 
-void Client::setBytesToReceive(size_t bytes)
-{
-	bytes_to_receive = bytes;
-}
