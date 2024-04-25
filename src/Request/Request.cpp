@@ -42,7 +42,7 @@ size_t Request::getChunkSize() const
 	return this->_chunkSize;
 }
 
-std::string Request::getBodyBuf() const
+std::vector<std::byte> Request::getBodyBuf() const
 {
 	return this->_bodyBuf;
 }
@@ -54,14 +54,29 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
 }
 
+void Request::eraseBody(const size_t &start, const size_t &end)
+{
+	this->_body.erase(_body.begin() + start, _body.begin() + end);
+}
+
+void Request::resizeBody(const size_t &n)
+{
+	this->_body.resize(n);
+}
+
 void Request::setChunkSize(const size_t &bytes)
 {
 	_chunkSize = bytes;
 }
 
-void Request::setBodyBuf(const std::string &buf)
+void Request::setBodyBuf(const std::vector<std::byte> &buf)
 {
-	_bodyBuf = buf;
+	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
+}
+
+void Request::clearBodyBuf()
+{
+	this->_bodyBuf.clear();
 }
 
 // UTILITIES

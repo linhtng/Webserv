@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 #include "../defines.hpp"
 
 namespace StringUtils

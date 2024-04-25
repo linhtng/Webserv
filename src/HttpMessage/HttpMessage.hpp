@@ -4,6 +4,7 @@
 #include "../defines.hpp"
 #include <string>
 #include <vector>
+#include <chrono>
 #include "../config_parser/ConfigData.hpp"
 #include <unordered_map>
 
@@ -48,7 +49,7 @@ public:
 	std::vector<std::byte> getBody() const;
 	ConnectionValue getConnection() const;
 	std::chrono::system_clock::time_point getDate() const;
-	ContentType getContentType() const;
+	std::string getContentType() const;
 	HttpStatusCode getStatusCode() const;
 	bool isChunked() const;
 
