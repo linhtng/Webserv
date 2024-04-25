@@ -37,11 +37,31 @@ std::string Request::getTransferEncoding() const
 	return this->_transferEncoding;
 }
 
+size_t Request::getChunkSize() const
+{
+	return this->_chunkSize;
+}
+
+std::string Request::getBodyBuf() const
+{
+	return this->_bodyBuf;
+}
+
 // MODIFIERS
 
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
+}
+
+void Request::setChunkSize(const size_t &bytes)
+{
+	_chunkSize = bytes;
+}
+
+void Request::setBodyBuf(const std::string &buf)
+{
+	_bodyBuf = buf;
 }
 
 // UTILITIES

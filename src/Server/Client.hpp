@@ -17,28 +17,31 @@ private:
 	socklen_t addrlen;
 	Request *request;
 	Response *response;
-	size_t bytes_to_receive;
+	// size_t chunk_size; //TODO - move to request
+	// std::string request_body_buf; //TODO - move to request
 
 public:
 	Client();
 	~Client();
 
-	struct sockaddr_in &getAndSetAddress(void);
-	socklen_t &getAndSetAddrlen(void);
+	struct sockaddr_in &getAndSetAddress();
+	socklen_t &getAndSetAddrlen();
 
 	void createRequest(std::string const &request_header, ConfigData const &config);
-	void createResponse(void);
+	void createResponse();
 
-	void removeRequest(void);
-	void removeResponse(void);
+	void removeRequest();
+	void removeResponse();
 
-	Request *getRequest(void);
-	Response *getResponse(void);
-	size_t &getBytesToReceive(void);
+	bool isNewRequest() const;
 
-	bool isNewRequest(void) const;
+	Request *getRequest() const;
+	Response *getResponse() const;
+	// size_t const &getChunkSize() const;
+	// std::string const &getRequestBodyBuf() const;
 
-	void setBytesToReceive(size_t bytes);
+	// void setChunkSize(size_t const &bytes);
+	// void setRequestBodyBuf(std::string const &buf);
 };
 
 #endif

@@ -34,6 +34,11 @@ client:
 
 clean:
 	rm -f *.o
+	rm -f ../Request/*.o
+	rm -f ../Response/*.o
+	rm -f ../HttpMessage/*.o
+	rm -f ../config_parser/*.o
+
 
 fclean: clean
 	rm -f $(NAME)
