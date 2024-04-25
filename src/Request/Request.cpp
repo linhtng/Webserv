@@ -19,39 +19,40 @@ void Request::printRequestProperties() const
 
 bool Request::isBodyExpected() const
 {
-	return this->_bodyExpected;
+	return (this->_bodyExpected);
 }
 
 std::string Request::getUserAgent() const
 {
-	return this->_userAgent;
+	return (this->_userAgent);
 }
 
 std::string Request::getHost() const
 {
-	return this->_host;
+	return (this->_host);
 }
 
 std::string Request::getTransferEncoding() const
 {
-	return this->_transferEncoding;
+	return (this->_transferEncoding);
 }
 
 size_t Request::getChunkSize() const
 {
-	return this->_chunkSize;
+	return (this->_chunkSize);
 }
 
-std::string Request::getBodyBuf() const
+std::vector<std::byte> Request::getBodyBuf() const
 {
-	return this->_bodyBuf;
+	return (this->_bodyBuf);
 }
 
 // MODIFIERS
 
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
-	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
+	this->_body.insert(this->_body.end(), newBodyChunk.begin(),
+					   newBodyChunk.end());
 }
 
 void Request::setChunkSize(const size_t &bytes)
@@ -59,14 +60,20 @@ void Request::setChunkSize(const size_t &bytes)
 	_chunkSize = bytes;
 }
 
-void Request::setBodyBuf(const std::string &buf)
+void Request::setBodyBuf(const std::vector<std::byte> &buf)
 {
-	_bodyBuf = buf;
+	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
+}
+
+void Request::clearBodyBuf()
+{
+	this->_bodyBuf.clear();
 }
 
 // UTILITIES
 
-std::vector<std::string> Request::splitByDelimiter(const std::string &input, const std::string &delimiter) const
+std::vector<std::string> Request::splitByDelimiter(const std::string &input,
+												   const std::string &delimiter) const
 {
 	std::vector<std::string> result;
 	size_t pos = 0;
@@ -84,7 +91,7 @@ std::vector<std::string> Request::splitByDelimiter(const std::string &input, con
 	{
 		result.push_back(input.substr(prev, std::string::npos));
 	}
-	return result;
+	return (result);
 }
 
 std::vector<std::string> Request::splitByCRLF(const std::string &input) const
@@ -105,7 +112,7 @@ std::vector<std::string> Request::splitByCRLF(const std::string &input) const
 	{
 		result.push_back(input.substr(prev, std::string::npos));
 	}
-	return result;
+	return (result);
 }
 
 std::vector<std::string> Request::splitCommaSeparatedList(const std::string &input) const
@@ -126,14 +133,15 @@ std::vector<std::string> Request::splitCommaSeparatedList(const std::string &inp
 	{
 		result.push_back(input.substr(prev, std::string::npos));
 	}
-	return result;
+	return (result);
 }
 
 bool Request::isDigitsOnly(const std::string &str) const
 {
 	return std::all_of(
-		str.begin(), str.end(), [](unsigned char c)
-		{ return std::isdigit(c); });
+		str.begin(), str.end(),
+		[](unsigned char c)
+		{ return (std::isdigit(c)); });
 }
 
 std::string Request::removeComments(const std::string &input) const
@@ -163,7 +171,7 @@ std::string Request::removeComments(const std::string &input) const
 			currentSegment += c;
 		}
 	}
-	return res;
+	return (res);
 }
 
 size_t Request::strToSizeT(const std::string &str) const
@@ -179,7 +187,7 @@ size_t Request::strToSizeT(const std::string &str) const
 		{
 			throw BadRequestException();
 		}
-		return static_cast<size_t>(value);
+		return (static_cast<size_t>(value));
 	}
 	// ull overflow
 	catch (const std::exception &e)
@@ -210,8 +218,11 @@ void Request::extractRequestLine(const std::string &requestLine)
 
 void Request::validateMethod()
 {
+	auto itValid;
+
 	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
-	auto itValid = std::find(validMethods.begin(), validMethods.end(), this->_requestLine.method);
+	itValid = std::find(validMethods.begin(), validMethods.end(),
+						this->_requestLine.method);
 	if (itValid == validMethods.end())
 	{
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
@@ -221,30 +232,34 @@ void Request::validateMethod()
 
 HttpMethod Request::matchValidMethod()
 {
+	auto it;
+
 	std::unordered_map<std::string, HttpMethod> methodMap = {
 		{"GET", HttpMethod::GET},
 		{"HEAD", HttpMethod::HEAD},
 		{"POST", HttpMethod::POST},
 		{"DELETE", HttpMethod::DELETE}};
-	auto it = methodMap.find(this->_requestLine.method);
+	it = methodMap.find(this->_requestLine.method);
 	if (it == methodMap.end())
 	{
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
 		throw BadRequestException();
 	}
-	return it->second;
+	return (it->second);
 }
 
 HttpMethod Request::parseMethod()
 {
 	validateMethod();
-	return matchValidMethod();
+	return (matchValidMethod());
 }
 
 int Request::parseVersion()
 {
+	int major;
+
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
-	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
+	major = std::stoi(this->_requestLine.HTTPVersionMajor);
 	if (major > 1)
 	{
 		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
@@ -254,20 +269,17 @@ int Request::parseVersion()
 	{
 		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
 		throw BadRequestException();
-
 		/*
 		ERROR PAGE EXAMPLE:
-
 		HTTP/1.1 426 Upgrade Required
 		Upgrade: HTTP/2.0
 		Connection: Upgrade
 		Content-Length: 53
 		Content-Type: text/plain
-
 		This service requires use of the HTTP/2.0 protocol
 		*/
 	}
-	return major;
+	return (major);
 }
 
 void Request::parseRequestLine()
@@ -298,14 +310,17 @@ void Request::parseHost()
 
 void Request::parseContentLength()
 {
-	auto it = this->_headerLines.find("content-length");
+	auto it;
+
+	it = this->_headerLines.find("content-length");
 	if (it == this->_headerLines.end())
 	{
 		return;
 	}
 	std::string contentLengthValue = it->second;
 	/*
-	Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
+	Since there is no predefined limit to the length of content,
+		a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
 	*/
 	this->_contentLength = strToSizeT(contentLengthValue);
 	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
@@ -318,14 +333,16 @@ void Request::parseContentLength()
 
 void Request::parseTransferEncoding()
 {
+	auto it;
 
 	/*
 	chunking an already chunked message is not allowed
-	If any transfer coding other than chunked is applied to a request's content, the sender MUST apply chunked as the final transfer coding to ensure that the message is properly framed.
-	If any transfer coding other than chunked is applied to a response's content, the sender MUST either apply chunked as the final transfer coding or terminate the message by closing the connection.
-	 */
-
-	auto it = this->_headerLines.find("transfer-encoding");
+	If any transfer coding other than chunked is applied to a request's content,
+		the sender MUST apply chunked as the final transfer coding to ensure that the message is properly framed.
+	If any transfer coding other than chunked is applied to a response's content,
+		the sender MUST either apply chunked as the final transfer coding or terminate the message by closing the connection.
+		*/
+	it = this->_headerLines.find("transfer-encoding");
 	if (it == this->_headerLines.end())
 	{
 		return;
@@ -336,7 +353,8 @@ void Request::parseTransferEncoding()
 		throw BadRequestException();
 	}
 	std::string transferEncodingValue = it->second;
-	std::transform(transferEncodingValue.begin(), transferEncodingValue.end(), transferEncodingValue.begin(), ::tolower);
+	std::transform(transferEncodingValue.begin(), transferEncodingValue.end(),
+				   transferEncodingValue.begin(), ::tolower);
 	if (transferEncodingValue == "chunked")
 	{
 		this->_chunked = true;
@@ -351,7 +369,9 @@ void Request::parseTransferEncoding()
 
 void Request::parseUserAgent()
 {
-	auto it = this->_headerLines.find("user-agent");
+	auto it;
+
+	it = this->_headerLines.find("user-agent");
 	if (it == this->_headerLines.end())
 	{
 		return;
@@ -361,13 +381,16 @@ void Request::parseUserAgent()
 
 void Request::parseConnection()
 {
-	auto it = this->_headerLines.find("connection");
+	auto it;
+
+	it = this->_headerLines.find("connection");
 	if (it == this->_headerLines.end())
 	{
 		return;
 	}
 	std::string connectionValue = it->second;
-	std::transform(connectionValue.begin(), connectionValue.end(), connectionValue.begin(), ::tolower);
+	std::transform(connectionValue.begin(), connectionValue.end(),
+				   connectionValue.begin(), ::tolower);
 	if (connectionValue == "close")
 	{
 		this->_connection = ConnectionValue::CLOSE;
@@ -397,9 +420,12 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	if (std::regex_match(headerLine, match, headerLineRegex))
 	{
 		std::string fieldName = match[1];
-		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
-		// std::cout << "fieldName: " << fieldName << ", value: " << match[2] << std::endl;
-		this->_headerLines[fieldName] = match[2];
+		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(),
+					   ::tolower);
+		// std::cout << "fieldName: " << fieldName << ",
+	value:
+		" << match[2] << std::endl;
+			this->_headerLines[fieldName] = match[2];
 	}
 	else
 	{
@@ -427,7 +453,8 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	parseHeaders();
 }
 
-Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
+Request::Request(const ConfigData &config,
+				 const std::string &requestLineAndHeaders)
 	: HttpMessage(config),
 	  _bodyExpected(false)
 {
