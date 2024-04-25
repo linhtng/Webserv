@@ -110,7 +110,7 @@ enum HttpStatusCode
 	GONE = 410,							 // preferred over 404 if the resource is permanently gone
 	LENGTH_REQUIRED = 411,				 // when Content-Length is missing for POST or PUT
 	PRECONDITION_FAILED = 412,			 // at least one condition in If-Match header failed
-	CONTENT_TOO_LARGE = 413,			 // we should terminate the request or close the connection. if temporaruy, generate a Retry-After header
+	PAYLOAD_TOO_LARGE = 413,			 // we should terminate the request or close the connection. if temporaruy, generate a Retry-After header
 	URI_TOO_LONG = 414,					 // rare
 	UNSUPPORTED_MEDIA_TYPE = 415,		 // occurs due to the request's indicated Content-Type or Content-Encoding, or as a result of inspecting the data directly. Generate Accept-Encoding or Accept header in a response
 	RANGE_NOT_SATISFIABLE = 416,		 // used with Range header. Generate Content-Range header in response. BUT! Because servers are free to ignore Range, many implementations will respond with the entire selected representation in a 200 (OK) response
@@ -120,6 +120,10 @@ enum HttpStatusCode
 	UNPROCESSABLE_CONTENT = 422,		 // syntactically correct but semantically incorrect, very rare, 400 is used instead
 	// 422 response is more typically associated with a POST that accepts data in a specific format in the body of the request.
 	UPGRADE_REQUIRED = 426, // HTTP protocol update required
+	PRECONDITION_REQUIRED = 428,
+	TOO_MANY_REQUESTS = 429,
+	REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
+	UNAVAILABLE_FOR_LEGAL_REASONS = 451,
 	INTERNAL_SERVER_ERROR = 500,
 	NOT_IMPLEMENTED = 501,			 // server does not recognize the request method. "I don't understand what you want" - this is probably what we need!
 	BAD_GATEWAY = 502,				 // probably not needed

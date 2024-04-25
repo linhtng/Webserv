@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "../config_parser/ConfigData.hpp"
+#include <unordered_map>
 
 class HttpMessage
 {
@@ -49,6 +50,8 @@ public:
 	ContentType getContentType() const;
 	HttpStatusCode getStatusCode() const;
 	bool isChunked() const;
+
+	static const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages;
 };
 
 #endif
