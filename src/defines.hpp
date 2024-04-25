@@ -9,6 +9,7 @@
 #define CRLF "\r\n"
 #define SP " "
 #define HTAB "\t"
+#define WHITESPACE "[\t ]"
 #define VCHAR_REGEX "[[:print:]]"
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
@@ -17,9 +18,7 @@
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
 #define HOST_REGEX "([^:]+):(\\d+)"
-
-// placeholder for value from config
-#define MAX_BODY_SIZE 10000
+#define MULTIFORM_BOUNDARY_REGEX "multipart/form-data;" RWS_REGEX "boundary=([^\\s;]+)"
 
 enum ConnectionValue
 {
@@ -36,18 +35,26 @@ enum HttpMethod
 	DELETE,
 };
 
+// not used
 enum ContentCoding
 {
 	CHUNKED,
 	OTHER
 };
 
+// not used
 enum ContentType
 {
+	UNDEFINED_CONTENT_TYPE,
 	TEXT_PLAIN,
 	TEXT_HTML,
 	TEXT_CSS,
 	TEXT_JAVASCRIPT,
+	APPLICATION_JSON,
+	APPLICATION_XML,
+	APPLICATION_PDF,
+	APPLICATION_ZIP,
+	APPLICATION_OCTET_STREAM,
 	IMAGE_JPEG,
 	IMAGE_PNG,
 	IMAGE_GIF,
@@ -55,7 +62,19 @@ enum ContentType
 	IMAGE_WEBP,
 	IMAGE_ICO,
 	IMAGE_BMP,
-	IMAGE_TIFF
+	IMAGE_TIFF,
+	AUDIO_MPEG,
+	AUDIO_OGG,
+	AUDIO_WAV,
+	AUDIO_WEBM,
+	VIDEO_MP4,
+	VIDEO_OGG,
+	VIDEO_WEBM,
+	VIDEO_MPEG,
+	VIDEO_QUICKTIME,
+	VIDEO_AVI,
+	MULTIPART_FORM_DATA,
+	APPLICATION_X_WWW_FORM_URLENCODED
 };
 
 #define VALID_HTTP_METHODS                          \
@@ -110,7 +129,7 @@ enum HttpStatusCode
 	GONE = 410,							 // preferred over 404 if the resource is permanently gone
 	LENGTH_REQUIRED = 411,				 // when Content-Length is missing for POST or PUT
 	PRECONDITION_FAILED = 412,			 // at least one condition in If-Match header failed
-	CONTENT_TOO_LARGE = 413,			 // we should terminate the request or close the connection. if temporaruy, generate a Retry-After header
+	PAYLOAD_TOO_LARGE = 413,			 // we should terminate the request or close the connection. if temporaruy, generate a Retry-After header
 	URI_TOO_LONG = 414,					 // rare
 	UNSUPPORTED_MEDIA_TYPE = 415,		 // occurs due to the request's indicated Content-Type or Content-Encoding, or as a result of inspecting the data directly. Generate Accept-Encoding or Accept header in a response
 	RANGE_NOT_SATISFIABLE = 416,		 // used with Range header. Generate Content-Range header in response. BUT! Because servers are free to ignore Range, many implementations will respond with the entire selected representation in a 200 (OK) response
@@ -120,6 +139,10 @@ enum HttpStatusCode
 	UNPROCESSABLE_CONTENT = 422,		 // syntactically correct but semantically incorrect, very rare, 400 is used instead
 	// 422 response is more typically associated with a POST that accepts data in a specific format in the body of the request.
 	UPGRADE_REQUIRED = 426, // HTTP protocol update required
+	PRECONDITION_REQUIRED = 428,
+	TOO_MANY_REQUESTS = 429,
+	REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
+	UNAVAILABLE_FOR_LEGAL_REASONS = 451,
 	INTERNAL_SERVER_ERROR = 500,
 	NOT_IMPLEMENTED = 501,			 // server does not recognize the request method. "I don't understand what you want" - this is probably what we need!
 	BAD_GATEWAY = 502,				 // probably not needed

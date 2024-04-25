@@ -89,3 +89,11 @@ chunks can contain CRLF
 
 
 HTTP/1.1 does not define any means to limit the size of a chunked response such that an intermediary can be assured of buffering the entire response. Additionally, very large chunk sizes may cause overflows or loss of precision if their values are not represented accurately in a receiving implementation. Therefore, recipients MUST anticipate potentially large hexadecimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer representation.
+
+
+HTTP/1.1 505 HTTP Version Not Supported
+Server: nginx/1.25.4
+Date: Thu, 25 Apr 2024 12:35:03 GMT
+Content-Type: text/html
+Content-Length: 187
+Connection: close

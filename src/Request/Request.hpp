@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <limits>
 #include "../HttpMessage/HttpMessage.hpp"
+#include "../StringUtils/StringUtils.hpp"
 
 class Request : public HttpMessage
 {
@@ -38,6 +39,9 @@ private:
 	std::string _host;
 	int _port;
 	std::string _transferEncoding;
+	std::string _boundary;
+
+	// Helper properties for parsing
 	size_t _chunkSize;
 	std::string _bodyBuf;
 
@@ -46,12 +50,8 @@ private:
 	// METHODS
 
 	// helpers
-	bool isDigitsOnly(const std::string &str) const;
-	size_t strToSizeT(const std::string &str) const;
+
 	std::string removeComments(const std::string &input) const;
-	std::vector<std::string> splitByCRLF(const std::string &input) const;
-	std::vector<std::string> splitByDelimiter(const std::string &input, const std::string &delimiter) const;
-	std::vector<std::string> splitCommaSeparatedList(const std::string &input) const;
 	// initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
@@ -68,6 +68,7 @@ private:
 	void parseUserAgent();
 	void parseHeaders();
 	void parseConnection();
+	void parseContentType();
 
 	// main function
 	void processRequest(const std::string &requestLineAndHeaders);

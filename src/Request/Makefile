@@ -9,6 +9,7 @@ SRCS = main.cpp \
 		../config_parser/ConfigParser.cpp \
 		../config_parser/ConfigData.cpp \
 		../config_parser/Location.cpp \
+		../StringUtils/StringUtils.cpp
 
 CC = c++
 
