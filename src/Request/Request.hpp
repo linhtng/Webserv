@@ -38,6 +38,8 @@ private:
 	std::string _host;
 	int _port;
 	std::string _transferEncoding;
+
+	// Helper properties for parsing
 	size_t _chunkSize;
 	std::string _bodyBuf;
 

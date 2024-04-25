@@ -311,7 +311,7 @@ void Request::parseContentLength()
 	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
 	if (this->_contentLength > MAX_BODY_SIZE)
 	{
-		this->_statusCode = HttpStatusCode::CONTENT_TOO_LARGE;
+		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
 		throw BadRequestException();
 	}
 }
