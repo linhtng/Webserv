@@ -7,6 +7,7 @@
 
 #include <string>
 #include <chrono>
+#include <vector>
 
 class Request;
 
@@ -17,13 +18,19 @@ class Response : public HttpMessage
 private:
 	std::string _serverHeader;
 	Request const &_request;
+	void setDateToCurrent();
+	std::string formDate() const;
+	std::string getHeader() const;
+	std::string formStatusLine() const;
+	std::string formHeader() const;
+	std::string formStatusCodeMessage() const;
+	std::string formConnection() const;
+	std::string formContentType() const;
 
 public:
 	Response(const Request &request);
-	std::string getHeader() const;
-	std::string formStatusLine() const;
-	std::string formHeaders() const;
-	std::string formBody() const;
+
+	std::vector<std::byte> formResponse() const;
 };
 
 #endif

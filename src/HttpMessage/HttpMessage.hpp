@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "../config_parser/ConfigData.hpp"
+#include <unordered_map>
 
 class HttpMessage
 {
@@ -21,7 +22,8 @@ protected:
 	std::string _target;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
-	ContentType _contentType;
+	std::string _contentType;
+	std::unordered_map<std::string, std::string> _contentTypeParams;
 
 	HttpMessage(const HttpMessage &other) = delete;
 
@@ -49,6 +51,8 @@ public:
 	ContentType getContentType() const;
 	HttpStatusCode getStatusCode() const;
 	bool isChunked() const;
+
+	static const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages;
 };
 
 #endif

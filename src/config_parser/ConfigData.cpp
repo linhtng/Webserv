@@ -268,11 +268,22 @@ void ConfigData::extractMaxClientBodySize()
         {
             multiplier = units[unit];
         }
-        maxClientBodySize = std::stoll(numberPart) * multiplier;
-        if (maxClientBodySize <= 0 || maxClientBodySize > INT_MAX)
+
+        // TODO: Linh, I replaced long long with size_t here, please check if everything is good
+        size_t numberPartSizeT;
+        try
+        {
+            numberPartSizeT = StringUtils::strToSizeT(numberPart);
+        }
+        catch (const std::exception &e)
+        {
+            throw std::runtime_error("Invalid max client body size: " + maxClientBodySizeStr);
+        }
+        if (std::numeric_limits<size_t>::max() / multiplier < numberPartSizeT)
         {
             throw std::runtime_error("Out of range max client body size: " + maxClientBodySizeStr);
         }
+        this->maxClientBodySize = numberPartSizeT * multiplier;
     }
     else
     {
@@ -336,7 +347,7 @@ std::unordered_map<int, std::string> ConfigData::getDefaultErrorPages() const
     return defaultErrorPages;
 }
 
-long long ConfigData::getMaxClientBodySize() const
+size_t ConfigData::getMaxClientBodySize() const
 {
     return maxClientBodySize;
 }

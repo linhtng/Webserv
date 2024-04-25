@@ -12,6 +12,7 @@
 #include <regex>
 #include <unordered_map>
 #include "Location.hpp"
+#include "../StringUtils/StringUtils.hpp"
 
 #define RED "\e[91m"
 #define CYAN "\033[36m"
@@ -55,7 +56,7 @@ public:
     std::string getServerName() const;
     std::string getServerHost() const;
     std::unordered_map<int, std::string> getDefaultErrorPages() const;
-    long long getMaxClientBodySize() const;
+    size_t getMaxClientBodySize() const;
     std::map<std::string, Location> getLocations() const;
 
 private:
@@ -66,7 +67,7 @@ private:
     std::string serverName;
     std::unordered_map<int, std::string> defaultErrorPages;
     std::string clientBodySize;
-    long long maxClientBodySize;
+    size_t maxClientBodySize;
     std::vector<std::string> locationBlocks;
     std::map<std::string, Location> locations;
 
