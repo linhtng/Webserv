@@ -38,6 +38,9 @@ private:
 	std::string _host;
 	int _port;
 	std::string _transferEncoding;
+	size_t _chunkSize;
+	std::string _bodyBuf;
+
 	// OPTIONAL: handle Expect header
 
 	// METHODS
@@ -76,6 +79,8 @@ public:
 	// SETTERS
 
 	void appendToBody(const std::vector<std::byte> &newBodyChunk);
+	void setChunkSize(const size_t &bytes);
+	void setBodyBuf(const std::string &buf);
 
 	// GETTERS
 
@@ -83,6 +88,8 @@ public:
 	std::string getUserAgent() const;
 	bool isBodyExpected() const;
 	std::string getTransferEncoding() const;
+	size_t getChunkSize() const;
+	std::string getBodyBuf() const;
 
 	// EXCEPTIONS
 

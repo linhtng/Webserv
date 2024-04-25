@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 Client::Client()
-	: addrlen(sizeof(address)), request(NULL), response(NULL), chunk_size(0)
+	: addrlen(sizeof(address)), request(NULL), response(NULL)
 {
 }
 
@@ -24,7 +24,7 @@ socklen_t &Client::getAndSetAddrlen()
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
 	request = new Request(config, request_header); // Create a Request object with the provided header
-	chunk_size = 0;
+	request->setChunkSize(0);
 }
 
 void Client::createResponse()
@@ -65,22 +65,22 @@ Response *Client::getResponse() const
 	return (response);
 }
 
-size_t const &Client::getChunkSize() const
-{
-	return (chunk_size);
-}
+// size_t const &Client::getChunkSize() const
+// {
+// 	return (chunk_size);
+// }
 
-std::string const &Client::getRequestBodyBuf() const
-{
-	return (request_body_buf);
-}
+// std::string const &Client::getRequestBodyBuf() const
+// {
+// 	return (request_body_buf);
+// }
 
-void Client::setChunkSize(size_t const &bytes)
-{
-	chunk_size = bytes;
-}
+// void Client::setChunkSize(size_t const &bytes)
+// {
+// 	chunk_size = bytes;
+// }
 
-void Client::setRequestBodyBuf(std::string const &buf)
-{
-	request_body_buf = buf;
-}
+// void Client::setRequestBodyBuf(std::string const &buf)
+// {
+// 	request_body_buf = buf;
+// }
