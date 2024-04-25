@@ -66,76 +66,6 @@ void Request::setBodyBuf(const std::string &buf)
 
 // UTILITIES
 
-std::vector<std::string> Request::splitByDelimiter(const std::string &input, const std::string &delimiter) const
-{
-	std::vector<std::string> result;
-	size_t pos = 0;
-	size_t prev = 0;
-	while ((pos = input.find(delimiter, prev)) != std::string::npos)
-	{
-		if (pos > prev)
-		{
-			result.push_back(input.substr(prev, pos - prev));
-		}
-		prev = pos + delimiter.length(); // Move past delimiter
-	}
-	// Add the last substring if it exists
-	if (prev < input.length())
-	{
-		result.push_back(input.substr(prev, std::string::npos));
-	}
-	return result;
-}
-
-std::vector<std::string> Request::splitByCRLF(const std::string &input) const
-{
-	std::vector<std::string> result;
-	size_t pos = 0;
-	size_t prev = 0;
-	while ((pos = input.find(CRLF, prev)) != std::string::npos)
-	{
-		if (pos > prev)
-		{
-			result.push_back(input.substr(prev, pos - prev));
-		}
-		prev = pos + 2; // Move past CRLF
-	}
-	// Add the last substring if it exists
-	if (prev < input.length())
-	{
-		result.push_back(input.substr(prev, std::string::npos));
-	}
-	return result;
-}
-
-std::vector<std::string> Request::splitCommaSeparatedList(const std::string &input) const
-{
-	std::vector<std::string> result;
-	size_t pos = 0;
-	size_t prev = 0;
-	while ((pos = input.find(",", prev)) != std::string::npos)
-	{
-		if (pos > prev)
-		{
-			result.push_back(input.substr(prev, pos - prev));
-		}
-		prev = pos + 1; // Move past comma
-	}
-	// Add the last substring if it exists
-	if (prev < input.length())
-	{
-		result.push_back(input.substr(prev, std::string::npos));
-	}
-	return result;
-}
-
-bool Request::isDigitsOnly(const std::string &str) const
-{
-	return std::all_of(
-		str.begin(), str.end(), [](unsigned char c)
-		{ return std::isdigit(c); });
-}
-
 std::string Request::removeComments(const std::string &input) const
 {
 	std::string res;
@@ -164,28 +94,6 @@ std::string Request::removeComments(const std::string &input) const
 		}
 	}
 	return res;
-}
-
-size_t Request::strToSizeT(const std::string &str) const
-{
-	if (str.empty() || !isDigitsOnly(str))
-	{
-		throw BadRequestException();
-	}
-	try
-	{
-		unsigned long long value = std::stoull(str);
-		if (value > std::numeric_limits<size_t>::max())
-		{
-			throw BadRequestException();
-		}
-		return static_cast<size_t>(value);
-	}
-	// ull overflow
-	catch (const std::exception &e)
-	{
-		throw BadRequestException();
-	}
 }
 
 // PARSING
@@ -307,7 +215,7 @@ void Request::parseContentLength()
 	/*
 	Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
 	*/
-	this->_contentLength = strToSizeT(contentLengthValue);
+	this->_contentLength = StringUtils::strToSizeT(contentLengthValue);
 	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
 	if (this->_contentLength > this->_config.getMaxClientBodySize())
 	{
@@ -391,7 +299,38 @@ void Request::parseContentType()
 	{
 		return;
 	}
-	std::string contentTypeValue = it->second;
+	std::string contentTypeFullValue = it->second;
+	std::transform(contentTypeFullValue.begin(), contentTypeFullValue.end(), contentTypeFullValue.begin(), ::tolower);
+
+	// split by semicolon
+	std::vector<std::string> split = StringUtils::splitByDelimiter(contentTypeFullValue, ";");
+	this->_contentType = StringUtils::trim(split[0]);
+	// is there are subtype params, parse them
+	for (size_t i = 1; i < split.size(); ++i)
+	{
+		std::vector<std::string> paramsSplit = StringUtils::splitByDelimiter(split[i], "=");
+		if (paramsSplit.size() != 2)
+		{
+			throw BadRequestException();
+		}
+		this->_contentTypeParams[StringUtils::trim(paramsSplit[0])] = StringUtils::trim(paramsSplit[1]);
+	}
+	if (this->_contentType == "multipart/form-data")
+	{
+		// check for boundary
+		auto it = this->_contentTypeParams.find("boundary");
+		if (it == this->_contentTypeParams.end())
+		{
+			throw BadRequestException();
+		}
+		// check if boundary is valid
+		std::string boundary = it->second;
+		if (boundary.empty())
+		{
+			throw BadRequestException();
+		}
+		this->_boundary = boundary;
+	}
 }
 
 // HEADERS GENERAL
@@ -432,7 +371,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	{
 		throw BadRequestException();
 	}
-	std::vector<std::string> split = splitByCRLF(requestLineAndHeaders);
+	std::vector<std::string> split = StringUtils::splitByDelimiter(requestLineAndHeaders, CRLF);
 	// handle request line
 	extractRequestLine(split[0]);
 	parseRequestLine();

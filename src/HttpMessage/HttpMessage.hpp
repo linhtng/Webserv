@@ -22,7 +22,8 @@ protected:
 	std::string _target;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
-	ContentType _contentType;
+	std::string _contentType;
+	std::unordered_map<std::string, std::string> _contentTypeParams;
 
 	HttpMessage(const HttpMessage &other) = delete;
 

@@ -9,6 +9,7 @@
 #define CRLF "\r\n"
 #define SP " "
 #define HTAB "\t"
+#define WHITESPACE "[\t ]"
 #define VCHAR_REGEX "[[:print:]]"
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
@@ -41,6 +42,7 @@ enum ContentCoding
 	OTHER
 };
 
+// not used
 enum ContentType
 {
 	UNDEFINED_CONTENT_TYPE,
