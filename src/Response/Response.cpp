@@ -1,5 +1,26 @@
 #include "Response.hpp"
 
+void printResponseProperties(const Response &response)
+{
+	std::cout << "Response properties:" << std::endl;
+	std::cout << "ConfigData: " << response.getConfig().getServerName() << std::endl;
+	std::cout << "Method: " << response.getMethod() << std::endl;
+	std::cout << "Target: " << response.getTarget() << std::endl;
+	std::cout << "HTTP version: " << response.getHttpVersionMajor() << "." << response.getHttpVersionMinor() << std::endl;
+	std::cout << "Content length: " << response.getContentLength() << std::endl;
+	std::cout << "Body: ";
+	for (std::byte byte : response.getBody())
+	{
+		std::cout << static_cast<char>(byte);
+	}
+	std::cout << std::endl;
+	std::cout << "Connection: " << response.getConnection() << std::endl;
+	std::cout << "Date: " << response.getDate().time_since_epoch().count() << std::endl;
+	std::cout << "Content type: " << response.getContentType() << std::endl;
+	std::cout << "Status code: " << response.getStatusCode() << std::endl;
+	std::cout << "Chunked: " << response.isChunked() << std::endl;
+}
+
 void Response::setDateToCurrent()
 {
 	this->_date = std::chrono::system_clock::now();
@@ -36,10 +57,17 @@ std::string Response::formContentType() const
 	return "text/html";
 }
 
+std::string Response::formStatusLine() const
+{
+	std::string statusLine;
+	statusLine += std::to_string(this->_httpVersionMajor) + "." + std::to_string(this->_httpVersionMinor) + " " + this->formStatusCodeMessage();
+	return statusLine;
+}
+
 std::string Response::formHeader() const
 {
 	std::string header;
-	header += this->_httpVersionMajor + " " + this->formStatusCodeMessage() + CRLF;
+	header += this->formStatusLine() + CRLF;
 	header += "Date: " + this->formDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;

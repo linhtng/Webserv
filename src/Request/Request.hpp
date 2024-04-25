@@ -70,6 +70,7 @@ private:
 	void parseUserAgent();
 	void parseHeaders();
 	void parseConnection();
+	void parseContentType();
 
 	// main function
 	void processRequest(const std::string &requestLineAndHeaders);

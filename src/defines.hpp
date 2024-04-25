@@ -17,9 +17,7 @@
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
 #define HOST_REGEX "([^:]+):(\\d+)"
-
-// placeholder for value from config
-#define MAX_BODY_SIZE 10000
+#define MULTIFORM_BOUNDARY_REGEX "multipart/form-data;" RWS_REGEX "boundary=([^\\s;]+)"
 
 enum ConnectionValue
 {
@@ -36,6 +34,7 @@ enum HttpMethod
 	DELETE,
 };
 
+// not used
 enum ContentCoding
 {
 	CHUNKED,
@@ -44,10 +43,16 @@ enum ContentCoding
 
 enum ContentType
 {
+	UNDEFINED_CONTENT_TYPE,
 	TEXT_PLAIN,
 	TEXT_HTML,
 	TEXT_CSS,
 	TEXT_JAVASCRIPT,
+	APPLICATION_JSON,
+	APPLICATION_XML,
+	APPLICATION_PDF,
+	APPLICATION_ZIP,
+	APPLICATION_OCTET_STREAM,
 	IMAGE_JPEG,
 	IMAGE_PNG,
 	IMAGE_GIF,
@@ -55,7 +60,19 @@ enum ContentType
 	IMAGE_WEBP,
 	IMAGE_ICO,
 	IMAGE_BMP,
-	IMAGE_TIFF
+	IMAGE_TIFF,
+	AUDIO_MPEG,
+	AUDIO_OGG,
+	AUDIO_WAV,
+	AUDIO_WEBM,
+	VIDEO_MP4,
+	VIDEO_OGG,
+	VIDEO_WEBM,
+	VIDEO_MPEG,
+	VIDEO_QUICKTIME,
+	VIDEO_AVI,
+	MULTIPART_FORM_DATA,
+	APPLICATION_X_WWW_FORM_URLENCODED
 };
 
 #define VALID_HTTP_METHODS                          \

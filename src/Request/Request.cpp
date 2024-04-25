@@ -309,10 +309,14 @@ void Request::parseContentLength()
 	*/
 	this->_contentLength = strToSizeT(contentLengthValue);
 	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
-	if (this->_contentLength > MAX_BODY_SIZE)
+	if (this->_contentLength > this->_config.getMaxClientBodySize())
 	{
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
 		throw BadRequestException();
+	}
+	if (this->_contentLength > 0)
+	{
+		this->_bodyExpected = true;
 	}
 }
 
@@ -333,6 +337,7 @@ void Request::parseTransferEncoding()
 	// protection from request smuggling
 	if (this->_headerLines.find("content-length") != this->_headerLines.end())
 	{
+		this->_bodyExpected = false;
 		throw BadRequestException();
 	}
 	std::string transferEncodingValue = it->second;
@@ -340,6 +345,7 @@ void Request::parseTransferEncoding()
 	if (transferEncodingValue == "chunked")
 	{
 		this->_chunked = true;
+		this->_bodyExpected = true;
 	}
 	else
 	{
@@ -378,6 +384,16 @@ void Request::parseConnection()
 	}
 }
 
+void Request::parseContentType()
+{
+	auto it = this->_headerLines.find("content-type");
+	if (it == this->_headerLines.end())
+	{
+		return;
+	}
+	std::string contentTypeValue = it->second;
+}
+
 // HEADERS GENERAL
 
 void Request::parseHeaders()
@@ -387,6 +403,7 @@ void Request::parseHeaders()
 	parseTransferEncoding();
 	parseUserAgent();
 	parseConnection();
+	parseContentType();
 }
 
 void Request::extractHeaderLine(const std::string &headerLine)
