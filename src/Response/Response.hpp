@@ -3,7 +3,7 @@
 
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
-#include "../Request/HttpMessage.hpp"
+#include "../HttpMessage/HttpMessage.hpp"
 
 #include <string>
 #include <chrono>
@@ -21,6 +21,9 @@ private:
 public:
 	Response(const Request &request);
 	std::string getHeader() const;
+	std::string formStatusLine() const;
+	std::string formHeaders() const;
+	std::string formBody() const;
 };
 
 #endif

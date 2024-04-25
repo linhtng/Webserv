@@ -110,9 +110,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	if (request_status != BAD_REQUEST)
 	// if (request->isBodyExpected() && request_status != BAD_REQUEST)
 	{
-		request_status = request->getContentLength() ?
-			formRequestBodyWithContentLength(client_fd, *request) :
-			formRequestBodyWithChunk(client_fd, *request); // TODO - check the function for checking 'if the request has content length'
+		request_status = request->getContentLength() ? formRequestBodyWithContentLength(client_fd, *request) : formRequestBodyWithChunk(client_fd, *request); // TODO - check the function for checking 'if the request has content length'
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
@@ -166,7 +164,7 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 
 	if (!clients[client_fd].getRequestBodyBuf().empty()) // Process any remaining data in the request body buffer
 	{
-		appendToBodyString(clients[client_fd].getRequestBodyBuf(), request); 
+		appendToBodyString(clients[client_fd].getRequestBodyBuf(), request);
 		clients[client_fd].setRequestBodyBuf("");
 	}
 
@@ -194,7 +192,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 	std::string body; // TODO - move to request class
-	
+
 	if (!clients[client_fd].getRequestBodyBuf().empty()) // Process any remaining data in the request body buffer
 	{
 		RequestStatus request_status = processChunkData(client_fd, request, clients[client_fd].getRequestBodyBuf(), body);
@@ -222,7 +220,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 Server::RequestStatus Server::processChunkData(int const &client_fd, Request &request, std::string const &body_buf, std::string &body)
 {
 	body.append(body_buf);
-	
+
 	if (clients[client_fd].getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
 	{
 		RequestStatus request_status = extractChunkSize(body, client_fd);
@@ -256,17 +254,17 @@ Server::RequestStatus Server::extractChunkSize(std::string &body, int const &cli
 {
 	if (body == "0" CRLF CRLF)
 		return (READY_TO_WRITE);
-	
+
 	std::smatch match;
 	if (std::regex_search(body, match, std::regex("^([0-9A-Fa-f]+)" CRLF)))
 	{
 		clients[client_fd].setChunkSize(std::stoi(match[1], nullptr, 16));
 		if (clients[client_fd].getChunkSize() == 0)
-			return ( body == "0" CRLF || body == "0" CRLF "\r" ) ? BODY_EXPECTED : BAD_REQUEST;
+			return (body == "0" CRLF || body == "0" CRLF "\r") ? BODY_EXPECTED : BAD_REQUEST;
 		body.erase(0, match[0].length());
 		return (PARSED_CHUNK_SIZE);
 	}
-	else if (!std::regex_search(body, std::regex("^([0-9A-Fa-f]+)"))) //if the chunk is not started with number
+	else if (!std::regex_search(body, std::regex("^([0-9A-Fa-f]+)"))) // if the chunk is not started with number
 		return (BAD_REQUEST);
 	else
 		return (BODY_EXPECTED);

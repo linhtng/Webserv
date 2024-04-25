@@ -23,7 +23,7 @@ socklen_t &Client::getAndSetAddrlen()
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
-	request = new Request(request_header, config); // Create a Request object with the provided header
+	request = new Request(config, request_header); // Create a Request object with the provided header
 	chunk_size = 0;
 }
 
@@ -52,7 +52,7 @@ void Client::removeResponse()
 
 bool Client::isNewRequest() const
 {
-	return request ? false : true; 
+	return request ? false : true;
 }
 
 Request *Client::getRequest() const
@@ -84,5 +84,3 @@ void Client::setRequestBodyBuf(std::string const &buf)
 {
 	request_body_buf = buf;
 }
-
-

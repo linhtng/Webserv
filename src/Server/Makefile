@@ -4,8 +4,8 @@ SRCS = main.cpp \
 		Server.cpp \
 		ServerManager.cpp \
 		Client.cpp \
-		../Request/HttpMessage.cpp \
 		../Request/Request.cpp \
+		../HttpMessage/HttpMessage.cpp \
 		../Response/Response.cpp \
 		../config_parser/ConfigParser.cpp \
 		../config_parser/ConfigData.cpp \
@@ -34,6 +34,11 @@ client:
 
 clean:
 	rm -f *.o
+	rm -f ../Request/*.o
+	rm -f ../Response/*.o
+	rm -f ../HttpMessage/*.o
+	rm -f ../config_parser/*.o
+
 
 fclean: clean
 	rm -f $(NAME)
