@@ -8,7 +8,7 @@
 #include <regex>
 #include <algorithm>
 #include <limits>
-#include "HttpMessage.hpp"
+#include "../HttpMessage/HttpMessage.hpp"
 
 class Request : public HttpMessage
 {
@@ -70,8 +70,8 @@ private:
 	void processRequest(const std::string &requestLineAndHeaders);
 
 public:
-	Request(const std::string &requestLineAndHeaders, const ConfigData &config);
-	Request(HttpStatusCode statusCode, const ConfigData &config);
+	Request(const ConfigData &config, const std::string &requestLineAndHeaders);
+	Request(const ConfigData &config, HttpStatusCode statusCode);
 
 	// SETTERS
 

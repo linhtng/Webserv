@@ -23,7 +23,7 @@ socklen_t &Client::getAndSetAddrlen(void)
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
-	request = new Request(request_header, config); // Create a Request object with the provided header
+	request = new Request(config, request_header); // Create a Request object with the provided header
 	bytes_to_receive = 0;
 }
 

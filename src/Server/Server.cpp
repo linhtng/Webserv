@@ -223,9 +223,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 	if (!request_body_buf.empty())
 	{
 		RequestStatus request_status = formRequestBodyWithChunkLoop(client_fd, request, request_body_buf, body);
-		if (request_status == READY_TO_WRITE
-			|| request_status == BAD_REQUEST
-			|| request_status == BODY_IN_CHUNK)
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
 
@@ -233,9 +231,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 	{
 		std::string body_buf(buf, buf + bytes);
 		RequestStatus request_status = formRequestBodyWithChunkLoop(client_fd, request, body_buf, body);
-		if (request_status == READY_TO_WRITE
-			|| request_status == BAD_REQUEST
-			|| request_status == BODY_IN_CHUNK)
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
@@ -250,11 +246,11 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd, Req
 Server::RequestStatus Server::formRequestBodyWithChunkLoop(int const &client_fd, Request &request, std::string &body_buf, std::string &body)
 {
 	if (!clients[client_fd].getBytesToReceive()) // if not yet parse the number of bytes for each chunk
-		{
-			RequestStatus request_status = extractByteNumberFromChunk(body_buf, client_fd);
-			if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST)
-				return (request_status);
-		}
+	{
+		RequestStatus request_status = extractByteNumberFromChunk(body_buf, client_fd);
+		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST)
+			return (request_status);
+	}
 
 	if (body_buf.length() > clients[client_fd].getBytesToReceive())
 		return (BAD_REQUEST);

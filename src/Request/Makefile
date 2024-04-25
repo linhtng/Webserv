@@ -3,7 +3,7 @@ NAME = request_test
 SRCS = main.cpp \
 		../Server/Server.cpp \
 		../Server/Client.cpp \
-		HttpMessage.cpp \
+		../HttpMessage/HttpMessage.cpp \
 		Request.cpp \
 		../Response/Response.cpp \
 		../config_parser/ConfigParser.cpp \
