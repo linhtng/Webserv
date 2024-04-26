@@ -3,7 +3,7 @@
 
 #include "../defines.hpp"
 
-class HttpMessage
+class DefaultResponsePage
 {
 };
 

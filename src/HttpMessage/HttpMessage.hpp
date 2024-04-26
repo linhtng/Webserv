@@ -48,7 +48,7 @@ public:
 	std::vector<std::byte> getBody() const;
 	ConnectionValue getConnection() const;
 	std::chrono::system_clock::time_point getDate() const;
-	ContentType getContentType() const;
+	std::string getContentType() const;
 	HttpStatusCode getStatusCode() const;
 	bool isChunked() const;
 

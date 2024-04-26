@@ -47,7 +47,6 @@ namespace StringUtils
 		{
 			throw std::invalid_argument("Invalid string argument");
 		}
-
 		try
 		{
 			unsigned long long value = std::stoull(str);
