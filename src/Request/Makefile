@@ -10,7 +10,7 @@ SRCS = main.cpp \
 		../config_parser/ConfigData.cpp \
 		../config_parser/Location.cpp \
 		../StringUtils/StringUtils.cpp \
-		../DefaultResponsePage/DefaultResponsePage.cpp \
+		../DefaultErrorPage/DefaultErrorPage.cpp \
 
 CC = c++
 

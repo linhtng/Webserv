@@ -4,7 +4,7 @@
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
 #include "../HttpMessage/HttpMessage.hpp"
-#include "../DefaultResponsePage/DefaultResponsePage.hpp"
+#include "../DefaultErrorPage/DefaultErrorPage.hpp"
 
 #include <string>
 #include <chrono>
@@ -18,6 +18,7 @@ class Response : public HttpMessage
 {
 private:
 	std::string _serverHeader;
+	std::chrono::system_clock::time_point _lastModified;
 
 	Request const &_request;
 
@@ -28,9 +29,11 @@ private:
 	std::string formatStatusCodeMessage() const;
 	std::string formatConnection() const;
 	std::string formatContentType() const;
+
 	void setDateToCurrent();
 	void prepareResponse();
 	void prepareErrorResponse();
+	void prepareStandardHeaders();
 
 public:
 	Response(const Request &request);

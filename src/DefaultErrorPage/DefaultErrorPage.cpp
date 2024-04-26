@@ -1,6 +1,6 @@
-#include "DefaultResponsePage.hpp"
+#include "DefaultErrorPage.hpp"
 
-std::vector<std::byte> DefaultResponsePage::getResponsePage(HttpStatusCode statusCode)
+std::vector<std::byte> DefaultErrorPage::getErrorPage(HttpStatusCode statusCode)
 {
 	// TODO: change path to match directory of the binary
 	std::string templatePath = "../pages/errorPage.html";
