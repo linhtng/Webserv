@@ -405,7 +405,9 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 
 Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
 	: HttpMessage(config),
-	  _bodyExpected(false)
+	  _bodyExpected(false),
+	  _port(0),
+	  _chunkSize(0)
 {
 	try
 	{
@@ -425,6 +427,6 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 }
 
 Request::Request(const ConfigData &config, HttpStatusCode statusCode)
-	: HttpMessage(config, statusCode)
+	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0), _chunkSize(0)
 {
 }
