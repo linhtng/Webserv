@@ -12,5 +12,10 @@ int main()
 	Request request2(config, HttpStatusCode::BAD_GATEWAY);
 	request2.printRequestProperties();
 	Response response(request2);
+	std::vector<std::byte> responseBytes = response.formatResponse();
+	for (std::byte byte : responseBytes)
+	{
+		std::cout << static_cast<char>(byte);
+	}
 	return 0;
 }

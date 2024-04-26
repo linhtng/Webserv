@@ -2,7 +2,8 @@
 
 std::vector<std::byte> DefaultResponsePage::getResponsePage(HttpStatusCode statusCode)
 {
-	std::string templatePath = "errorPage.html";
+	// TODO: change path to match directory of the binary
+	std::string templatePath = "../pages/errorPage.html";
 	std::ifstream templateFile(templatePath);
 	if (!templateFile.is_open())
 	{
