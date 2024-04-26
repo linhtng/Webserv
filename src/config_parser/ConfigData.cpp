@@ -146,6 +146,7 @@ void ConfigData::extractServerName()
     std::string serverNameStr = extractDirectiveValue(serverBlock, DirectiveKeys::SERVER_NAME);
     if (serverNameStr.empty())
     {
+        std::cout << "Server name is empty. Using default server name: " << DefaultValues::SERVER_NAME << std::endl;
         serverName = DefaultValues::SERVER_NAME;
         return;
     }
@@ -339,6 +340,7 @@ void ConfigData::splitLocationBlocks()
 
 std::string ConfigData::getServerName() const
 {
+    std::cout << "Server name: " << serverName << std::endl;
     return serverName;
 }
 

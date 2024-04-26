@@ -35,6 +35,15 @@ private:
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
 
+	void checkForRedirect();
+	void validateTarget();
+	bool isCGI();
+	void executeCGI();
+	void handlePost();
+	void handleGet();
+	void handleHead();
+	void handleDelete();
+
 public:
 	Response(const Request &request);
 
