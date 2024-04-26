@@ -4,6 +4,7 @@
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
 #include "../HttpMessage/HttpMessage.hpp"
+#include "../DefaultResponsePage/DefaultResponsePage.hpp"
 
 #include <string>
 #include <chrono>
@@ -17,20 +18,24 @@ class Response : public HttpMessage
 {
 private:
 	std::string _serverHeader;
+
 	Request const &_request;
-	void setDateToCurrent();
-	std::string formDate() const;
+
+	std::string formatDate() const;
 	std::string getHeader() const;
-	std::string formStatusLine() const;
-	std::string formHeader() const;
-	std::string formStatusCodeMessage() const;
-	std::string formConnection() const;
-	std::string formContentType() const;
+	std::string formatStatusLine() const;
+	std::string formatHeader() const;
+	std::string formatStatusCodeMessage() const;
+	std::string formatConnection() const;
+	std::string formatContentType() const;
+	void setDateToCurrent();
+	void prepareResponse();
+	void prepareErrorResponse();
 
 public:
 	Response(const Request &request);
 
-	std::vector<std::byte> formResponse() const;
+	std::vector<std::byte> formatResponse() const;
 };
 
 #endif

@@ -14,6 +14,7 @@ namespace StringUtils
 	std::vector<std::string> splitByDelimiter(const std::string &input, const std::string &delimiter);
 	std::string trim(const std::string &str);
 	bool isDigitsOnly(const std::string &str);
+	void replaceAll(std::string &str, const std::string &from, const std::string &to);
 }
 
 #endif

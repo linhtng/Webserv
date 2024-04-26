@@ -1,5 +1,7 @@
 #include "Response.hpp"
 
+// DEBUGGING FUNCTIONS
+
 void printResponseProperties(const Response &response)
 {
 	std::cout << "Response properties:" << std::endl;
@@ -21,12 +23,9 @@ void printResponseProperties(const Response &response)
 	std::cout << "Chunked: " << response.isChunked() << std::endl;
 }
 
-void Response::setDateToCurrent()
-{
-	this->_date = std::chrono::system_clock::now();
-}
+// STRING FORMING FUNCTIONS
 
-std::string Response::formDate() const
+std::string Response::formatDate() const
 {
 	std::time_t currentTime = std::chrono::system_clock::to_time_t(this->_date);
 	std::stringstream ss;
@@ -35,12 +34,12 @@ std::string Response::formDate() const
 	return httpDate;
 }
 
-std::string Response::formStatusCodeMessage() const
+std::string Response::formatStatusCodeMessage() const
 {
-	return this->_statusCodeMessages.at(this->_statusCode);
+	return (std::to_string(this->_statusCode) + " " + this->_statusCodeMessages.at(this->_statusCode));
 }
 
-std::string Response::formConnection() const
+std::string Response::formatConnection() const
 {
 	if (this->_connection == ConnectionValue::CLOSE)
 	{
@@ -52,35 +51,35 @@ std::string Response::formConnection() const
 	}
 }
 
-std::string Response::formContentType() const
+std::string Response::formatContentType() const
 {
 	return "text/html";
 }
 
-std::string Response::formStatusLine() const
+std::string Response::formatStatusLine() const
 {
 	std::string statusLine;
-	statusLine += std::to_string(this->_httpVersionMajor) + "." + std::to_string(this->_httpVersionMinor) + " " + this->formStatusCodeMessage();
+	statusLine += std::to_string(this->_httpVersionMajor) + "." + std::to_string(this->_httpVersionMinor) + " " + this->formatStatusCodeMessage();
 	return statusLine;
 }
 
-std::string Response::formHeader() const
+std::string Response::formatHeader() const
 {
 	std::string header;
-	header += this->formStatusLine() + CRLF;
-	header += "Date: " + this->formDate() + CRLF;
+	header += this->formatStatusLine() + CRLF;
+	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
-	header += "Content-Type: " + this->formContentType() + CRLF;
-	header += "Connection: " + this->formConnection() + CRLF;
+	header += "Content-Type: " + this->formatContentType() + CRLF;
+	header += "Connection: " + this->formatConnection() + CRLF;
 	header += CRLF;
 	return header;
 }
 
-std::vector<std::byte> Response::formResponse() const
+std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
-	for (char ch : this->formHeader())
+	for (char ch : this->formatHeader())
 	{
 		response.push_back(static_cast<std::byte>(ch));
 	}
@@ -89,12 +88,34 @@ std::vector<std::byte> Response::formResponse() const
 	return response;
 }
 
+// RESPONSE PREPARATION
+
+void Response::setDateToCurrent()
+{
+	this->_date = std::chrono::system_clock::now();
+}
+
+void Response::prepareResponse()
+{
+	// Things that are done for every response
+	this->setDateToCurrent();
+	this->_serverHeader = this->_config.getServerName();
+	this->_connection = this->_request.getConnection();
+}
+
+void Response::prepareErrorResponse()
+{
+	this->_body = DefaultResponsePage::getResponsePage(this->_statusCode);
+}
+
+// CONSTRUCTOR
+
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod()), _request(request)
 {
-	if (this->_statusCode >= HttpStatusCode::MULTIPLE_CHOICES)
+	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
-		// we already know what the response will be, just need to form it
-		// formResponse();
+		// we already know what the response will be, just need to format it
+		this->prepareErrorResponse();
 	}
 	else
 	{

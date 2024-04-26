@@ -1,4 +1,5 @@
 #include "Request.hpp"
+#include "../Response/Response.hpp"
 #include <iostream>
 #include "../config_parser/ConfigData.hpp"
 
@@ -10,5 +11,6 @@ int main()
 	std::cout << std::endl;
 	Request request2(config, HttpStatusCode::BAD_GATEWAY);
 	request2.printRequestProperties();
+	Response response(request2);
 	return 0;
 }
