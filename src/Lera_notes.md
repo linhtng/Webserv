@@ -97,3 +97,25 @@ Date: Thu, 25 Apr 2024 12:35:03 GMT
 Content-Type: text/html
 Content-Length: 187
 Connection: close
+
+CGI error page:
+
+<?php
+// error.php
+$statusCode = $_SERVER['REDIRECT_STATUS'];
+$statusMessage = getStatusMessage($statusCode); // Implement this function based on your status code definitions
+
+// Load the template
+$template = file_get_contents('error_template.html');
+
+// Replace placeholders with actual values
+$template = str_replace('{{status_code}}', $statusCode, $template);
+$template = str_replace('{{status_message}}', $statusMessage, $template);
+
+echo $template;
+?>
+
+config:
+
+error_page 404 /error.php?status=404;
+error_page 500 502 503 504 /error.php?status=500;

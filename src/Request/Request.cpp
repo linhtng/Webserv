@@ -410,10 +410,6 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	try
 	{
 		processRequest(requestLineAndHeaders);
-		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
-		{
-			this->_statusCode = HttpStatusCode::OK;
-		}
 	}
 	catch (const BadRequestException &e)
 	{

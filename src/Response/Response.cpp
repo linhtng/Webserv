@@ -1,9 +1,11 @@
 #include "Response.hpp"
 
+// DEBUGGING FUNCTIONS
+
 void printResponseProperties(const Response &response)
 {
 	std::cout << "Response properties:" << std::endl;
-	std::cout << "ConfigData: " << response.getConfig().getServerName() << std::endl;
+	std::cout << "Server name: " << response.getConfig().getServerName() << std::endl;
 	std::cout << "Method: " << response.getMethod() << std::endl;
 	std::cout << "Target: " << response.getTarget() << std::endl;
 	std::cout << "HTTP version: " << response.getHttpVersionMajor() << "." << response.getHttpVersionMinor() << std::endl;
@@ -21,12 +23,9 @@ void printResponseProperties(const Response &response)
 	std::cout << "Chunked: " << response.isChunked() << std::endl;
 }
 
-void Response::setDateToCurrent()
-{
-	this->_date = std::chrono::system_clock::now();
-}
+// STRING FORMING FUNCTIONS
 
-std::string Response::formDate() const
+std::string Response::formatDate() const
 {
 	std::time_t currentTime = std::chrono::system_clock::to_time_t(this->_date);
 	std::stringstream ss;
@@ -35,12 +34,12 @@ std::string Response::formDate() const
 	return httpDate;
 }
 
-std::string Response::formStatusCodeMessage() const
+std::string Response::formatStatusCodeMessage() const
 {
-	return this->_statusCodeMessages.at(this->_statusCode);
+	return (std::to_string(this->_statusCode) + " " + this->_statusCodeMessages.at(this->_statusCode));
 }
 
-std::string Response::formConnection() const
+std::string Response::formatConnection() const
 {
 	if (this->_connection == ConnectionValue::CLOSE)
 	{
@@ -52,35 +51,36 @@ std::string Response::formConnection() const
 	}
 }
 
-std::string Response::formContentType() const
+std::string Response::formatContentType() const
 {
+	// TODO: actually handle different types
 	return "text/html";
 }
 
-std::string Response::formStatusLine() const
+std::string Response::formatStatusLine() const
 {
 	std::string statusLine;
-	statusLine += std::to_string(this->_httpVersionMajor) + "." + std::to_string(this->_httpVersionMinor) + " " + this->formStatusCodeMessage();
+	statusLine += "HTTP/" + std::to_string(this->_httpVersionMajor) + "." + std::to_string(this->_httpVersionMinor) + " " + this->formatStatusCodeMessage();
 	return statusLine;
 }
 
-std::string Response::formHeader() const
+std::string Response::formatHeader() const
 {
 	std::string header;
-	header += this->formStatusLine() + CRLF;
-	header += "Date: " + this->formDate() + CRLF;
+	header += this->formatStatusLine() + CRLF;
+	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
-	header += "Content-Type: " + this->formContentType() + CRLF;
-	header += "Connection: " + this->formConnection() + CRLF;
+	header += "Content-Type: " + this->formatContentType() + CRLF;
+	header += "Connection: " + this->formatConnection() + CRLF;
 	header += CRLF;
 	return header;
 }
 
-std::vector<std::byte> Response::formResponse() const
+std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
-	for (char ch : this->formHeader())
+	for (char ch : this->formatHeader())
 	{
 		response.push_back(static_cast<std::byte>(ch));
 	}
@@ -89,12 +89,79 @@ std::vector<std::byte> Response::formResponse() const
 	return response;
 }
 
+// RESPONSE PREPARATION
+
+/* std::string getLastModified(const std::filesystem::path &filePath)
+{
+	try
+	{
+		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
+		// Convert file_time_type to time_t
+		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
+		std::tm *time = std::localtime(&lastModifiedTimeT);
+		if (time)
+		{
+			char buffer[100];
+			std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time);
+			return std::string(buffer);
+		}
+	}
+	catch (const std::filesystem::filesystem_error &e)
+	{
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+	return "Unknown";
+} */
+/*
+std::string setLastModified(const std::filesystem::path &filePath)
+{
+	try
+	{
+		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
+		// Convert file_time_type to time_t
+		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
+		std::tm *time = std::localtime(&lastModifiedTimeT);
+	}
+	catch (const std::filesystem::filesystem_error &e)
+	{
+	}
+} */
+
+void Response::setDateToCurrent()
+{
+	this->_date = std::chrono::system_clock::now();
+}
+
+void Response::prepareResponse()
+{
+	// Things that are done for every response
+}
+
+void Response::prepareErrorResponse()
+{
+	this->_body = DefaultErrorPage::getErrorPage(this->_statusCode);
+	this->_contentLength = this->_body.size();
+	// set Content-Type to http
+}
+
+void Response::prepareStandardHeaders()
+{
+	this->_httpVersionMajor = 1;
+	this->_httpVersionMinor = 1;
+	this->setDateToCurrent();
+	this->_serverHeader = this->_config.getServerName();
+	this->_connection = this->_request.getConnection();
+}
+
+// CONSTRUCTOR
+
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod()), _request(request)
 {
-	if (this->_statusCode >= HttpStatusCode::MULTIPLE_CHOICES)
+	this->prepareStandardHeaders();
+	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
-		// we already know what the response will be, just need to form it
-		// formResponse();
+		// we already know what the response will be, just need to format it
+		this->prepareErrorResponse();
 	}
 	else
 	{
