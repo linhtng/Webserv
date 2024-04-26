@@ -74,6 +74,11 @@ void Request::setBodyBuf(const std::vector<std::byte> &buf)
 	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
 }
 
+void Request::eraseBodyBuf(const size_t &start, const size_t &end)
+{
+	this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
+}
+
 void Request::clearBodyBuf()
 {
 	this->_bodyBuf.clear();

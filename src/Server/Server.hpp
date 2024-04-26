@@ -55,7 +55,7 @@ private:
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd);
 	RequestStatus processChunkData(int const &client_fd, std::vector<std::byte> const &body_buf);
-	RequestStatus extractChunkSize(int const &client_fd);
+	RequestStatus extractChunkSize(int const &client_fd, std::vector<std::byte> const &body_buf);
 	void appendToBodyString(std::string const &str, Request &request); // TODO - move to request class
 
 public:

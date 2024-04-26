@@ -99,11 +99,11 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		------------------------------------------------------------------
 		*/
 
-		std::cout << std::endl;
-		std::cout << "----request_header---- " << std::endl;
-		std::cout << request_header << std::endl;
-		std::cout << "----request_header end---- " << std::endl;
-		std::cout << std::endl;
+		// std::cout << std::endl;
+		// std::cout << "----request_header---- " << std::endl;
+		// std::cout << request_header << std::endl;
+		// std::cout << "----request_header end---- " << std::endl;
+		// std::cout << std::endl;
 
 		clients[client_fd].createRequest(request_header, this->config); // create request object
 		clients[client_fd].getRequest()->setBodyBuf(request_body_buf);
@@ -147,12 +147,13 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 		{
 			size_t body_length = request_header.size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
 			std::cout << "body_length: " << body_length << std::endl;
+			std::cout << "delimiter_pos" << delimiter_pos << std::endl;
 			for (size_t i = 0; i < body_length; ++i)
 				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
-			std::cout << "-----request_body_buf-------" << std::endl;
-			for (auto &ch : request_body_buf)
-				std::cout << static_cast<char>(ch);
-			std::cout << "--------------------------" << std::endl;
+			// std::cout << "-----request_body_buf-------" << std::endl;
+			// for (auto &ch : request_body_buf)
+			// 	std::cout << static_cast<char>(ch);
+			// std::cout << "--------------------------" << std::endl;
 			std::cout << std::endl;
 
 			request_header.resize(delimiter_pos);
@@ -176,10 +177,10 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 
 	if (!request->getBodyBuf().empty()) // process any remaining data in the request body buffer
 	{
-		std::cout << "request buf: ";
-		for (auto &ch : request->getBodyBuf())
-			std::cout << static_cast<char>(ch);
-		std::cout << std::endl;
+		// std::cout << "request buf: ";
+		// for (auto &ch : request->getBodyBuf())
+		// 	std::cout << static_cast<char>(ch);
+		// std::cout << std::endl;
 		request->appendToBody(request->getBodyBuf());
 		request->clearBodyBuf();
 	}
@@ -218,7 +219,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 
 	Request *request = clients[client_fd].getRequest();
 
-	std::cout << "here" << std::endl;
+	// std::cout << "here" << std::endl;
 
 	if (!request->getBodyBuf().empty()) // process any remaining data in the request body buffer
 	{
@@ -231,8 +232,12 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		std::vector<std::byte> body_buf;
-		for (auto &ch : buf)
-			body_buf.push_back(static_cast<std::byte>(ch));
+		for (ssize_t i = 0; i < bytes; ++i)
+			body_buf.push_back(static_cast<std::byte>(buf[i]));
+		std::cout << "body_buf: ";
+		for (auto &ch : body_buf)
+			std::cout << static_cast<char>(ch);
+		std::cout << std::endl;
 		RequestStatus request_status = processChunkData(client_fd, body_buf);
 		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
 			return (request_status);
@@ -250,55 +255,62 @@ Server::RequestStatus Server::processChunkData(int const &client_fd, std::vector
 {
 	Request *request = clients[client_fd].getRequest();
 
-	std::cout << "request buf: ";
-	for (auto &ch : body_buf)
-		std::cout << static_cast<char>(ch);
-	std::cout << std::endl;
-
-	request->appendToBody(body_buf);
+	// std::cout << "request buf: ";
+	// for (auto &ch : body_buf)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
 
 	if (request->getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
 	{
-		RequestStatus request_status = extractChunkSize(client_fd);
-		std::cout << "request->getChunkSize(): " << request->getChunkSize() << std::endl; 
+		std::cout << "start extract chunk size" << std::endl;
+		RequestStatus request_status = extractChunkSize(client_fd, body_buf);
+		std::cout << "request->getChunkSize(): " << request->getChunkSize() << std::endl;
 		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_EXPECTED)
 			return (request_status);
 	}
+	else
+		request->appendToBody(body_buf);
 
 	std::vector<std::byte> body = request->getBody();
 
-		std::cout << "body: ";
-		for (auto &ch : body)
-			std::cout << static_cast<char>(ch);
-		std::cout << std::endl;
+	// std::cout << "body: ";
+	// for (auto &ch : body)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
 
 	size_t chunk_and_delimiter_size = request->getChunkSize() + (sizeof(CRLF) - 1);
 	if (body.size() >= chunk_and_delimiter_size) // last buffer
 	{
-		char expected_sequence_array[] = { '\r', '\n', '0', '\r', '\n', '\r', '\n' };
-		std::vector<std::byte> expected_sequence;
-		for (auto ch: expected_sequence_array)
-			expected_sequence.push_back(static_cast<std::byte>(ch));
-		if (std::memcmp(body.data() - expected_sequence.size(), expected_sequence.data(), 7))
-		{
-				// body.resize(body.size() - expected_sequence.size());
-				request->resizeBody(body.size() - expected_sequence.size());
+		std::string expected_sequence = CRLF "0" CRLF CRLF;
 
-				std::cout << "body: ";
-				for (auto &ch : request->getBody())
-					std::cout << static_cast<char>(ch);
-				std::cout << std::endl;
-				// request->appendToBody(body);
-				return (READY_TO_WRITE);
+		if (std::memcmp(body.data() + body.size() - 7, expected_sequence.data(), expected_sequence.length()) == 0)
+		{
+			// body.resize(body.size() - expected_sequence.size());
+			request->resizeBody(body.size() - expected_sequence.length());
+
+			// std::cout << "body2: ";
+			// for (auto &ch : request->getBody())
+			// 	std::cout << static_cast<char>(ch);
+			// std::cout << std::endl;
+			request->appendToBody(body);
+			return (READY_TO_WRITE);
 		}
 		if (static_cast<char>(body[request->getChunkSize()]) != '\r' || static_cast<char>(body[request->getChunkSize() + 1]) != '\n') // delimiter is not CRLF
 			return (BAD_REQUEST);
 
- 		std::vector<std::byte> body_buf_tmp (body.size() - chunk_and_delimiter_size);
-  	std::copy ( body.begin() + chunk_and_delimiter_size , body.end() , body_buf_tmp.begin() );
+		std::vector<std::byte> body_buf_tmp(body.size() - chunk_and_delimiter_size);
+		std::copy(body.begin() + chunk_and_delimiter_size, body.end(), body_buf_tmp.begin());
 		request->setBodyBuf(body_buf_tmp);
+		std::cout << "buf ";
+		for (auto &ch : request->getBodyBuf())
+			std::cout << static_cast<char>(ch);
+		std::cout << std::endl;
 		// body.resize(request->getChunkSize());
 		request->resizeBody(request->getChunkSize());
+		// std::cout << "body2: ";
+		// for (auto &ch : request->getBody())
+		// 	std::cout << static_cast<char>(ch);
+		// std::cout << std::endl;
 		// if (body.size() != request->getChunkSize()) // check chunk size
 		// 	return (BAD_REQUEST);
 		request->setChunkSize(0);
@@ -307,45 +319,123 @@ Server::RequestStatus Server::processChunkData(int const &client_fd, std::vector
 	return (BODY_EXPECTED);
 }
 
-Server::RequestStatus Server::extractChunkSize(int const &client_fd)
+Server::RequestStatus Server::extractChunkSize(int const &client_fd, std::vector<std::byte> const &body_buf)
 {
 	Request *request = clients[client_fd].getRequest();
 
-	std::string body;
-	for (const auto &byte : request->getBody())
-		body.push_back(static_cast<char>(byte));
+	std::cout << "buf in extract chunk size: ";
+	for (auto &ch : body_buf)
+		std::cout << static_cast<char>(ch);
+	std::cout << std::endl;
 
-			std::cout << "body: ";
-		for (auto &ch : request->getBody())
-			std::cout << static_cast<char>(ch);
-		std::cout << std::endl;
+	std::string bodyBufStr;
+	for (auto &ch : request->getBodyBuf())
+		bodyBufStr.push_back(static_cast<char>(ch));
 
-	if (body == "0" CRLF CRLF)
-		return (READY_TO_WRITE);
+	std::string final_chunk = "0" CRLF CRLF;
 
-	std::smatch match;
-	if (std::regex_search(body, match, std::regex("^([0-9A-Fa-f]+)" CRLF)))
+	char final_chunk_array[] = {'0', '\r', '\n', '\r', '\n'};
+	// std::vector<std::byte> final_chunk;
+	// for (auto ch : final_chunk_array)
+	// 	final_chunk.push_back(static_cast<std::byte>(ch));
+
+	std::vector<std::byte> final_chunk_with_CRLF;
+	for (int i = 0; i < 3; i++)
+		final_chunk_with_CRLF.push_back(static_cast<std::byte>(final_chunk_array[i]));
+
+	std::vector<std::byte> final_chunk_with_CRLF_CR;
+	for (int i = 0; i < 4; i++)
+		final_chunk_with_CRLF_CR.push_back(static_cast<std::byte>(final_chunk_array[i]));
+
+	std::cout << "after forming chunk" << std::endl;
+	// std::cout << std::memcmp(body.data(), final_chunk.data(), 5) << std::endl;
+	if (body_buf.size() >= final_chunk.length() && std::memcmp(body_buf.data(), final_chunk.data(), final_chunk.length()) == 0)
 	{
-		request->setChunkSize(std::stoi(match[1], nullptr, 16));
-		if (request->getChunkSize() == 0)
-			return (body == "0" CRLF || body == "0" CRLF "\r") ? BODY_EXPECTED : BAD_REQUEST;
-		// body.erase(0, match[0].length());
-					std::cout << "body: ";
-		for (auto &ch : request->getBody())
-			std::cout << static_cast<char>(ch);
-		std::cout << std::endl;
-		std::cout << "match[0].length(): " << match[0].length() << std::endl;
-		request->eraseBody(0, match[0].length());
-					std::cout << "body: ";
-		for (auto &ch : request->getBody())
-			std::cout << static_cast<char>(ch);
-		std::cout << std::endl;
-		return (PARSED_CHUNK_SIZE);
+		std::cout << "here2" << std::endl;
+		return (READY_TO_WRITE);
 	}
-	else if (!std::regex_search(body, std::regex("^([0-9A-Fa-f]+)"))) // if the chunk is not started with number
-		return (BAD_REQUEST);
+	std::cout << "after forming chunk 2" << std::endl;
+
+	std::vector<std::byte> delimiter;
+	delimiter.push_back(static_cast<std::byte>('\r'));
+	delimiter.push_back(static_cast<std::byte>('\n'));
+
+	// std::cout << "body0: ";
+	// for (auto &ch : request->getBody())
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
+
+	// std::cout << "delimiter: ";
+	// for (auto &ch : delimiter)
+	// 	std::cout << static_cast<char>(ch);
+	// std::cout << std::endl;
+
+	auto crlfPos = std::search(body_buf.begin(), body_buf.end(), delimiter.begin(), delimiter.end());
+
+	if (crlfPos != body_buf.end())
+	{
+		std::cout << "here1" << std::endl;
+		std::string hexSize;
+		for (auto it = body_buf.begin(); it != crlfPos; ++it)
+		{
+			hexSize.push_back(static_cast<char>(*it));
+			std::cout << static_cast<char>(*it);
+		}
+
+		if (std::all_of(hexSize.begin(), hexSize.end(), ::isxdigit))
+		{
+			int chunkSize = std::stoi(hexSize, nullptr, 16);
+			std::cout << "chunk size: " << chunkSize << std::endl;
+			request->setChunkSize(chunkSize);
+			if (request->getChunkSize() == 0)
+				return (std::memcmp(body_buf.data(), final_chunk_with_CRLF.data(), 3) == 0 || std::memcmp(body_buf.data(), final_chunk_with_CRLF_CR.data(), 4) == 0) ? BODY_EXPECTED : BAD_REQUEST;
+			// request->eraseBody(request->getBody().size() - body_buf.size(), request->getBody().size() - body_buf.size() + crlfPos - body_buf.begin() + 2);
+			std::vector<std::byte> body_buf_tmp;
+			for (auto it = crlfPos + 2; it != body_buf.end(); ++it)
+				body_buf_tmp.push_back(*it);
+			request->appendToBody(body_buf_tmp);
+			return PARSED_CHUNK_SIZE;
+		}
+		else
+			return BAD_REQUEST;
+	}
+	else if (!std::regex_search(bodyBufStr, std::regex("^([0-9A-Fa-f]+)")))
+	{
+		return BAD_REQUEST;
+	}
 	else
-		return (BODY_EXPECTED);
+	{
+		std::cout << "here: " << std::endl;
+		for (auto &ch : body_buf)
+			std::cout << static_cast<char>(ch);
+		std::cout << std::endl;
+		request->setBodyBuf(body_buf);
+		return BODY_EXPECTED;
+	}
+
+	// std::smatch match;
+	// if (std::regex_search(body, match, std::regex("^([0-9A-Fa-f]+)" CRLF)))
+	// {
+	// 	request->setChunkSize(std::stoi(match[1], nullptr, 16));
+	// 	if (request->getChunkSize() == 0)
+	// 		return (body == "0" CRLF || body == "0" CRLF "\r") ? BODY_EXPECTED : BAD_REQUEST;
+	// 	// body.erase(0, match[0].length());
+	// 	std::cout << "body: ";
+	// 	for (auto &ch : request->getBody())
+	// 		std::cout << static_cast<char>(ch);
+	// 	std::cout << std::endl;
+	// 	std::cout << "match[0].length(): " << match[0].length() << std::endl;
+	// 	request->eraseBody(0, match[0].length());
+	// 	std::cout << "body: ";
+	// 	for (auto &ch : request->getBody())
+	// 		std::cout << static_cast<char>(ch);
+	// 	std::cout << std::endl;
+	// 	return (PARSED_CHUNK_SIZE);
+	// }
+	// else if (!std::regex_search(body, std::regex("^([0-9A-Fa-f]+)"))) // if the chunk is not started with number
+	// 	return (BAD_REQUEST);
+	// else
+	// 	return (BODY_EXPECTED);
 }
 
 //--------------------------------------------------------------

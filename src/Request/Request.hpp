@@ -84,6 +84,8 @@ public:
 	void resizeBody(const size_t &n);
 	void setChunkSize(const size_t &bytes);
 	void setBodyBuf(const std::vector<std::byte> &buf);
+	void eraseBodyBuf(const size_t &start, const size_t &end);
+	void appendToBodyBuf(const std::vector<std::byte> &newBodyChunk);
 	void clearBodyBuf();
 
 	// GETTERS
