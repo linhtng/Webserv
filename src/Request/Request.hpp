@@ -43,7 +43,7 @@ private:
 
 	// Helper properties for parsing
 	size_t _chunkSize;
-	std::string _bodyBuf;
+	std::vector<std::byte> _bodyBuf;
 
 	// OPTIONAL: handle Expect header
 
@@ -80,8 +80,13 @@ public:
 	// SETTERS
 
 	void appendToBody(const std::vector<std::byte> &newBodyChunk);
+	void eraseBody(const size_t &start, const size_t &end);
+	void resizeBody(const size_t &n);
 	void setChunkSize(const size_t &bytes);
-	void setBodyBuf(const std::string &buf);
+	void setBodyBuf(const std::vector<std::byte> &buf);
+	void eraseBodyBuf(const size_t &start, const size_t &end);
+	void appendToBodyBuf(const std::vector<std::byte> &newBodyChunk);
+	void clearBodyBuf();
 
 	// GETTERS
 
@@ -90,7 +95,7 @@ public:
 	bool isBodyExpected() const;
 	std::string getTransferEncoding() const;
 	size_t getChunkSize() const;
-	std::string getBodyBuf() const;
+	std::vector<std::byte> getBodyBuf() const;
 
 	// EXCEPTIONS
 

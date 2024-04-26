@@ -9,6 +9,7 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <iomanip>
 
 class Request;
 
@@ -48,6 +49,7 @@ public:
 	Response(const Request &request);
 
 	std::vector<std::byte> formatResponse() const;
+	void printResponseProperties() const;
 };
 
 #endif

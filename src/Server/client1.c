@@ -14,7 +14,7 @@ int main(int argc, char const *argv[])
 	char buffer[1024];
 
 	int status, valread, client_fd;
-	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 9\r\nContent-Type: text/plain\r\n\r\n12345678910";
+	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nContent-Length: 9\r\nContent-Type: text/plain\r\n\r\n123456789";
 	if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		printf("\n Socket creation error \n");
@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
 		printf("\nConnection Failed \n");
 		return (-1);
 	}
-	// send(client_fd, hello, strlen(hello), 0);
+	send(client_fd, hello, strlen(hello), 0);
 
 	// printf("Hello message sent\n");
 	// valread = read(client_fd, buffer,
@@ -58,17 +58,17 @@ int main(int argc, char const *argv[])
 	// memset(buffer, 0, 1024);
 
 
-	sleep(2);
-	hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n5\r\nhello\r\n";
-	send(client_fd, hello, strlen(hello), 0);
+	// sleep(2);
+	// hello = "POST /endpoint HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n5\r\nhello\r\n";
+	// send(client_fd, hello, strlen(hello), 0);
 
-	sleep(1);
-	hello = "6\r\n world\r\n";
-	send(client_fd, hello, strlen(hello), 0);
+	// sleep(1);
+	// hello = "6\r\n world\r\n";
+	// send(client_fd, hello, strlen(hello), 0);
 
-	sleep(1);
-	hello = "0\r\n\r\n";
-	send(client_fd, hello, strlen(hello), 0);
+	// sleep(1);
+	// hello = "0\r\n\r\n";
+	// send(client_fd, hello, strlen(hello), 0);
 
 	printf("Hello message sent\n");
 	valread = read(client_fd, buffer,
