@@ -67,8 +67,10 @@ public:
 	RequestStatus receiveRequest(int const &client_fd);
 	ResponseStatus sendResponse(int const &client_fd);
 
-	int const &getServerFd(void) const;
+	int const &getServerFd() const;
 	void removeClient(int const &client_fd);
+	std::unordered_map<int, Client> const &getClients() const;
+	ConfigData const &getConfig() const;
 
 	class SocketCreationException : public std::exception
 	{

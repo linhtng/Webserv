@@ -112,9 +112,10 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	if (request_status != BAD_REQUEST)
 	// if (request->isBodyExpected() && request_status != BAD_REQUEST)
 	{
-		// request_status = clients[client_fd].getRequest()->getContentLength() ? formRequestBodyWithContentLength(client_fd) : formRequestBodyWithChunk(client_fd); // TODO - check the function for checking 'if the request has content length'
+		request_status = clients[client_fd].getRequest()->getContentLength() ? formRequestBodyWithContentLength(client_fd) : formRequestBodyWithChunk(client_fd); // TODO - check the function for checking 'if the request has content length'
+		std::cout << "Content length: " << clients[client_fd].getRequest()->getContentLength() << std::endl;
 		// request_status = formRequestBodyWithContentLength(client_fd); // TODO - check the function for checking 'if the request has content length'
-		request_status = formRequestBodyWithChunk(client_fd); // TODO - check the function for checking 'if the request has content length'
+		// request_status = formRequestBodyWithChunk(client_fd); // TODO - check the function for checking 'if the request has content length'
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
@@ -464,39 +465,39 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
-	std::ofstream ofs("test.txt");
-	std::vector<std::byte> body = clients[client_fd].getRequest()->getBody();
-	const std::byte *dataPtr = body.data();
-	std::size_t dataSize = body.size();
-	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
-	ofs.close();
+	// std::ofstream ofs("test.txt");
+	// std::vector<std::byte> body = clients[client_fd].getRequest()->getBody();
+	// const std::byte *dataPtr = body.data();
+	// std::size_t dataSize = body.size();
+	// ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
+	// ofs.close();
 	//--------------------------------------------------------------
 
 	// sample response to be sent to browser
-	std::vector<std::byte>
-		full_response;
-	std::string sample_response = "HTTP/1.1 200 OK\r\n"
-								  "Content-Type: text/html\r\n"
-								  "Content-Length: 431\r\n"
-								  "\r\n"
-								  "<!DOCTYPE html>\n"
-								  "<html lang=\"en\">\n"
-								  "<head>\n"
-								  "    <meta charset=\"UTF-8\">\n"
-								  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-								  "    <title>File Upload Example</title>\n"
-								  "</head>\n"
-								  "<body>\n"
-								  "    <h2>Upload a File</h2>\n"
-								  "    <form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\n"
-								  "        <input type=\"file\" name=\"fileUpload\" id=\"fileUpload\">\n"
-								  "        <button type=\"submit\">Upload</button>\n"
-								  "    </form>\n"
-								  "</body>\n"
-								  "</html>\n";
+	// std::vector<std::byte>
+	// 	full_response;
+	// std::string sample_response = "HTTP/1.1 200 OK\r\n"
+	// 							  "Content-Type: text/html\r\n"
+	// 							  "Content-Length: 431\r\n"
+	// 							  "\r\n"
+	// 							  "<!DOCTYPE html>\n"
+	// 							  "<html lang=\"en\">\n"
+	// 							  "<head>\n"
+	// 							  "    <meta charset=\"UTF-8\">\n"
+	// 							  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+	// 							  "    <title>File Upload Example</title>\n"
+	// 							  "</head>\n"
+	// 							  "<body>\n"
+	// 							  "    <h2>Upload a File</h2>\n"
+	// 							  "    <form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\n"
+	// 							  "        <input type=\"file\" name=\"fileUpload\" id=\"fileUpload\">\n"
+	// 							  "        <button type=\"submit\">Upload</button>\n"
+	// 							  "    </form>\n"
+	// 							  "</body>\n"
+	// 							  "</html>\n";
 
-	for (char ch : sample_response)
-		full_response.push_back(static_cast<std::byte>(ch));
+	// for (char ch : sample_response)
+	// 	full_response.push_back(static_cast<std::byte>(ch));
 
 	// std::cout << std::endl;
 	// std::cout << "-----full response-----" << std::endl;
@@ -505,6 +506,24 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// std::cout << std::endl;
 	// std::cout << "-----full response end-----" << std::endl;
 	// std::cout << std::endl;
+
+	std::cout << "to get full response" << std::endl;
+
+	std::cout << "client_fd: " << client_fd << std::endl;
+
+	std::cout << "response again: " << std::endl;
+	clients[client_fd].getResponse()->printResponseProperties();
+
+	std::vector<std::byte>
+		full_response = clients[client_fd].getResponse()->formatResponse();
+
+	std::cout << std::endl;
+	std::cout << "-----full response-----" << std::endl;
+	for (auto &ch : full_response)
+		std::cout << static_cast<char>(ch);
+	std::cout << std::endl;
+	std::cout << "-----full response end-----" << std::endl;
+	std::cout << std::endl;
 
 	ssize_t bytes;
 	size_t response_len = full_response.size();
@@ -516,6 +535,11 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// if request header = Connection: close, close connection
 	// std::cout << "Response sent from server" << std::endl;
 	// return (RESPONSE_CLIENT_DISCONNECTED);
+	if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE)
+	{
+		std::cout << "connection close" << std::endl;
+		return (RESPONSE_CLIENT_DISCONNECTED);
+	}
 	if (bytes_sent >= response_len || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
 	{
 
@@ -545,6 +569,16 @@ int const &Server::getServerFd() const
 void Server::removeClient(int const &client_fd)
 {
 	clients.erase(client_fd);
+}
+
+std::unordered_map<int, Client> const &Server::getClients() const
+{
+	return (clients);
+}
+
+ConfigData const &Server::getConfig() const
+{
+	return (config);
 }
 
 // std::cout << "full response: ";

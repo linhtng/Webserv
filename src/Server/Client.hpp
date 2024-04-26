@@ -30,6 +30,8 @@ public:
 	void createRequest(std::string const &request_header, ConfigData const &config);
 	void createResponse();
 
+	void createErrorRequest(ConfigData const &config, HttpStatusCode statusCode);
+
 	void removeRequest();
 	void removeResponse();
 

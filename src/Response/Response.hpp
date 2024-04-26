@@ -40,6 +40,7 @@ public:
 	Response(const Request &request);
 
 	std::vector<std::byte> formatResponse() const;
+	void printResponseProperties() const;
 };
 
 #endif
