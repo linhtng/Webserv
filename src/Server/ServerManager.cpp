@@ -256,6 +256,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 // if the server shutdown, send error response to all clients and close all clients
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode statusCode)
 {
+	(void)statusCode;
 	statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 	for (auto &server : servers)
 	{
