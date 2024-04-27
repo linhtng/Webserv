@@ -507,13 +507,6 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// std::cout << "-----full response end-----" << std::endl;
 	// std::cout << std::endl;
 
-	std::cout << "to get full response" << std::endl;
-
-	std::cout << "client_fd: " << client_fd << std::endl;
-
-	std::cout << "response again: " << std::endl;
-	clients[client_fd].getResponse()->printResponseProperties();
-
 	std::vector<std::byte>
 		full_response = clients[client_fd].getResponse()->formatResponse();
 
@@ -559,6 +552,13 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	else if (bytes == 0 || errno == ECONNRESET) // client has shutdown or disconnect
 		return (RESPONSE_CLIENT_DISCONNECTED);
 	throw SendException();
+}
+
+void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd)
+{
+    clients[client_fd].createErrorRequest(config, statusCode);
+    clients[client_fd].createResponse();
+    sendResponse(client_fd);
 }
 
 int const &Server::getServerFd() const

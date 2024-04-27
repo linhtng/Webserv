@@ -66,6 +66,7 @@ public:
 	std::vector<int> acceptNewConnections();
 	RequestStatus receiveRequest(int const &client_fd);
 	ResponseStatus sendResponse(int const &client_fd);
+	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
 
 	int const &getServerFd() const;
 	void removeClient(int const &client_fd);

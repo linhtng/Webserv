@@ -69,23 +69,3 @@ Response *Client::getResponse() const
 {
 	return (response);
 }
-
-// size_t const &Client::getChunkSize() const
-// {
-// 	return (chunk_size);
-// }
-
-// std::string const &Client::getRequestBodyBuf() const
-// {
-// 	return (request_body_buf);
-// }
-
-// void Client::setChunkSize(size_t const &bytes)
-// {
-// 	chunk_size = bytes;
-// }
-
-// void Client::setRequestBodyBuf(std::string const &buf)
-// {
-// 	request_body_buf = buf;
-// }

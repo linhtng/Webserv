@@ -17,8 +17,6 @@ private:
 	socklen_t addrlen;
 	Request *request;
 	Response *response;
-	// size_t chunk_size; //TODO - move to request
-	// std::string request_body_buf; //TODO - move to request
 
 public:
 	Client();
@@ -39,11 +37,6 @@ public:
 
 	Request *getRequest() const;
 	Response *getResponse() const;
-	// size_t const &getChunkSize() const;
-	// std::string const &getRequestBodyBuf() const;
-
-	// void setChunkSize(size_t const &bytes);
-	// void setRequestBodyBuf(std::string const &buf);
 };
 
 #endif
