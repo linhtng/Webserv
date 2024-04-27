@@ -176,17 +176,25 @@ void Response::handlePost()
 {
 }
 
-Location Response::getLocation()
+Location getLocation(std::string locationRoute, ConfigData config)
 {
 	std::map<std::string, Location> locations = config.getLocations();
-	Location location = locations.at(this->_target);
+	Location location = locations.at(locationRoute);
 	return locations.at(locationRoute);
 }
 
 void Response::handleGet()
 {
-	std::map<std::string, Location> locations = this->_config.getLocations();
-	Location location = locations.at(this->_target);
+	Location location;
+	try
+	{
+		location = getLocation(this->_target, this->_config);
+	}
+	catch (const std::out_of_range &e)
+	{
+		this->_statusCode = HttpStatusCode::NOT_FOUND;
+		this->prepareErrorResponse();
+	}
 
 	if (FileSystemUtils::isDir(this->_target))
 	{
