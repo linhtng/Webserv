@@ -15,6 +15,7 @@ int main(int argc, char **argv)
     {
         ConfigParser parser(fileName);
         parser.extractServerConfigs();
+        parser.printCluster(); // debug
     }
     catch (std::exception &e)
     {

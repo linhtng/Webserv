@@ -12,7 +12,6 @@ Location::Location(const std::string &input)
     cgiExtension = "";
     cgiPath = "";
     redirectionRoute = "";
-    acceptedMethods = {"POST", "GET"};
 }
 
 Location::~Location() {}
@@ -38,11 +37,13 @@ void Location::analyzeLocationData()
     setRedirection();
     setLocationAlias();
     setLocationRoot();
-    // if (alias.empty())
-    //     setLocationRoot();
     if (root.empty() && alias.empty())
     {
         throw std::runtime_error("Root or alias must be set in location block: " + locationBlock);
+    }
+    if (!root.empty() && !alias.empty())
+    {
+        throw std::runtime_error("Don't have both root and alias set in location block: " + locationBlock);
     }
     setDirectoryListing();
     setDefaultFile();
@@ -102,7 +103,7 @@ void Location::setLocationRoute()
  */
 void Location::setAcceptedMethods()
 {
-    std::regex methodRegex("limit_except\\s+(([A-Z]+\\s*)+)\\{");
+    std::regex methodRegex("allowed_method\\s+(\\S+\\s*)\\;");
     std::smatch match;
     if (std::regex_search(locationBlock, match, methodRegex))
     {
@@ -111,14 +112,28 @@ void Location::setAcceptedMethods()
         std::string method;
         while (iss >> method)
         {
-            if (std::find(acceptedMethods.begin(), acceptedMethods.end(), method) == acceptedMethods.end())
-                acceptedMethods.push_back(method);
+            acceptedMethods.insert(matchValidMethod(method));
         }
     }
-    else if (locationBlock.find("limit_except") != std::string::npos)
+    else if (locationBlock.find("allowed_method") != std::string::npos)
     {
-        throw std::runtime_error("Invalid limit_except syntax");
+        throw std::runtime_error("Invalid allowed_method syntax");
     }
+}
+
+HttpMethod Location::matchValidMethod(std::string method)
+{
+    std::unordered_map<std::string, HttpMethod> methodMap = {
+        {"GET", HttpMethod::GET},
+        {"HEAD", HttpMethod::HEAD},
+        {"POST", HttpMethod::POST},
+        {"DELETE", HttpMethod::DELETE}};
+    auto it = methodMap.find(method);
+    if (it == methodMap.end())
+    {
+        throw std::invalid_argument("Invalid method: " + method);
+    }
+    return it->second;
 }
 
 void Location::setRedirection()
@@ -224,16 +239,12 @@ void Location::setCgiExtension()
 
 void Location::setCgiPath()
 {
-    std::string cgiPathValue = extractDirectiveValue("cgi-path");
-    if (!cgiPathValue.empty())
-    {
-        std::regex invalidCharRegex("[;:*?<>|]");
-        checkValidCharacters(cgiPathValue, invalidCharRegex);
-        cgiExtension = cgiPathValue;
-    }
+    if (cgiExtension.empty())
+        return;
+    cgiPath = root + locationRoute;
 }
 
-std::vector<std::string> Location::getAcceptedMethods()
+std::unordered_set<HttpMethod> Location::getAcceptedMethods()
 {
     return acceptedMethods;
 }

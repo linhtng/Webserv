@@ -30,7 +30,8 @@ int ServerManager::runServer()
 	{
 		createServers();
 		startServerLoop();
-		cleanUpForServerShutdown(503);
+		std::cout << "about to shut down" << std::endl;
+		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
 
 		/*
 		------------------------------------------------------------------
@@ -43,7 +44,7 @@ int ServerManager::runServer()
 	}
 	catch (std::exception &e)
 	{
-		cleanUpForServerShutdown(500);
+		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
 
 		/*
 		------------------------------------------------------------------
@@ -130,7 +131,11 @@ void ServerManager::handlePoll()
 	if (ready < 0)
 	{
 		if (errno == EINTR)
+		{
+			std::cout << "ctrl C" << std::endl;
 			return;
+		}
+
 		throw PollException();
 	}
 	else if (ready == 0) // timeout occur for all socket
@@ -249,12 +254,35 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 }
 
 // if the server shutdown, send error response to all clients and close all clients
-void ServerManager::cleanUpForServerShutdown(const int &status_code)
+void ServerManager::cleanUpForServerShutdown(HttpStatusCode statusCode)
 {
-	std::string error_response = "server error with status code " + std::to_string(status_code);
-	for (auto &client : client_to_server_map)
-		send(client.first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
-	for (const pollfd &fd : pollfds)											// close all pollfds
+	(void)statusCode;
+	statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+	for (auto &server : servers)
+	{
+		for (auto client : server.second.getClients())
+		{
+			std::cout << "create Error Request" << std::endl;
+			client.second.createErrorRequest(server.second.getConfig(), HttpStatusCode::INTERNAL_SERVER_ERROR);
+			client.second.getRequest()->printRequestProperties();
+			std::cout << "create Response" << std::endl;
+			client.second.createResponse();
+			client.second.getResponse()->printResponseProperties();
+			std::cout << "send Response client fd: " << client.first << std::endl;
+			server.second.sendResponse(client.first);
+		}
+	}
+
+	// std::string error_response = "server error with status code " + std::to_string(status_code);
+	// Server::ResponseStatus response_status = servers[server_fd].sendResponse(client_fd);
+	// for (auto &map : client_to_server_map)
+	// {
+	// 	int server_fd = map.second;
+	// 	servers[server_fd].client.createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
+	// 	client.createResponse();
+	// }
+	// send(client.first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+	for (const pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
 }
 

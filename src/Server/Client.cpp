@@ -27,6 +27,11 @@ void Client::createRequest(std::string const &request_header, ConfigData const &
 	request->setChunkSize(0);
 }
 
+void Client::createErrorRequest(ConfigData const &config, HttpStatusCode statusCode)
+{
+	request = new Request(config, statusCode); // Create a Request object with the provided header
+}
+
 void Client::createResponse()
 {
 	response = new Response(*request); // Create a Response object with the corresponding request

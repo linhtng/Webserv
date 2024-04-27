@@ -2,25 +2,24 @@
 
 // DEBUGGING FUNCTIONS
 
-void printResponseProperties(const Response &response)
+void Response::printResponseProperties() const
 {
 	std::cout << "Response properties:" << std::endl;
-	std::cout << "Server name: " << response.getConfig().getServerName() << std::endl;
-	std::cout << "Method: " << response.getMethod() << std::endl;
-	std::cout << "Target: " << response.getTarget() << std::endl;
-	std::cout << "HTTP version: " << response.getHttpVersionMajor() << "." << response.getHttpVersionMinor() << std::endl;
-	std::cout << "Content length: " << response.getContentLength() << std::endl;
+	std::cout << "Server name: " << this->getConfig().getServerName() << std::endl;
+	std::cout << "Method: " << this->getMethod() << std::endl;
+	std::cout << "Target: " << this->getTarget() << std::endl;
+	std::cout << "HTTP version: " << this->getHttpVersionMajor() << "." << this->getHttpVersionMinor() << std::endl;
+	std::cout << "Content length: " << this->getContentLength() << std::endl;
+	std::cout << "Connection: " << this->getConnection() << std::endl;
+	std::cout << "Date: " << this->getDate().time_since_epoch().count() << std::endl;
+	std::cout << "Content type: " << this->getContentType() << std::endl;
+	std::cout << "Status code: " << this->getStatusCode() << std::endl;
+	std::cout << "Chunked: " << this->isChunked() << std::endl;
 	std::cout << "Body: ";
-	for (std::byte byte : response.getBody())
+	for (std::byte byte : this->getBody())
 	{
 		std::cout << static_cast<char>(byte);
 	}
-	std::cout << std::endl;
-	std::cout << "Connection: " << response.getConnection() << std::endl;
-	std::cout << "Date: " << response.getDate().time_since_epoch().count() << std::endl;
-	std::cout << "Content type: " << response.getContentType() << std::endl;
-	std::cout << "Status code: " << response.getStatusCode() << std::endl;
-	std::cout << "Chunked: " << response.isChunked() << std::endl;
 }
 
 // STRING FORMING FUNCTIONS
@@ -66,12 +65,13 @@ std::string Response::formatStatusLine() const
 
 std::string Response::formatHeader() const
 {
+	printResponseProperties();
 	std::string header;
 	header += this->formatStatusLine() + CRLF;
 	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
+	header += "Content-Length: XXX" CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
-	header += "Content-Type: " + this->formatContentType() + CRLF;
 	header += "Connection: " + this->formatConnection() + CRLF;
 	header += CRLF;
 	return header;

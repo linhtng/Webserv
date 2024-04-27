@@ -12,3 +12,23 @@ In other words, listen 80 default_server; is a more explicit way to set a server
 
 Command to check your default error page with curl:
 curl -k -I https://your-nginx-server/nonexistent-page
+
+CgiHandler:
+if request requires CGI handling:
+    parse the request
+    set up the CGI environment
+    execute the CGI script
+    if request method is POST:
+        send the request body to the script's stdin
+    read the script's stdout
+    create an HTTP response with the script's output
+    send the response to the client
+
+
+The `PATH_INFO` environment variable is used in the context of CGI scripts to provide extra path information after the script name in the URL. This can be useful for scripts that can handle different resources based on this path information.
+
+However, in your case, the requirement states "Because you won’t call the CGI directly, use the full path as PATH_INFO". This means that instead of using `PATH_INFO` to store extra path information after the script name, you should use it to store the full path of the CGI script itself.
+
+This is likely because your server is set up to handle requests for certain paths (like `/test/cgi-bin`) by executing a corresponding CGI script, rather than directly calling a specific script. The server needs to know the full path of the script to execute it, and storing this path in `PATH_INFO` is a convenient way to pass this information to the part of the server code that handles executing the script.
+
+So, if a request comes in for the URL `/test/cgi-bin/upload.php`, the server would set `PATH_INFO` to the full path of the `upload.php` script, something like `/data/www/test/cgi-bin/upload.php`, before executing the script.

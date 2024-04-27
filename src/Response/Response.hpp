@@ -13,9 +13,11 @@
 #include <string>
 #include <chrono>
 #include <vector>
+// TODO: check imports below
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <iomanip>
 
 class Request;
 
@@ -55,6 +57,7 @@ public:
 	Response(const Request &request);
 
 	std::vector<std::byte> formatResponse() const;
+	void printResponseProperties() const;
 };
 
 #endif
