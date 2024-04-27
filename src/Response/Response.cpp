@@ -176,8 +176,44 @@ void Response::handlePost()
 {
 }
 
+Location Response::getLocation()
+{
+	std::map<std::string, Location> locations = config.getLocations();
+	Location location = locations.at(this->_target);
+	return locations.at(locationRoute);
+}
+
 void Response::handleGet()
 {
+	std::map<std::string, Location> locations = this->_config.getLocations();
+	Location location = locations.at(this->_target);
+
+	if (FileSystemUtils::isDir(this->_target))
+	{
+		if (isAutoindexOn(this->_target))
+		{
+			// serve directory listing
+		}
+		else if (hasIndexFile(this->_target))
+		{
+			// server index file
+		}
+		else
+		{
+			// 403 Forbidden
+		}
+	}
+	else
+	{
+		if (isFile(this->_target))
+		{
+			// serve file
+		}
+		else
+		{
+			// 404 Not Found
+		}
+	}
 }
 
 void Response::handleHead()

@@ -1,10 +1,12 @@
-#ifndef DEFAULT_ERROR_HPP
-#define DEFAULT_ERROR_HPP
+#ifndef DEFAULT_ERROR_PAGE_HPP
+#define DEFAULT_ERROR_PAGE_HPP
 
 #include "../defines.hpp"
-#include <vector>
 #include "../HttpMessage/HttpMessage.hpp"
 #include "../StringUtils/StringUtils.hpp"
+
+#include <vector>
+#include <sstream>
 
 namespace DefaultErrorPage
 {

@@ -2,3 +2,5 @@ webserv
 .DS_Store
 .vscode/
 *.o
+/src/Server/server
+/src/Response/response_test

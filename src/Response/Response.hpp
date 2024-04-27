@@ -5,10 +5,17 @@
 #include "../Request/Request.hpp"
 #include "../HttpMessage/HttpMessage.hpp"
 #include "../DefaultErrorPage/DefaultErrorPage.hpp"
+#include "../DirectoryListingPage/DirectoryListingPage.hpp"
+#include "../StringUtils/StringUtils.hpp"
+#include "../FileSystemUtils/FileSystemUtils.hpp"
+#include "../config_parser/Location.hpp"
 
 #include <string>
 #include <chrono>
 #include <vector>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 class Request;
 
