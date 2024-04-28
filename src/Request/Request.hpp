@@ -59,6 +59,7 @@ private:
 	int parseVersion();
 	HttpMethod matchValidMethod();
 	HttpMethod parseMethod();
+	std::string parseTarget();
 	void validateMethod();
 
 	void parseRequestLine();

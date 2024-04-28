@@ -11,8 +11,7 @@ SRCS = main.cpp \
 		../config_parser/ConfigData.cpp \
 		../config_parser/Location.cpp \
 		../StringUtils/StringUtils.cpp \
-		../DefaultErrorPage/DefaultErrorPage.cpp
-		
+		../BinaryData/BinaryData.cpp \
 
 CC = c++
 

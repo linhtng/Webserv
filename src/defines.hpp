@@ -1,7 +1,8 @@
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
 
-#define DEFAULT_TIMEOUT 1000
+#define SERVER_SOFTWARE "webservant v0.1"
+#define CGI_LOCATION "cgi-bin"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
@@ -21,6 +22,7 @@
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
 #define RWS_REGEX "[\t ]+"
+#define URL_REGEX "[a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]+"
 
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})(\\.\\d{1,3})?$" // nginx takes up to 3 digits for the minor version

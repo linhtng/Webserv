@@ -169,6 +169,18 @@ HttpMethod Request::parseMethod()
 	return matchValidMethod();
 }
 
+std::string Request::parseTarget()
+{
+	std::string target = this->_requestLine.requestTarget;
+	std::regex targetRegex(URL_REGEX);
+	if (!std::regex_match(target, targetRegex))
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		throw BadRequestException();
+	}
+	return target;
+}
+
 int Request::parseVersion()
 {
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
@@ -189,7 +201,7 @@ int Request::parseVersion()
 void Request::parseRequestLine()
 {
 	this->_method = parseMethod();
-	this->_target = this->_requestLine.requestTarget;
+	this->_target = parseTarget();
 	this->_httpVersionMajor = parseVersion();
 }
 

@@ -1,4 +1,6 @@
 TODO:
+- standardise this-> stuff
+- check that i didn't mess up with matches array (0th elem is always full string)
 
 POST /upload HTTP/1.1
 Host: localhost:8081

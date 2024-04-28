@@ -5,6 +5,7 @@ ConfigData::ConfigData() {}
 ConfigData::ConfigData(std::string &input)
 {
     serverBlock = input;
+    analyzeConfigData();
 }
 
 ConfigData::~ConfigData() {}
@@ -340,7 +341,6 @@ void ConfigData::splitLocationBlocks()
 
 std::string ConfigData::getServerName() const
 {
-    std::cout << "Server name: " << serverName << std::endl;
     return serverName;
 }
 
@@ -361,11 +361,18 @@ std::map<std::string, Location> ConfigData::getLocations() const
 
 bool ConfigData::hasMatchingLocation(std::string locationRoute) const
 {
+    std::cout << BLUE;
+    std::cout << "Number of locations: " << this->locations.size() << std::endl;
+    for (auto &location : this->locations)
+    {
+        std::cout << "Location route: " << location.first << std::endl;
+    }
+    std::cout << RESET;
     return this->locations.find(locationRoute) != locations.end();
 }
 
 Location ConfigData::getMatchingLocation(std::string locationRoute) const
 {
     Location location = this->locations.at(locationRoute);
-    return locations.at(locationRoute);
+    return location;
 }
