@@ -19,6 +19,14 @@ class Location
 public:
     Location();
     Location(const std::string &input);
+    Location(const Location &location);
+    Location& operator=(const Location& other) {
+        if (this != &other) {
+            // Copy members from other to this
+            // Make sure to handle any dynamic memory or resources properly
+        }
+        return *this;
+    }
     ~Location();
 
     void analyzeLocationData();
@@ -33,7 +41,7 @@ public:
     bool getDirectoryListing();
     std::string getDefaultFile();
     std::string getCgiExtension();
-    std::string getCgiPath();
+    std::string getCgiExecutor();
 
 private:
     std::string locationBlock;
@@ -45,7 +53,7 @@ private:
     bool directoryListing;
     std::string defaultFile;
     std::string cgiExtension;
-    std::string cgiPath;
+    std::string cgiExecutor;
     // ... other properties ...
 
     std::string extractDirectiveValue(const std::string &directiveKey);
@@ -59,5 +67,5 @@ private:
     void setDirectoryListing();
     void setDefaultFile();
     void setCgiExtension();
-    void setCgiPath();
+    void setCgiExecutor();
 };

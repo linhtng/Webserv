@@ -32,3 +32,41 @@ However, in your case, the requirement states "Because you won’t call the CGI 
 This is likely because your server is set up to handle requests for certain paths (like `/test/cgi-bin`) by executing a corresponding CGI script, rather than directly calling a specific script. The server needs to know the full path of the script to execute it, and storing this path in `PATH_INFO` is a convenient way to pass this information to the part of the server code that handles executing the script.
 
 So, if a request comes in for the URL `/test/cgi-bin/upload.php`, the server would set `PATH_INFO` to the full path of the `upload.php` script, something like `/data/www/test/cgi-bin/upload.php`, before executing the script.
+
+
+∗ The CGI should be run in the correct directory for relative path file access.
+
+[ When a CGI script is run, it's executed within a certain context on the server. This context includes a current working directory. Any file paths in the CGI script that are relative (i.e., not starting with a `/`) are interpreted relative to this current working directory.
+
+For example, let's say your server's file system looks like this:
+
+```
+/
+├── server
+│   ├── cgi-bin
+│   │   └── upload.py
+│   └── uploads
+└── tmp
+```
+
+And let's say `upload.py` contains a line like this:
+
+```python
+with open('file.txt', 'w') as f:
+    f.write('Hello, world!')
+```
+
+The path `'file.txt'` is a relative path. If `upload.py` is run with a current working directory of `/server/cgi-bin`, then `file.txt` will be created at `/server/cgi-bin/file.txt`.
+
+But if `upload.py` is run with a current working directory of `/server/uploads`, then `file.txt` will be created at `/server/uploads/file.txt`.
+
+So, when the specification says "The CGI should be run in the correct directory for relative path file access", it means that you should set the current working directory to the directory where you want relative paths to be resolved to.
+
+In C++, you can change the current working directory using the `chdir` function. For example, to change the current working directory to `/server/uploads` before running a CGI script, you could do:
+
+```cpp
+chdir("/server/uploads");
+// Now run the CGI script
+```
+
+This way, any relative paths in the CGI script will be resolved relative to `/server/uploads`. ]

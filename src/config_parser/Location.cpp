@@ -10,8 +10,22 @@ Location::Location(const std::string &input)
     directoryListing = false;
     defaultFile = "index.html";
     cgiExtension = "";
-    cgiPath = "";
+    cgiExecutor = "";
     redirectionRoute = "";
+}
+
+Location::Location(const Location &rhs)
+{
+    locationBlock = rhs.locationBlock;
+    locationRoute = rhs.locationRoute;
+    acceptedMethods = rhs.acceptedMethods;
+    redirectionRoute = rhs.redirectionRoute;
+    root = rhs.root;
+    alias = rhs.alias;
+    directoryListing = rhs.directoryListing;
+    defaultFile = rhs.defaultFile;
+    cgiExtension = rhs.cgiExtension;
+    cgiExecutor = rhs.cgiExecutor;
 }
 
 Location::~Location() {}
@@ -48,7 +62,7 @@ void Location::analyzeLocationData()
     setDirectoryListing();
     setDefaultFile();
     setCgiExtension();
-    setCgiPath();
+    setCgiExecutor();
 }
 
 void Location::printLocationData()
@@ -67,7 +81,7 @@ void Location::printLocationData()
     std::cout << "Directory listing: " << (directoryListing ? "on" : "off") << std::endl;
     std::cout << "Default file: " << defaultFile << std::endl;
     std::cout << "Cgi extension: " << cgiExtension << std::endl;
-    std::cout << "Cgi path: " << cgiPath << std::endl;
+    std::cout << "Cgi path: " << cgiExecutor << std::endl;
     std::cout << std::endl;
 }
 
@@ -103,7 +117,7 @@ void Location::setLocationRoute()
  */
 void Location::setAcceptedMethods()
 {
-    std::regex methodRegex("allowed_method\\s+(\\S+\\s*)\\;");
+    std::regex methodRegex("allowed_method\\s+(([A-Z]+\\s*)+)\\;");
     std::smatch match;
     if (std::regex_search(locationBlock, match, methodRegex))
     {
@@ -117,6 +131,7 @@ void Location::setAcceptedMethods()
     }
     else if (locationBlock.find("allowed_method") != std::string::npos)
     {
+        std::cout << "Invalid allowed_method syntax: " << locationBlock << std::endl;
         throw std::runtime_error("Invalid allowed_method syntax");
     }
 }
@@ -228,7 +243,7 @@ void Location::setDefaultFile()
 
 void Location::setCgiExtension()
 {
-    std::string cgiExtenValue = extractDirectiveValue("cgi-exten");
+    std::string cgiExtenValue = extractDirectiveValue("cgi_exten");
     if (!cgiExtenValue.empty())
     {
         std::regex invalidCharRegex("[\\\\/;:*?<>|]");
@@ -237,11 +252,9 @@ void Location::setCgiExtension()
     }
 }
 
-void Location::setCgiPath()
+void Location::setCgiExecutor()
 {
-    if (cgiExtension.empty())
-        return;
-    cgiPath = root + locationRoute;
+    cgiExecutor = extractDirectiveValue("cgi_executor");
 }
 
 std::unordered_set<HttpMethod> Location::getAcceptedMethods()
@@ -279,7 +292,7 @@ std::string Location::getCgiExtension()
     return cgiExtension;
 }
 
-std::string Location::getCgiPath()
+std::string Location::getCgiExecutor()
 {
-    return cgiPath;
+    return cgiExecutor;
 }

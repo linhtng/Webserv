@@ -12,6 +12,7 @@ SRCS = main.cpp \
 		../config_parser/Location.cpp \
 		../StringUtils/StringUtils.cpp \
 		../BinaryData/BinaryData.cpp \
+		../FileSystemUtils/FileSystemUtils.cpp \
 
 CC = c++
 

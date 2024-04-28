@@ -30,7 +30,6 @@ int ServerManager::runServer()
 	{
 		createServers();
 		startServerLoop();
-		std::cout << "about to shut down" << std::endl;
 		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
 
 		/*
@@ -108,7 +107,10 @@ void ServerManager::startServerLoop()
 				handleClientDisconnection(it);
 			}
 			else
+			{
+				std::cout << "throw ReventErrorFlagException" << std::endl;
 				throw ReventErrorFlagException();
+			}
 		}
 	}
 }
@@ -131,11 +133,7 @@ void ServerManager::handlePoll()
 	if (ready < 0)
 	{
 		if (errno == EINTR)
-		{
-			std::cout << "ctrl C" << std::endl;
 			return;
-		}
-
 		throw PollException();
 	}
 	else if (ready == 0) // timeout occur for all socket
@@ -151,8 +149,10 @@ void ServerManager::handlePollTimeout()
 	{
 		if (client_to_server_map.find(it->fd) != client_to_server_map.end())
 		{
+			int client_fd = it->fd;
+			int server_fd = client_to_server_map[client_fd];
 			std::string error_response = "poll timeout";
-			send(it->fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+			servers[server_fd].createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
 			handleClientDisconnection(it);
 		}
 	}
@@ -176,8 +176,10 @@ void ServerManager::checkClientTimeout()
 			std::chrono::duration<double> elapsed_seconds = std::chrono::steady_clock::now() - client_last_active_time[it->fd];
 			if (elapsed_seconds.count() >= TIMEOUT / 1000)
 			{
+				int client_fd = it->fd;
+				int server_fd = client_to_server_map[client_fd];
 				std::string error_response = "timeout";
-				send(it->fd, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+				servers[server_fd].createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
 				handleClientDisconnection(it);
 
 				/*
@@ -254,34 +256,10 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 }
 
 // if the server shutdown, send error response to all clients and close all clients
-void ServerManager::cleanUpForServerShutdown(HttpStatusCode statusCode)
+void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 {
-	(void)statusCode;
-	statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-	for (auto &server : servers)
-	{
-		for (auto client : server.second.getClients())
-		{
-			std::cout << "create Error Request" << std::endl;
-			client.second.createErrorRequest(server.second.getConfig(), HttpStatusCode::INTERNAL_SERVER_ERROR);
-			client.second.getRequest()->printRequestProperties();
-			std::cout << "create Response" << std::endl;
-			client.second.createResponse();
-			client.second.getResponse()->printResponseProperties();
-			std::cout << "send Response client fd: " << client.first << std::endl;
-			server.second.sendResponse(client.first);
-		}
-	}
-
-	// std::string error_response = "server error with status code " + std::to_string(status_code);
-	// Server::ResponseStatus response_status = servers[server_fd].sendResponse(client_fd);
-	// for (auto &map : client_to_server_map)
-	// {
-	// 	int server_fd = map.second;
-	// 	servers[server_fd].client.createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
-	// 	client.createResponse();
-	// }
-	// send(client.first, error_response.c_str(), error_response.length(), 0); // TODO - replace with response to client
+	for (auto & pair :client_to_server_map)
+		servers[pair.second].createAndSendErrorResponse(statusCode, pair.first);
 	for (const pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
 }
@@ -295,10 +273,3 @@ const char *ServerManager::ReventErrorFlagException::what() const throw()
 {
 	return "ServerManager::error flag in revent";
 }
-
-// std::cout << "pollfd :";
-// for (auto &pollfd : pollfds)
-// {
-// 	std::cout << pollfd.fd << ", ";
-// }
-// std::cout << std::endl;

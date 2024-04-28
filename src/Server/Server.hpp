@@ -54,9 +54,8 @@ private:
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd);
-	RequestStatus processChunkData(int const &client_fd, std::vector<std::byte> const &body_buf);
-	RequestStatus extractChunkSize(int const &client_fd, std::vector<std::byte> const &body_buf);
-	void appendToBodyString(std::string const &str, Request &request); // TODO - move to request class
+	RequestStatus processChunkData(int const &client_fd);
+	RequestStatus extractChunkSize(int const &client_fd);
 
 public:
 	Server();
@@ -66,11 +65,10 @@ public:
 	std::vector<int> acceptNewConnections();
 	RequestStatus receiveRequest(int const &client_fd);
 	ResponseStatus sendResponse(int const &client_fd);
+	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
 
 	int const &getServerFd() const;
 	void removeClient(int const &client_fd);
-	std::unordered_map<int, Client> const &getClients() const;
-	ConfigData const &getConfig() const;
 
 	class SocketCreationException : public std::exception
 	{
