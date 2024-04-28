@@ -358,3 +358,14 @@ std::map<std::string, Location> ConfigData::getLocations() const
 {
     return locations;
 }
+
+bool ConfigData::hasMatchingLocation(std::string locationRoute) const
+{
+    return this->locations.find(locationRoute) != locations.end();
+}
+
+Location ConfigData::getMatchingLocation(std::string locationRoute) const
+{
+    Location location = this->locations.at(locationRoute);
+    return locations.at(locationRoute);
+}

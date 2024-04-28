@@ -155,12 +155,20 @@ void Response::prepareStandardHeaders()
 
 // CONSTRUCTOR
 
-void Response::checkForRedirect()
+void Response::handleRedirect()
 {
 }
 
-void Response::validateTarget()
+bool Response::targetFound()
 {
+	if (!FileSystemUtils::pathExists(this->_target))
+	{
+		this->_statusCode = HttpStatusCode::NOT_FOUND;
+	}
+	else
+	{
+		// check permissions
+	}
 }
 
 bool Response::isCGI()
@@ -176,33 +184,16 @@ void Response::handlePost()
 {
 }
 
-Location getLocation(std::string locationRoute, ConfigData config)
-{
-	std::map<std::string, Location> locations = config.getLocations();
-	Location location = locations.at(locationRoute);
-	return locations.at(locationRoute);
-}
-
 void Response::handleGet()
 {
-	Location location;
-	try
-	{
-		location = getLocation(this->_target, this->_config);
-	}
-	catch (const std::out_of_range &e)
-	{
-		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		this->prepareErrorResponse();
-	}
 
 	if (FileSystemUtils::isDir(this->_target))
 	{
-		if (isAutoindexOn(this->_target))
+		if (this->_location.getDirectoryListing())
 		{
 			// serve directory listing
 		}
-		else if (hasIndexFile(this->_target))
+		else if (!this->_location.getDefaultFile().empty())
 		{
 			// server index file
 		}
@@ -213,7 +204,7 @@ void Response::handleGet()
 	}
 	else
 	{
-		if (isFile(this->_target))
+		if (FileSystemUtils::isFile(this->_target))
 		{
 			// serve file
 		}
@@ -242,8 +233,26 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	}
 	else
 	{
-		checkForRedirect();
-		validateTarget();
+		// try to match location
+		if (_config.hasMatchingLocation(_target))
+		{
+			this->_location = _config.getMatchingLocation(_target);
+		}
+		else
+		{
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			this->prepareErrorResponse();
+			return;
+		}
+		// handle redirection
+		handleRedirect();
+		// make sure target exists
+		if (!targetFound())
+		{
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			this->prepareErrorResponse();
+			return;
+		}
 		if (isCGI())
 		{
 			executeCGI();

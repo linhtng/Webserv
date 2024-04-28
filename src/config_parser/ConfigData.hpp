@@ -58,6 +58,8 @@ public:
     std::unordered_map<int, std::string> getDefaultErrorPages() const;
     size_t getMaxClientBodySize() const;
     std::map<std::string, Location> getLocations() const;
+    bool hasMatchingLocation(std::string locationRoute) const;
+    Location getMatchingLocation(std::string locationRoute) const;
 
 private:
     std::string serverBlock;

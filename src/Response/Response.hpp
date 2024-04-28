@@ -30,6 +30,7 @@ private:
 	std::chrono::system_clock::time_point _lastModified;
 
 	Request const &_request;
+	Location _location;
 
 	std::string formatDate() const;
 	std::string getHeader() const;
@@ -44,8 +45,8 @@ private:
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
 
-	void checkForRedirect();
-	void validateTarget();
+	void handleRedirect();
+	bool targetFound();
 	bool isCGI();
 	void executeCGI();
 	void handlePost();
