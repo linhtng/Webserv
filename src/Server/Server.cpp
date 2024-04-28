@@ -342,41 +342,30 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	//--------------------------------------------------------------
 
 	// sample response to be sent to browser
-	std::vector<std::byte>
-		full_response;
-	std::string sample_response = "HTTP/1.1 200 OK\r\n"
-								  "Content-Type: text/html\r\n"
-								  "Content-Length: 431\r\n"
-								  "\r\n"
-								  "<!DOCTYPE html>\n"
-								  "<html lang=\"en\">\n"
-								  "<head>\n"
-								  "    <meta charset=\"UTF-8\">\n"
-								  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-								  "    <title>File Upload Example</title>\n"
-								  "</head>\n"
-								  "<body>\n"
-								  "    <h2>Upload a File</h2>\n"
-								  "    <form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\n"
-								  "        <input type=\"file\" name=\"fileUpload\" id=\"fileUpload\">\n"
-								  "        <button type=\"submit\">Upload</button>\n"
-								  "    </form>\n"
-								  "</body>\n"
-								  "</html>\n";
-
-	for (char ch : sample_response)
-		full_response.push_back(static_cast<std::byte>(ch));
-
-	std::cout << std::endl;
-	std::cout << "-----full response-----" << std::endl;
-	for (auto &ch : full_response)
-		std::cout << static_cast<char>(ch);
-	std::cout << std::endl;
-	std::cout << "-----full response end-----" << std::endl;
-	std::cout << std::endl;
-
 	// std::vector<std::byte>
-	// 	full_response = clients[client_fd].getResponse()->formatResponse();
+	// 	full_response;
+	// std::string sample_response = "HTTP/1.1 200 OK\r\n"
+	// 							  "Content-Type: text/html\r\n"
+	// 							  "Content-Length: 431\r\n"
+	// 							  "\r\n"
+	// 							  "<!DOCTYPE html>\n"
+	// 							  "<html lang=\"en\">\n"
+	// 							  "<head>\n"
+	// 							  "    <meta charset=\"UTF-8\">\n"
+	// 							  "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+	// 							  "    <title>File Upload Example</title>\n"
+	// 							  "</head>\n"
+	// 							  "<body>\n"
+	// 							  "    <h2>Upload a File</h2>\n"
+	// 							  "    <form action=\"/upload\" method=\"post\" enctype=\"multipart/form-data\">\n"
+	// 							  "        <input type=\"file\" name=\"fileUpload\" id=\"fileUpload\">\n"
+	// 							  "        <button type=\"submit\">Upload</button>\n"
+	// 							  "    </form>\n"
+	// 							  "</body>\n"
+	// 							  "</html>\n";
+
+	// for (char ch : sample_response)
+	// 	full_response.push_back(static_cast<std::byte>(ch));
 
 	// std::cout << std::endl;
 	// std::cout << "-----full response-----" << std::endl;
@@ -385,6 +374,17 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// std::cout << std::endl;
 	// std::cout << "-----full response end-----" << std::endl;
 	// std::cout << std::endl;
+
+	std::vector<std::byte>
+		full_response = clients[client_fd].getResponse()->formatResponse();
+
+	std::cout << std::endl;
+	std::cout << "-----full response-----" << std::endl;
+	for (auto &ch : full_response)
+		std::cout << static_cast<char>(ch);
+	std::cout << std::endl;
+	std::cout << "-----full response end-----" << std::endl;
+	std::cout << std::endl;
 
 	ssize_t bytes;
 	size_t response_len = full_response.size();

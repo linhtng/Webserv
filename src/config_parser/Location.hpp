@@ -20,6 +20,13 @@ public:
     Location();
     Location(const std::string &input);
     Location(const Location &location);
+    Location& operator=(const Location& other) {
+        if (this != &other) {
+            // Copy members from other to this
+            // Make sure to handle any dynamic memory or resources properly
+        }
+        return *this;
+    }
     ~Location();
 
     void analyzeLocationData();
