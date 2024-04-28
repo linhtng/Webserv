@@ -17,7 +17,7 @@ static std::vector<std::string> getDirectoryContents(const std::string &path)
 	return contents;
 }
 
-std::vector<std::byte> DirectoryListingPage::getDirectoryListingPage(std::string path, std::string dir)
+std::vector<std::byte> DirectoryListingPage::getDirectoryListingPage(std::string path)
 {
 	std::string templatePath = "../pages/directoryListing.html";
 	std::ifstream templateFile(templatePath);
@@ -36,7 +36,7 @@ std::vector<std::byte> DirectoryListingPage::getDirectoryListingPage(std::string
 		listItems += "<li><a href=\"" + content + "\">" + content + "</a></li>\n";
 	}
 
-	StringUtils::replaceAll(templateContent, "{{dir_name}}", dir);
+	StringUtils::replaceAll(templateContent, "{{dir_name}}", path);
 	StringUtils::replaceAll(templateContent, "{{list_items}}", listItems);
 
 	std::vector<std::byte> response;

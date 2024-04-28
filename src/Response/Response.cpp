@@ -153,10 +153,18 @@ void Response::prepareStandardHeaders()
 	this->_connection = this->_request.getConnection();
 }
 
+void Response::prepareRedirectResponse()
+{
+	this->_statusCode = HttpStatusCode::MOVED_PERMANENTLY;
+	this->_locationHeader = this->_redirectionRoute;
+}
+
 // CONSTRUCTOR
 
-void Response::handleRedirect()
+bool Response::isRedirect()
 {
+	this->_redirectionRoute = this->_location.getRedirectionRoute();
+	return this->_redirectionRoute != "";
 }
 
 bool Response::targetFound()
@@ -186,12 +194,13 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
-
 	if (FileSystemUtils::isDir(this->_target))
 	{
 		if (this->_location.getDirectoryListing())
 		{
 			// serve directory listing
+			this->_body = DirectoryListingPage::getDirectoryListingPage(this->_target);
+			this->_statusCode = HttpStatusCode::OK;
 		}
 		else if (!this->_location.getDefaultFile().empty())
 		{
@@ -223,7 +232,7 @@ void Response::handleDelete()
 {
 }
 
-Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod()), _request(request)
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
 {
 	this->prepareStandardHeaders();
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
@@ -245,7 +254,11 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 			return;
 		}
 		// handle redirection
-		handleRedirect();
+		if (isRedirect())
+		{
+			this->prepareRedirectResponse();
+			return;
+		}
 		// make sure target exists
 		if (!targetFound())
 		{

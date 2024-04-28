@@ -15,9 +15,9 @@ protected:
 
 	HttpStatusCode _statusCode;
 	HttpMethod _method;
+	ConnectionValue _connection;
 	size_t _contentLength;
 	bool _chunked;
-	ConnectionValue _connection;
 	int _httpVersionMajor;
 	int _httpVersionMinor;
 	std::string _target;
@@ -26,14 +26,13 @@ protected:
 	std::string _contentType;
 	std::unordered_map<std::string, std::string> _contentTypeParams;
 
-	HttpMessage(const HttpMessage &other) = delete;
-
-	HttpMessage(ConfigData const &_config,
+	HttpMessage(ConfigData const &config,
 				HttpStatusCode statusCode = HttpStatusCode::UNDEFINED_STATUS,
 				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
+				std::string target = "",
+				ConnectionValue connection = KEEP_ALIVE,
 				size_t contentLength = 0,
 				bool chunked = false,
-				ConnectionValue connection = KEEP_ALIVE,
 				int httpVersionMajor = 1,
 				int httpVersionMinor = 1);
 

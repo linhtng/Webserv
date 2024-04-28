@@ -27,13 +27,14 @@ class Response : public HttpMessage
 {
 private:
 	std::string _serverHeader;
+	std::string _locationHeader;
 	std::chrono::system_clock::time_point _lastModified;
 
 	Request const &_request;
 	Location _location;
+	std::string _redirectionRoute;
 
 	std::string formatDate() const;
-	std::string getHeader() const;
 	std::string formatStatusLine() const;
 	std::string formatHeader() const;
 	std::string formatStatusCodeMessage() const;
@@ -44,8 +45,9 @@ private:
 	void prepareResponse();
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
+	void prepareRedirectResponse();
 
-	void handleRedirect();
+	bool isRedirect();
 	bool targetFound();
 	bool isCGI();
 	void executeCGI();

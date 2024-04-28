@@ -11,7 +11,7 @@
 
 namespace DirectoryListingPage
 {
-	std::vector<std::byte> getDirectoryListingPage(std::string path, std::string dir);
+	std::vector<std::byte> getDirectoryListingPage(std::string path);
 };
 
 #endif

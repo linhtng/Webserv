@@ -51,17 +51,19 @@ const std::unordered_map<HttpStatusCode, std::string> HttpMessage::_statusCodeMe
 HttpMessage::HttpMessage(ConfigData const &config,
 						 HttpStatusCode statusCode,
 						 HttpMethod method,
+						 std::string target,
+						 ConnectionValue connection,
 						 size_t contentLength,
 						 bool chunked,
-						 ConnectionValue connection,
 						 int httpVersionMajor,
 						 int httpVersionMinor)
 	: _config(config),
 	  _statusCode(statusCode),
 	  _method(method),
+	  _target(target),
+	  _connection(connection),
 	  _contentLength(contentLength),
 	  _chunked(chunked),
-	  _connection(connection),
 	  _httpVersionMajor(httpVersionMajor),
 	  _httpVersionMinor(httpVersionMinor)
 {
