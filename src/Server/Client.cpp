@@ -23,17 +23,20 @@ socklen_t &Client::getAndSetAddrlen()
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
+	removeRequest();
 	request = new Request(config, request_header); // Create a Request object with the provided header
 	request->setChunkSize(0);
 }
 
 void Client::createErrorRequest(ConfigData const &config, HttpStatusCode statusCode)
 {
+	removeRequest();
 	request = new Request(config, statusCode); // Create a Request object with the provided header
 }
 
 void Client::createResponse()
 {
+	removeResponse();
 	response = new Response(*request); // Create a Response object with the corresponding request
 }
 

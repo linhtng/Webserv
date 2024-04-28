@@ -47,6 +47,11 @@ std::vector<std::byte> Request::getBodyBuf() const
 	return this->_bodyBuf;
 }
 
+size_t Request::getBytesToReceive() const
+{
+	return this->_bytesToReceive;
+}
+
 // MODIFIERS
 
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
@@ -54,9 +59,10 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
 }
 
-void Request::eraseBody(const size_t &start, const size_t &end)
+void Request::appendToBody(char newBodyChunk[], const ssize_t &bytes)
 {
-	this->_body.erase(_body.begin() + start, _body.begin() + end);
+	for (ssize_t i = 0; i < bytes; ++i)
+		this->_body.push_back(static_cast<std::byte>(newBodyChunk[i]));
 }
 
 void Request::resizeBody(const size_t &n)
@@ -64,24 +70,35 @@ void Request::resizeBody(const size_t &n)
 	this->_body.resize(n);
 }
 
-void Request::setChunkSize(const size_t &bytes)
-{
-	_chunkSize = bytes;
-}
-
-void Request::setBodyBuf(const std::vector<std::byte> &buf)
+void Request::appendToBodyBuf(const std::vector<std::byte> &buf)
 {
 	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
 }
 
+void Request::appendToBodyBuf(char buf[], const ssize_t &bytes)
+{
+	for (ssize_t i = 0; i < bytes; ++i)
+		this->_bodyBuf.push_back(static_cast<std::byte>(buf[i]));
+}
+
 void Request::eraseBodyBuf(const size_t &start, const size_t &end)
 {
-	this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
+		this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
 }
 
 void Request::clearBodyBuf()
 {
 	this->_bodyBuf.clear();
+}
+
+void Request::setChunkSize(const size_t &bytes)
+{
+	_chunkSize = bytes;
+}
+
+void Request::setBytesToReceive(size_t bytes)
+{
+	this->_bytesToReceive = bytes;
 }
 
 // UTILITIES
@@ -407,7 +424,8 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	: HttpMessage(config),
 	  _bodyExpected(false),
 	  _port(0),
-	  _chunkSize(0)
+	  _chunkSize(0),
+		_bytesToReceive(0)
 {
 	try
 	{
@@ -427,6 +445,6 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 }
 
 Request::Request(const ConfigData &config, HttpStatusCode statusCode)
-	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0), _chunkSize(0)
+	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0), _chunkSize(0), _bytesToReceive(0)
 {
 }

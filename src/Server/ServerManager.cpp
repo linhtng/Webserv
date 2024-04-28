@@ -107,7 +107,10 @@ void ServerManager::startServerLoop()
 				handleClientDisconnection(it);
 			}
 			else
+			{
+				std::cout << "throw ReventErrorFlagException" << std::endl;
 				throw ReventErrorFlagException();
+			}
 		}
 	}
 }
