@@ -172,9 +172,11 @@ bool Response::targetFound()
 	if (!FileSystemUtils::pathExists(this->_target))
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
+		return false;
 	}
 	else
 	{
+		return true;
 		// check permissions
 	}
 }
@@ -237,6 +239,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	this->prepareStandardHeaders();
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
+		std::cout << RED << "Creating response based on error" << RESET << std::endl;
 		// we already know what the response will be, just need to format it
 		this->prepareErrorResponse();
 	}
@@ -245,10 +248,12 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 		// try to match location
 		if (_config.hasMatchingLocation(_target))
 		{
+			std::cout << RED << "Location found" << RESET << std::endl;
 			this->_location = _config.getMatchingLocation(_target);
 		}
 		else
 		{
+			std::cout << RED << "Location not found" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
 			this->prepareErrorResponse();
 			return;
@@ -256,6 +261,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 		// handle redirection
 		if (isRedirect())
 		{
+			std::cout << RED << "Redirect" << RESET << std::endl;
 			this->prepareRedirectResponse();
 			return;
 		}

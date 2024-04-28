@@ -15,12 +15,12 @@ protected:
 
 	HttpStatusCode _statusCode;
 	HttpMethod _method;
+	std::string _target;
 	ConnectionValue _connection;
 	size_t _contentLength;
 	bool _chunked;
 	int _httpVersionMajor;
 	int _httpVersionMinor;
-	std::string _target;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
 	std::string _contentType;

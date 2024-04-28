@@ -14,10 +14,6 @@
 #include <unordered_set>
 #include "../defines.hpp"
 
-#define RED "\e[91m"
-#define CYAN "\033[36m"
-#define RESET "\e[0m"
-
 class Location
 {
 public:

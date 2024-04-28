@@ -182,18 +182,6 @@ int Request::parseVersion()
 	{
 		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
 		throw BadRequestException();
-
-		/*
-		ERROR PAGE EXAMPLE:
-
-		HTTP/1.1 426 Upgrade Required
-		Upgrade: HTTP/2.0
-		Connection: Upgrade
-		Content-Length: 53
-		Content-Type: text/plain
-
-		This service requires use of the HTTP/2.0 protocol
-		*/
 	}
 	return major;
 }

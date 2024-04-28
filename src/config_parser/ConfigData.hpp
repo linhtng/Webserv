@@ -13,10 +13,7 @@
 #include <unordered_map>
 #include "Location.hpp"
 #include "../StringUtils/StringUtils.hpp"
-
-#define RED "\e[91m"
-#define CYAN "\033[36m"
-#define RESET "\e[0m"
+#include "../defines.hpp"
 
 #define MAX_PORT 65535
 #define MIN_PORT 1024

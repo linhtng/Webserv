@@ -9,12 +9,8 @@
 #include <string>
 #include <regex>
 #include <unordered_set>
-
 #include "ConfigData.hpp"
-
-#define RED "\e[91m"
-#define CYAN "\033[36m"
-#define RESET "\e[0m"
+#include "../defines.hpp"
 
 class ConfigParser
 {

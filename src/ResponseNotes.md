@@ -10,7 +10,7 @@
 - Content Length (0)
 - chunked (false)
 - HTTP version major (1)
-- HTTP version minor (1)
+- HTTP version minor (1) - make sure to check that this is parsed correctly in request
 
 ## Important properties in _request
 - body
@@ -132,3 +132,20 @@ value2
 - Success
 	- 200
 	- 201 created (for upload). No body needed, just Lcoation header!
+
+
+
+
+426
+Upgrade: HTTP/2.0
+Connection: Upgrade
+
+ERROR PAGE EXAMPLE:
+
+		HTTP/1.1 426 Upgrade Required
+		Upgrade: HTTP/2.0
+		Connection: Upgrade
+		Content-Length: 53
+		Content-Type: text/plain
+
+		This service requires use of the HTTP/2.0 protocol
