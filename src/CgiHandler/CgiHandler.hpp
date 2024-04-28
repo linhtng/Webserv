@@ -1,11 +1,12 @@
 #pragma once
+#include <unistd.h>
 #include <string>
 #include <iostream>
 #include <map>
 #include "../Request/Request.hpp"
 #include "../config_parser/ConfigParser.hpp"
 
-#define CGI_PATH "cgi-bin"
+#define GATEWAY_INTERFACE "CGI/1.1"
 
 struct CgiRequest
 {
@@ -20,14 +21,15 @@ class CgiHandler
 {
 public:
     CgiHandler();
-    CgiHandler(const std::string &path, const Request &request);
+    CgiHandler(const Request &request, Location &cgiBin);
     ~CgiHandler();
 
     void executeCgiScript();
     void sendCgiResponse();
 
 private:
-    void parseCgiRequest(const Request &request);
+    void parseCgiRequest(const Request &request, Location &cgiBin);
+    std::string setPathInfo(const Request &request, Location &cgiBin);
 
     std::map<std::string, std::string> env;
     std::string cgiPath;
