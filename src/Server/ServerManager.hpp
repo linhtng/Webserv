@@ -34,7 +34,7 @@ private:
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
 	void handleClientDisconnection(std::list<pollfd>::iterator &it);
-	void cleanUpForServerShutdown(HttpStatusCode statusCode);
+	void cleanUpForServerShutdown(HttpStatusCode const &statusCode);
 
 public:
 	void initServer(const std::vector<ConfigData> &parsedConfigs);

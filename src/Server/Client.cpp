@@ -23,17 +23,20 @@ socklen_t &Client::getAndSetAddrlen()
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
+	removeRequest();
 	request = new Request(config, request_header); // Create a Request object with the provided header
 	request->setChunkSize(0);
 }
 
 void Client::createErrorRequest(ConfigData const &config, HttpStatusCode statusCode)
 {
+	removeRequest();
 	request = new Request(config, statusCode); // Create a Request object with the provided header
 }
 
 void Client::createResponse()
 {
+	removeResponse();
 	response = new Response(*request); // Create a Response object with the corresponding request
 }
 
@@ -69,23 +72,3 @@ Response *Client::getResponse() const
 {
 	return (response);
 }
-
-// size_t const &Client::getChunkSize() const
-// {
-// 	return (chunk_size);
-// }
-
-// std::string const &Client::getRequestBodyBuf() const
-// {
-// 	return (request_body_buf);
-// }
-
-// void Client::setChunkSize(size_t const &bytes)
-// {
-// 	chunk_size = bytes;
-// }
-
-// void Client::setRequestBodyBuf(std::string const &buf)
-// {
-// 	request_body_buf = buf;
-// }

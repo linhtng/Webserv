@@ -70,7 +70,6 @@ std::string Response::formatHeader() const
 	header += this->formatStatusLine() + CRLF;
 	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
-	header += "Content-Length: XXX" CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
 	header += "Connection: " + this->formatConnection() + CRLF;
 	header += CRLF;
