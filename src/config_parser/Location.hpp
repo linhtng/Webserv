@@ -11,6 +11,8 @@
 #include <map>
 #include <regex>
 #include <unordered_map>
+#include <unordered_set>
+#include "../defines.hpp"
 
 #define RED "\e[91m"
 #define CYAN "\033[36m"
@@ -28,7 +30,7 @@ public:
 
     /* Getters */
     std::string getLocationRoute();
-    std::vector<std::string> getAcceptedMethods();
+    std::unordered_set<HttpMethod> getAcceptedMethods();
     std::string getRedirectionRoute();
     std::string getLocationRoot();
     std::string getLocationAlias();
@@ -40,7 +42,7 @@ public:
 private:
     std::string locationBlock;
     std::string locationRoute;
-    std::vector<std::string> acceptedMethods;
+    std::unordered_set<HttpMethod> acceptedMethods;
     std::string redirectionRoute;
     std::string root;
     std::string alias;
@@ -54,6 +56,7 @@ private:
     void checkValidCharacters(const std::string &value, const std::regex &regexPattern);
     void setLocationRoute();
     void setAcceptedMethods();
+    HttpMethod matchValidMethod(std::string method);
     void setRedirection();
     void setLocationRoot();
     void setLocationAlias();

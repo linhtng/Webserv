@@ -22,7 +22,6 @@ public:
     ConfigParser(std::string &fileName);
     ~ConfigParser();
 
-    bool isValidFile(const std::string &filename);
     void readConfigFile(const std::string &fileName);
     void extractServerConfigs();
     void printCluster();
