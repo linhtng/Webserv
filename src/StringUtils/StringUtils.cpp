@@ -69,3 +69,21 @@ void StringUtils::replaceAll(std::string &str, const std::string &from, const st
 		start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
 	}
 }
+
+std::unordered_map<std::string, std::string> StringUtils::parseQueryString(const std::string &queryString)
+{
+	std::unordered_map<std::string, std::string> queryMap;
+	std::stringstream ss(queryString);
+	std::string item;
+
+	while (std::getline(ss, item, '&'))
+	{
+		std::stringstream itemStream(item);
+		std::string key, value;
+		std::getline(itemStream, key, '=');
+		std::getline(itemStream, value, '=');
+		queryMap[key] = value;
+	}
+
+	return queryMap;
+}

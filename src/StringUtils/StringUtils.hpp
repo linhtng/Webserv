@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
+#include <sstream>
 #include "../defines.hpp"
 
 namespace StringUtils
@@ -16,6 +18,7 @@ namespace StringUtils
 	std::string trim(const std::string &str);
 	bool isDigitsOnly(const std::string &str);
 	void replaceAll(std::string &str, const std::string &from, const std::string &to);
+	std::unordered_map<std::string, std::string> parseQueryString(const std::string &queryString);
 }
 
 #endif
