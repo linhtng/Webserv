@@ -70,35 +70,35 @@ void ServerManager::startServerLoop()
 {
 	while (true)
 	{
-		std::cout << "before poll" << std::endl;
+		// std::cout << "before poll" << std::endl;
 		handlePoll();
-		std::cout << "after poll" << std::endl;
+		// std::cout << "after poll" << std::endl;
 		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it) // loop through all pollfds to check which events have occurred
 		{
-			std::cout << "poll loop fd:" << it->fd << std::endl;
+			// std::cout << "poll loop fd:" << it->fd << std::endl;
 			if (!it->revents)
 			{
-				std::cout << "no revent" << std::endl;
+				// std::cout << "no revent" << std::endl;
 				continue;
 			}
 			else if (it->revents & POLLIN)
 			{
-				std::cout << "POLLIN" << std::endl;
+				// std::cout << "POLLIN" << std::endl;
 				handleReadyToRead(it);
 			}
 			else if (it->revents & POLLOUT)
 			{
-				std::cout << "POLLOUT" << std::endl;
+				// std::cout << "POLLOUT" << std::endl;
 				handleReadyToWrite(it);
 			}
 			else if (it->revents & POLLHUP || it->revents & POLLERR)
 			{
-				std::cout << "POLLERR" << std::endl;
+				// std::cout << "POLLERR" << std::endl;
 				handleClientDisconnection(it);
 			}
 			else
 			{
-				std::cout << "throw ReventErrorFlagException" << std::endl;
+				// std::cout << "throw ReventErrorFlagException" << std::endl;
 				throw ReventErrorFlagException();
 			}
 		}
@@ -115,10 +115,10 @@ void ServerManager::handlePoll()
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfds_tmp.begin(), pollfds_tmp.end()); // move the contents back from the vector
 
-	std::cout << "fds: ";
-	for (auto &pollfd : pollfds)
-		std::cout << pollfd.fd << " ";
-	std::cout << std::endl;
+	// std::cout << "fds: ";
+	// for (auto &pollfd : pollfds)
+	// 	std::cout << pollfd.fd << " ";
+	// std::cout << std::endl;
 
 	if (ready < 0)
 		throw PollException();

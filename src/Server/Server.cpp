@@ -91,14 +91,21 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 	if (clients[client_fd].isNewRequest()) // if the request is not created yet, create the request with the request header
 	{
-		std::string request_header;
+		static std::string request_header;
 		std::vector<std::byte> request_body_buf;
 
 		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
-		if (request_status == REQUEST_CLIENT_DISCONNECTED)
+		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == HEADER_IN_CHUNK)
 			return request_status;
+		if (request_status == BAD_REQUEST)
+		{
+			clients[client_fd].createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+			clients[client_fd].createResponse(); // create response object
+			return (READY_TO_WRITE);
+		}
 
 		clients[client_fd].createRequest(request_header, this->config); // create request object
+		request_header = "";
 		Request *request = clients[client_fd].getRequest();
 		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
 			inet_ntoa(getClientIPv4Address(client_fd)),
@@ -129,7 +136,7 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
-	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		request_header.append(buf, bytes);
 		size_t delimiter_pos = request_header.find(CRLF CRLF);
@@ -141,15 +148,18 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 			request_header.resize(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
+		else
+		{
+			if ((bytes = recv(client_fd, buf, sizeof(buf), MSG_PEEK)) > 0)
+				return (HEADER_IN_CHUNK);
+			else
+				return (BAD_REQUEST);
+		}
 	}
 	if (bytes == 0) // client has shutdown
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else
-	{
-		if (request_header.find(CRLF CRLF) == std::string::npos) // if cannot search for the delimiter
-			return (BAD_REQUEST);
 		throw RecvException();
-	}	
 }
 
 Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd)
@@ -162,15 +172,6 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	{
 		request->appendToBody(request->getBodyBuf());
 		request->clearBodyBuf();
-	}
-
-	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
-		request->appendToBody(buf, bytes);
-
-	if (bytes == 0) // client has shutdown
-		return (REQUEST_CLIENT_DISCONNECTED);
-	else
-	{
 		size_t body_size = request->getBody().size();
 		size_t content_length = request->getContentLength();
 		if (body_size < content_length) // request body send in chunk
@@ -180,6 +181,24 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		else
 			return (BAD_REQUEST);
 	}
+
+	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	{
+		request->appendToBody(buf, bytes);
+		size_t body_size = request->getBody().size();
+		size_t content_length = request->getContentLength();
+		if (body_size < content_length) // request body send in chunk
+			return (BODY_IN_CHUNK);
+		else if (body_size == content_length) // read till the end
+			return (READY_TO_WRITE);
+		else
+			return (BAD_REQUEST);	
+	}
+
+	if (bytes == 0) // client has shutdown
+		return (REQUEST_CLIENT_DISCONNECTED);
+	else
+		throw RecvException();
 }
 
 Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
@@ -191,37 +210,29 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 	if (!request->getBodyBuf().empty()) // process any remaining data in the body buffer from request or last chunk
 	{
 		RequestStatus request_status = processChunkData(client_fd);
-		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
+		if (request_status != BODY_IN_CHUNK)
 			return (request_status);
 	}
 
-	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		request->appendToBodyBuf(buf, bytes);
-		RequestStatus request_status = processChunkData(client_fd);
-		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
-			return (request_status);
+		return (processChunkData(client_fd));
 	}
 	if (bytes == 0) // client has shutdown
 		return (REQUEST_CLIENT_DISCONNECTED);
 	else
-	{
-		std::vector<std::byte> delimiter = {std::byte('\r'), std::byte('\n')};
-		std::vector<std::byte> body = request->getBody();
-		auto delimiter_pos = std::search(body.begin(), body.end(), delimiter.begin(), delimiter.end());
-		if (delimiter_pos == body.end()) // no delimiter
-			return (BODY_IN_CHUNK);
 		throw RecvException();
-	}
 }
 
 Server::RequestStatus Server::processChunkData(int const &client_fd)
 {
 	Request *request = clients[client_fd].getRequest();
+
 	if (request->getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
 	{
 		RequestStatus request_status = extractChunkSize(client_fd);
-		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_EXPECTED)
+		if (request_status != PARSED_CHUNK_SIZE)
 			return (request_status);
 	}
 
@@ -230,6 +241,7 @@ Server::RequestStatus Server::processChunkData(int const &client_fd)
 
 	std::vector<std::byte> body = request->getBody();
 	size_t total_body_size = request->getBytesToReceive() + (sizeof(CRLF) - 1);
+
 	if (body.size() >= total_body_size) // last buffer
 	{
 		std::string final_chunk_ending = CRLF "0" CRLF CRLF;
@@ -250,7 +262,7 @@ Server::RequestStatus Server::processChunkData(int const &client_fd)
 		return (BODY_IN_CHUNK);
 	}
 
-	return (BODY_EXPECTED);
+	return (BODY_IN_CHUNK);
 }
 
 Server::RequestStatus Server::extractChunkSize(int const &client_fd)
@@ -259,14 +271,14 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 	std::vector<std::byte> body_buf = request->getBodyBuf();
 
 	std::string final_chunk = "0" CRLF CRLF;
-	if (std::memcmp(body_buf.data(), final_chunk.data(), final_chunk.length()) == 0)
+	if (std::memcmp(body_buf.data(), final_chunk.data(), std::min(final_chunk.length(), body_buf.size())) == 0)
 	{
 		if (body_buf.size() == final_chunk.length()) // if the body buffer is 0 CRLF CRLF
 			return (READY_TO_WRITE);
 		else if (body_buf.size() > final_chunk.length()) // if the body buffer is more than 0 CRLF CRLF
 			return (BAD_REQUEST);
 		else
-			return (BODY_EXPECTED);
+			return (BODY_IN_CHUNK);
 	}
 
 	std::vector<std::byte> delimiter = {std::byte('\r'), std::byte('\n')};
@@ -276,7 +288,7 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 		std::string chunk_size;
 		for (auto it = body_buf.begin(); it != delimiter_pos; ++it)
 			chunk_size.push_back(static_cast<char>(*it));
-		if (std::all_of(chunk_size.begin(), chunk_size.end(), ::isxdigit)) // if the chunk size only contains hexadecimal character
+		if (chunk_size.length() > 0 && std::all_of(chunk_size.begin(), chunk_size.end(), ::isxdigit)) // if the chunk size only contains hexadecimal character
 		{
 			request->setChunkSize(std::stoi(chunk_size, nullptr, 16));
 
@@ -295,7 +307,7 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 		if (!std::all_of(body_buf_str.begin(), body_buf_str.end(), ::isxdigit)) // if the body buffer contains non-hexadecimal character
 			return (BAD_REQUEST);
 		else
-			return (BODY_EXPECTED);
+			return (BODY_IN_CHUNK);
 	}
 }
 
@@ -349,25 +361,20 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 		full_response = clients[client_fd].getResponse()->formatResponse();
 
 	ssize_t bytes;
-	size_t response_len = full_response.size();
-	size_t bytes_sent = 0;
-	while (bytes_sent < response_len && (bytes = send(client_fd,
-													  &(*(full_response.begin() + bytes_sent)), std::min(response_len - bytes_sent, static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
-		bytes_sent += bytes;
-
-	if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE)
-		return (RESPONSE_CLIENT_DISCONNECTED);
-	if (bytes_sent >= response_len) // finish sending response
+	if ((bytes = send(client_fd, static_cast<const void*>(full_response.data()), full_response.size(), 0)) > 0)
 	{
-		Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
-			inet_ntoa(getClientIPv4Address(client_fd)),
-			ntohs(getClientPortNumber(client_fd)),
-			clients[client_fd].getResponse()->getStatusCode());
-		clients[client_fd].removeRequest();
-		clients[client_fd].removeResponse();
-		return (KEEP_ALIVE); // keep the connection alive by default
+			Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)),
+				clients[client_fd].getResponse()->getStatusCode());
+			if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE)
+				return (RESPONSE_CLIENT_DISCONNECTED);
+			clients[client_fd].removeRequest();
+			clients[client_fd].removeResponse();
+			return (KEEP_ALIVE); // keep the connection alive by default
 	}
-	else if (bytes == 0) // client has shutdown
+
+	if (bytes == 0) // client has shutdown
 		return (RESPONSE_CLIENT_DISCONNECTED);
 	throw SendException();
 }
