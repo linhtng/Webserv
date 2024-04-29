@@ -9,23 +9,24 @@ Location::Location(const std::string &input)
     alias = "";
     directoryListing = false;
     defaultFile = "index.html";
-    cgiExtension = "";
-    cgiExecutor = "";
     redirectionRoute = "";
 }
 
-Location::Location(const Location &rhs)
+Location &Location::operator=(const Location &other)
 {
-    locationBlock = rhs.locationBlock;
-    locationRoute = rhs.locationRoute;
-    acceptedMethods = rhs.acceptedMethods;
-    redirectionRoute = rhs.redirectionRoute;
-    root = rhs.root;
-    alias = rhs.alias;
-    directoryListing = rhs.directoryListing;
-    defaultFile = rhs.defaultFile;
-    cgiExtension = rhs.cgiExtension;
-    cgiExecutor = rhs.cgiExecutor;
+    if (this == &other)
+    {
+        return *this;
+    }
+    locationBlock = other.locationBlock;
+    locationRoute = other.locationRoute;
+    acceptedMethods = other.acceptedMethods;
+    redirectionRoute = other.redirectionRoute;
+    root = other.root;
+    alias = other.alias;
+    directoryListing = other.directoryListing;
+    defaultFile = other.defaultFile;
+    return *this;
 }
 
 Location::~Location() {}
@@ -61,8 +62,8 @@ void Location::analyzeLocationData()
     }
     setDirectoryListing();
     setDefaultFile();
-    setCgiExtension();
-    setCgiExecutor();
+    // setCgiExtension();
+    // setCgiExecutor();
 }
 
 void Location::printLocationData()
@@ -80,8 +81,6 @@ void Location::printLocationData()
     std::cout << "Alias: " << alias << std::endl;
     std::cout << "Directory listing: " << (directoryListing ? "on" : "off") << std::endl;
     std::cout << "Default file: " << defaultFile << std::endl;
-    std::cout << "Cgi extension: " << cgiExtension << std::endl;
-    std::cout << "Cgi path: " << cgiExecutor << std::endl;
     std::cout << std::endl;
 }
 
@@ -153,12 +152,13 @@ HttpMethod Location::matchValidMethod(std::string method)
 
 void Location::setRedirection()
 {
-    std::regex redirectionRegex("return\\s+(\\S+\\s*)\\;");
-    std::smatch match;
-    if (std::regex_search(locationBlock, match, redirectionRegex))
-    {
-        redirectionRoute = match[1].str();
-    }
+    // std::regex redirectionRegex("return\\s+(\\S+\\s*)\\;");
+    // std::smatch match;
+    // if (std::regex_search(locationBlock, match, redirectionRegex))
+    // {
+    //     redirectionRoute = match[1].str();
+    // }
+    redirectionRoute = extractDirectiveValue("return");
 }
 
 void Location::setLocationRoot()
@@ -241,21 +241,21 @@ void Location::setDefaultFile()
     }
 }
 
-void Location::setCgiExtension()
-{
-    std::string cgiExtenValue = extractDirectiveValue("cgi_exten");
-    if (!cgiExtenValue.empty())
-    {
-        std::regex invalidCharRegex("[\\\\/;:*?<>|]");
-        checkValidCharacters(cgiExtenValue, invalidCharRegex);
-        cgiExtension = cgiExtenValue;
-    }
-}
+// void Location::setCgiExtension()
+// {
+//     std::string cgiExtenValue = extractDirectiveValue("cgi_exten");
+//     if (!cgiExtenValue.empty())
+//     {
+//         std::regex invalidCharRegex("[\\\\/;:*?<>|]");
+//         checkValidCharacters(cgiExtenValue, invalidCharRegex);
+//         cgiExtension = cgiExtenValue;
+//     }
+// }
 
-void Location::setCgiExecutor()
-{
-    cgiExecutor = extractDirectiveValue("cgi_executor");
-}
+// void Location::setCgiExecutor()
+// {
+//     cgiExecutor = extractDirectiveValue("cgi_executor");
+// }
 
 std::unordered_set<HttpMethod> Location::getAcceptedMethods()
 {
@@ -287,12 +287,12 @@ std::string Location::getDefaultFile()
     return defaultFile;
 }
 
-std::string Location::getCgiExtension()
-{
-    return cgiExtension;
-}
+// std::string Location::getCgiExtension()
+// {
+//     return cgiExtension;
+// }
 
-std::string Location::getCgiExecutor()
-{
-    return cgiExecutor;
-}
+// std::string Location::getCgiExecutor()
+// {
+//     return cgiExecutor;
+// }
