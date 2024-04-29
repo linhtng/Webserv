@@ -91,10 +91,9 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 	if (clients[client_fd].isNewRequest()) // if the request is not created yet, create the request with the request header
 	{
-		static std::string request_header;
 		std::vector<std::byte> request_body_buf;
 
-		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
+		request_status = formRequestHeader(client_fd, request_body_buf);
 		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == HEADER_IN_CHUNK)
 			return request_status;
 		if (request_status == BAD_REQUEST)
@@ -104,8 +103,8 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (READY_TO_WRITE);
 		}
 
-		clients[client_fd].createRequest(request_header, this->config); // create request object
-		request_header = "";
+		clients[client_fd].createRequest(clients[client_fd].getRequestHeaderBuf(), this->config); // create request object
+		clients[client_fd].clearRequestHeaderBuf();
 		Request *request = clients[client_fd].getRequest();
 		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
 			inet_ntoa(getClientIPv4Address(client_fd)),
@@ -131,21 +130,21 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	return (READY_TO_WRITE);
 }
 
-Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf)
+Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::vector<std::byte> &request_body_buf)
 {
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
 	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-		request_header.append(buf, bytes);
-		size_t delimiter_pos = request_header.find(CRLF CRLF);
+		clients[client_fd].appendToRequestHeaderBuf(buf, bytes);
+		size_t delimiter_pos = clients[client_fd].getRequestHeaderBuf().find(CRLF CRLF);
 		if (delimiter_pos != std::string::npos)
 		{
-			size_t body_length = request_header.size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
+			size_t body_length = clients[client_fd].getRequestHeaderBuf().size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
 			for (size_t i = 0; i < body_length; ++i)
-				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
-			request_header.resize(delimiter_pos);
+				request_body_buf.push_back(static_cast<std::byte>(clients[client_fd].getRequestHeaderBuf()[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
+			clients[client_fd].resizeRequestHeaderBuf(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
 		else

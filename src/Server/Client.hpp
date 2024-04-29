@@ -2,9 +2,8 @@
 #define CLIENT_HPP
 
 #include <netinet/in.h>
-#include <vector>
-#include <queue>
 #include <iostream>
+#include <string>
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
 #include "../config_parser/ConfigData.hpp"
@@ -17,6 +16,7 @@ private:
 	socklen_t addrlen;
 	Request *request;
 	Response *response;
+	std::string request_header_buf;
 
 public:
 	Client();
@@ -37,9 +37,14 @@ public:
 
 	Request *getRequest() const;
 	Response *getResponse() const;
+	std::string const &getRequestHeaderBuf() const;
 
 	unsigned short int const &getPortNumber() const;
 	struct in_addr const &getIPv4Address() const;
+
+	void appendToRequestHeaderBuf(char buf[], const ssize_t &bytes);
+	void resizeRequestHeaderBuf(const size_t &size);
+	void clearRequestHeaderBuf();
 };
 
 #endif

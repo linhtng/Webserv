@@ -52,7 +52,7 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
+	RequestStatus formRequestHeader(int const &client_fd, std::vector<std::byte> &request_body_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd);
 	RequestStatus processChunkData(int const &client_fd);

@@ -73,6 +73,11 @@ Response *Client::getResponse() const
 	return (response);
 }
 
+std::string const &Client::getRequestHeaderBuf() const
+{
+	return (request_header_buf);
+}
+
 unsigned short int const &Client::getPortNumber() const
 {
 	return (address.sin_port);
@@ -81,4 +86,19 @@ unsigned short int const &Client::getPortNumber() const
 in_addr const &Client::getIPv4Address() const
 {
 	return (address.sin_addr);
+}
+
+void Client::appendToRequestHeaderBuf(char buf[], const ssize_t &bytes)
+{
+	request_header_buf.append(buf, bytes);
+}
+
+void Client::resizeRequestHeaderBuf(const size_t &size)
+{
+	request_header_buf.resize(size);
+}
+
+void Client::clearRequestHeaderBuf()
+{
+	request_header_buf.clear();
 }

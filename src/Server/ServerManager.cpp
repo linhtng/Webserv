@@ -18,6 +18,7 @@ void segfaultHandler(int signum)
 	(void)signum;
 	if (serverManagerPtr != nullptr)
 	{
+		Logger::log(e_log_level::ERROR, ERROR_MESSAGE, "Seg fault");
 		Logger::log(e_log_level::ERROR, ERROR_MESSAGE, "Internal server error");
 		serverManagerPtr->cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
 		std::exit(EXIT_FAILURE);
