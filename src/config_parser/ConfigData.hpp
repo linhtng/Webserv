@@ -49,6 +49,7 @@ class ConfigData
 public:
     ConfigData();
     ConfigData(std::string &input);
+    ConfigData(const ConfigData &other);
     ConfigData &operator=(const ConfigData &other);
     ~ConfigData();
 
@@ -56,6 +57,7 @@ public:
     void printConfigData();
 
     int getServerPort() const;
+    std::string getServerPortString() const;
     std::string getServerName() const;
     std::string getServerHost() const;
     std::unordered_map<int, std::string> getDefaultErrorPages() const;
@@ -69,7 +71,7 @@ public:
 
 private:
     std::string serverBlock;
-    // std::vector<int> serverPorts;
+    std::string serverPortString;
     int serverPort;
     std::string serverHost;
     std::string serverName;

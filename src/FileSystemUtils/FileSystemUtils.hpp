@@ -10,6 +10,7 @@
 namespace FileSystemUtils
 {
 	bool pathExists(const std::string &target);
+	bool pathExistsAndAccessible(const std::string &target);
 	bool isDir(const std::string &target);
 	bool isFile(const std::string &target);
 }

@@ -5,8 +5,7 @@
 #include <map>
 #include "../Request/Request.hpp"
 #include "../config_parser/ConfigParser.hpp"
-
-#define GATEWAY_INTERFACE "CGI/1.1"
+#include "../defines.hpp"
 
 struct CgiRequest
 {
@@ -21,15 +20,15 @@ class CgiHandler
 {
 public:
     CgiHandler();
-    CgiHandler(const Request &request, Location &cgiBin);
+    CgiHandler(const Request &request, const ConfigData &server);
     ~CgiHandler();
 
     void executeCgiScript();
     void sendCgiResponse();
+    void printEnv();
 
 private:
-    void parseCgiRequest(const Request &request, Location &cgiBin);
-    std::string setPathInfo(const Request &request, Location &cgiBin);
+    void parseCgiRequest(const Request &request, const ConfigData &server);
 
     std::map<std::string, std::string> env;
     std::string cgiPath;

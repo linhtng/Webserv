@@ -6,6 +6,11 @@ bool FileSystemUtils::pathExists(const std::string &target)
 	return stat(target.c_str(), &path_stat) == 0;
 }
 
+bool FileSystemUtils::pathExistsAndAccessible(const std::string &target)
+{
+	return access(target.c_str(), F_OK | R_OK | X_OK) == 0;
+}
+
 bool FileSystemUtils::isDir(const std::string &target)
 {
 	struct stat path_stat;
