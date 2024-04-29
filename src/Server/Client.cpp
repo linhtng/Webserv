@@ -72,3 +72,13 @@ Response *Client::getResponse() const
 {
 	return (response);
 }
+
+unsigned short int const &Client::getPortNumber() const
+{
+	return (address.sin_port);
+}
+
+in_addr const &Client::getIPv4Address() const
+{
+	return (address.sin_addr);
+}

@@ -61,7 +61,7 @@ std::vector<int> Server::acceptNewConnections()
 			std::cout << "client_fd: " << client_fd << std::endl;
 			if (client_fd < 0)
 			{
-				if (errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR) // listen() queue is empty or interrupted by a signal
+				if (errno == EWOULDBLOCK || errno == EAGAIN) // listen() queue is empty
 					break;
 				else if (errno == ECONNABORTED) // a connection has been aborted
 					continue;
@@ -69,6 +69,9 @@ std::vector<int> Server::acceptNewConnections()
 			}
 			clients[client_fd] = std::move(client);
 			new_client_fds.push_back(client_fd);
+			Logger::log(e_log_level::INFO, CLIENT, "New connection from %s:%d",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
 			if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 				throw SocketSetNonBlockingException();
 		}
@@ -92,22 +95,17 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		std::vector<std::byte> request_body_buf;
 
 		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
-		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED)
+		if (request_status == REQUEST_CLIENT_DISCONNECTED)
 			return request_status;
-		/*
-		------------------------------------------------------------------
-			Logger - print out the request header and from which client
-		------------------------------------------------------------------
-		*/
-
-		// std::cout << std::endl;
-		// std::cout << "----request_header---- " << std::endl;
-		// std::cout << request_header << std::endl;
-		// std::cout << "----request_header end---- " << std::endl;
-		// std::cout << std::endl;
 
 		clients[client_fd].createRequest(request_header, this->config); // create request object
-		clients[client_fd].getRequest()->appendToBodyBuf(request_body_buf);
+		Request *request = clients[client_fd].getRequest();
+		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
+			inet_ntoa(getClientIPv4Address(client_fd)),
+			ntohs(getClientPortNumber(client_fd)),
+			request->getMethod(),
+			request->getTarget().c_str());
+		request->appendToBodyBuf(request_body_buf);
 	}
 
 	if (clients[client_fd].getRequest()->isBodyExpected() && request_status != BAD_REQUEST)
@@ -115,20 +113,12 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		request_status = clients[client_fd].getRequest()->isChunked()
 			? formRequestBodyWithChunk(client_fd)
 			: formRequestBodyWithContentLength(client_fd);
-		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == REQUEST_INTERRUPTED || request_status == BODY_IN_CHUNK)
+		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
 
 	if (request_status == BAD_REQUEST)
 		clients[client_fd].createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
-
-	// Request *request = clients[client_fd].getRequest();
-	// std::vector<std::byte> body = request->getBody();
-	// std::cout << "-----body-----" << std::endl;
-	// for (auto ch : body)
-	// 	std::cout << static_cast<char>(ch);
-	// std::cout << std::endl;
-	// std::cout << "-----body end-----" << std::endl;
 
 	clients[client_fd].createResponse(); // create response object
 	return (READY_TO_WRITE);
@@ -148,20 +138,12 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 			size_t body_length = request_header.size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
 			for (size_t i = 0; i < body_length; ++i)
 				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
-			// std::cout << "-----request_body_buf-------" << std::endl;
-			// for (auto &ch : request_body_buf)
-			// 	std::cout << static_cast<char>(ch);
-			// std::cout << "--------------------------" << std::endl;
-			std::cout << std::endl;
-
 			request_header.resize(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if (errno == EINTR) // interrupted by a signal
-		return (REQUEST_INTERRUPTED);
 	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if cannot search for the delimiter
 		return (BAD_REQUEST);
 	throw RecvException();
@@ -184,8 +166,6 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if (errno == EINTR) // interrupted by a signal
-		return (REQUEST_INTERRUPTED);
 	else if (errno == EWOULDBLOCK || errno == EAGAIN)
 	{
 		size_t body_size = request->getBody().size();
@@ -222,8 +202,6 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 	}
 	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if (errno == EINTR) // interrupted by a signal
-		return (REQUEST_INTERRUPTED);
 	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) // no delimiter
 		return (BODY_IN_CHUNK);
 
@@ -233,17 +211,13 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 Server::RequestStatus Server::processChunkData(int const &client_fd)
 {
 	Request *request = clients[client_fd].getRequest();
-	// std::cout << "buf: ";
-	// for (auto &ch : request->getBodyBuf())
-	// 	std::cout << static_cast<char>(ch);
-	// std::cout << std::endl;
-
 	if (request->getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
 	{
 		RequestStatus request_status = extractChunkSize(client_fd);
 		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_EXPECTED)
 			return (request_status);
 	}
+
 	request->appendToBody(request->getBodyBuf());
 	request->clearBodyBuf();
 
@@ -320,17 +294,6 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 
 Server::ResponseStatus Server::sendResponse(int const &client_fd)
 {
-	// Response *response = clients[client_fd].getResponse();
-
-	//--------------------------------------------------------------
-	// TODO - to combine response header and response body in Response class
-	// std::vector<std::byte> full_response;
-	// for (char ch : response->getHeader())
-	// 	full_response.push_back(static_cast<std::byte>(ch));
-	// std::vector<std::byte> body = response->getBody();
-	// full_response.insert(full_response.end(), body.begin(), body.end());
-	//--------------------------------------------------------------
-
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
 	std::ofstream ofs("test.txt");
@@ -378,14 +341,6 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	std::vector<std::byte>
 		full_response = clients[client_fd].getResponse()->formatResponse();
 
-	std::cout << std::endl;
-	std::cout << "-----full response-----" << std::endl;
-	for (auto &ch : full_response)
-		std::cout << static_cast<char>(ch);
-	std::cout << std::endl;
-	std::cout << "-----full response end-----" << std::endl;
-	std::cout << std::endl;
-
 	ssize_t bytes;
 	size_t response_len = full_response.size();
 	size_t bytes_sent = 0;
@@ -397,20 +352,14 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 		return (RESPONSE_CLIENT_DISCONNECTED);
 	if (bytes_sent >= response_len || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
 	{
-
-		/*
-		------------------------------------------------------------------
-			Logger - print out the response and to which client
-		------------------------------------------------------------------
-		*/
-
+		Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
+			inet_ntoa(getClientIPv4Address(client_fd)),
+			ntohs(getClientPortNumber(client_fd)),
+			clients[client_fd].getResponse()->getStatusCode());
 		clients[client_fd].removeRequest();
 		clients[client_fd].removeResponse();
-		std::cout << "Response sent from server" << std::endl;
 		return (KEEP_ALIVE); // keep the connection alive by default
 	}
-	else if (errno == EINTR) // interrupted by a signal
-		return (RESPONSE_INTERRUPTED);
 	else if (bytes == 0 || errno == ECONNRESET) // client has shutdown or disconnect
 		return (RESPONSE_CLIENT_DISCONNECTED);
 	throw SendException();
@@ -426,6 +375,21 @@ void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int co
 int const &Server::getServerFd() const
 {
 	return (server_fd);
+}
+
+ConfigData const &Server::getConfig() const
+{
+	return (config);
+}
+
+unsigned short int const &Server::getClientPortNumber(int const &client_fd)
+{
+	return (clients[client_fd].getPortNumber());
+}
+
+in_addr const &Server::getClientIPv4Address(int const &client_fd)
+{
+	return (clients[client_fd].getIPv4Address());
 }
 
 void Server::removeClient(int const &client_fd)

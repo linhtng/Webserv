@@ -1,19 +1,27 @@
 #include "ServerManager.hpp"
 
-volatile sig_atomic_t shutdown_flag = 0; // flag for shutting down the server
+ServerManager* serverManagerPtr = nullptr;
 
-// signal handler for shutting down the server
-void signalHandler(int signum)
+void interruptHandler(int signum)
 {
 	(void)signum;
-	shutdown_flag = 1;
+	if (serverManagerPtr != nullptr)
+	{
+		Logger::log(e_log_level::INFO, SERVER, "Interrupt signal received");
+		serverManagerPtr->cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
+		std::exit(EXIT_FAILURE);
+	}
 }
 
-// Not sure if needed, but as an idea we could use this to safeguard from crashes
 void segfaultHandler(int signum)
 {
 	(void)signum;
-	// TODO: return 500 response, cut connections, shut down gracefully
+	if (serverManagerPtr != nullptr)
+	{
+		Logger::log(e_log_level::ERROR, ERROR_MESSAGE, "Internal server error");
+		serverManagerPtr->cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
+		std::exit(EXIT_FAILURE);
+	}
 }
 
 void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
@@ -24,35 +32,20 @@ void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
 // run the server
 int ServerManager::runServer()
 {
-	signal(SIGINT, signalHandler);
+	serverManagerPtr = this;
+	signal(SIGINT, interruptHandler);
 	signal(SIGSEGV, segfaultHandler);
+
 	try
 	{
 		createServers();
 		startServerLoop();
-		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
-
-		/*
-		------------------------------------------------------------------
-			Logger - print out server shutting down
-		------------------------------------------------------------------
-		*/
-
-		std::cout << "server shutting down..." << std::endl;
 		return EXIT_SUCCESS;
 	}
 	catch (std::exception &e)
 	{
+		Logger::log(e_log_level::ERROR, ERROR_MESSAGE, "Internal server error - %s", e.what());
 		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
-
-		/*
-		------------------------------------------------------------------
-			Logger - print out internal server error and the reasons
-		------------------------------------------------------------------
-		*/
-
-		std::cout << "internal server error" << std::endl;
-		std::cout << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
 }
@@ -63,13 +56,10 @@ void ServerManager::createServers()
 	{
 		Server server(config);
 		server.setUpServerSocket(); // set up each server socket
-
-		/*
-		------------------------------------------------------------------
-			Logger - print out the host and port of each server
-		------------------------------------------------------------------
-		*/
-
+		Logger::log(e_log_level::INFO, SERVER, "Server %s created - Host: %s, Port: %d",
+			config.getServerName().c_str(),
+			config.getServerHost().c_str(),
+			config.getServerPort());
 		servers[server.getServerFd()] = std::move(server);	  // insert server into map
 		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
 	}
@@ -78,12 +68,12 @@ void ServerManager::createServers()
 // start the main server loop
 void ServerManager::startServerLoop()
 {
-	while (!shutdown_flag)
+	while (true)
 	{
 		std::cout << "before poll" << std::endl;
 		handlePoll();
 		std::cout << "after poll" << std::endl;
-		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end() && !shutdown_flag; ++it) // loop through all pollfds to check which events have occurred
+		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it) // loop through all pollfds to check which events have occurred
 		{
 			std::cout << "poll loop fd:" << it->fd << std::endl;
 			if (!it->revents)
@@ -131,64 +121,28 @@ void ServerManager::handlePoll()
 	std::cout << std::endl;
 
 	if (ready < 0)
-	{
-		if (errno == EINTR)
-			return;
 		throw PollException();
-	}
-	else if (ready == 0) // timeout occur for all socket
-		handlePollTimeout();
 	else // check timeout for each client socket
-		checkClientTimeout();
+		checkClientTimeout(ready);
 }
 
-// if poll timeout, disconnect all client sockets
-void ServerManager::handlePollTimeout()
-{
-	for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
-	{
-		if (client_to_server_map.find(it->fd) != client_to_server_map.end())
-		{
-			int client_fd = it->fd;
-			int server_fd = client_to_server_map[client_fd];
-			std::string error_response = "poll timeout";
-			servers[server_fd].createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
-			handleClientDisconnection(it);
-		}
-	}
-
-	/*
-	------------------------------------------------------------------
-		Logger - print out poll time out
-	------------------------------------------------------------------
-	*/
-
-	std::cout << "poll time out" << std::endl;
-}
-
-// disconnect client socket if it timeout
-void ServerManager::checkClientTimeout()
+// disconnect client socket if it timeout or poll timeout
+void ServerManager::checkClientTimeout(int const &ready)
 {
 	for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
 	{
 		if (client_to_server_map.find(it->fd) != client_to_server_map.end())
 		{
 			std::chrono::duration<double> elapsed_seconds = std::chrono::steady_clock::now() - client_last_active_time[it->fd];
-			if (elapsed_seconds.count() >= TIMEOUT / 1000)
+			if (ready == 0 || elapsed_seconds.count() >= TIMEOUT / 1000) // if poll timeout or the client timeout
 			{
 				int client_fd = it->fd;
 				int server_fd = client_to_server_map[client_fd];
-				std::string error_response = "timeout";
+				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
+					inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
+					ntohs(servers[server_fd].getClientPortNumber(client_fd)));
 				servers[server_fd].createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
 				handleClientDisconnection(it);
-
-				/*
-				------------------------------------------------------------------
-					Logger - print out which client time out
-				------------------------------------------------------------------
-				*/
-
-				std::cout << "client " << it->fd << " timeout" << std::endl;
 			}
 		}
 	}
@@ -215,8 +169,6 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 		client_last_active_time[client_fd] = std::chrono::steady_clock::now();
 		if (request_status == Server::REQUEST_CLIENT_DISCONNECTED)
 			handleClientDisconnection(it);
-		else if (request_status == Server::REQUEST_INTERRUPTED)
-			return;
 		else if (request_status == Server::READY_TO_WRITE)
 			*it = {client_fd, POLLOUT, 0};
 	}
@@ -247,12 +199,9 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	client_last_active_time.erase(client_fd);
 	it = pollfds.erase(it);
 	it--;
-
-	/*
-	------------------------------------------------------------------
-		Logger - print out the address of client that has disconnected
-	------------------------------------------------------------------
-	*/
+	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+		inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
+		ntohs(servers[server_fd].getClientPortNumber(client_fd)));
 }
 
 // if the server shutdown, send error response to all clients and close all clients
@@ -262,6 +211,8 @@ void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 		servers[pair.second].createAndSendErrorResponse(statusCode, pair.first);
 	for (const pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
+	for (auto & server: servers)
+		Logger::log(e_log_level::INFO, SERVER, "Server %s shut down", server.second.getConfig().getServerName().c_str());
 }
 
 const char *ServerManager::PollException::what() const throw()

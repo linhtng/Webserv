@@ -1,5 +1,6 @@
 #include "ServerManager.hpp"
 #include "../config_parser/ConfigParser.hpp"
+#include "../Logger/Logger.hpp"
 #include <iostream>
 
 int main(int argc, char **argv)
@@ -14,6 +15,7 @@ int main(int argc, char **argv)
 	ServerManager server_manager;
 	try
 	{
+		Logger::initLogger();
 		ConfigParser parser(fileName);
 		parser.extractServerConfigs();
 		parser.printCluster(); // debug

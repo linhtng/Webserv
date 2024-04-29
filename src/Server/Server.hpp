@@ -21,6 +21,7 @@
 #include "../Response/Response.hpp"
 #include "../config_parser/ConfigParser.hpp"
 #include "../defines.hpp"
+#include "../Logger/Logger.hpp"
 
 class Server
 {
@@ -32,7 +33,6 @@ public:
 		REQUEST_CLIENT_DISCONNECTED,
 		BODY_IN_CHUNK,
 		READY_TO_WRITE,
-		REQUEST_INTERRUPTED,
 		PARSED_CHUNK_SIZE,
 		BAD_REQUEST,
 		BODY_EXPECTED
@@ -68,6 +68,10 @@ public:
 	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
 
 	int const &getServerFd() const;
+	ConfigData const &getConfig() const;
+	unsigned short int const &getClientPortNumber(int const &client_fd);
+	in_addr const &getClientIPv4Address(int const &client_fd);
+
 	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception

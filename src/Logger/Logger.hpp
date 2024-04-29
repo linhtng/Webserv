@@ -17,6 +17,7 @@
 # include <iostream>
 # include <sstream>
 # include <unistd.h>
+# include <cstdarg>
 
 //modify logger options here
 # define LOG_BUF_SIZE 512
@@ -26,6 +27,8 @@
 
 //type colours
 # define CLIENT GREEN
+# define SERVER BLUE
+# define ERROR_MESSAGE RED
 
 
 enum e_log_level {

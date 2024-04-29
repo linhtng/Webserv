@@ -14,6 +14,7 @@ SRCS = main.cpp \
 		../DefaultErrorPage/DefaultErrorPage.cpp \
 		../DirectoryListingPage/DirectoryListingPage.cpp \
 		../FileSystemUtils/FileSystemUtils.cpp \
+		../Logger/Logger.cpp
 		
 
 CC = c++

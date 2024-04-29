@@ -29,16 +29,15 @@ private:
 	void createServers();
 	void startServerLoop();
 	void handlePoll();
-	void handlePollTimeout();
-	void checkClientTimeout();
+	void checkClientTimeout(int const &ready);
 	void handleReadyToRead(std::list<pollfd>::iterator &it);
 	void handleReadyToWrite(std::list<pollfd>::iterator &it);
 	void handleClientDisconnection(std::list<pollfd>::iterator &it);
-	void cleanUpForServerShutdown(HttpStatusCode const &statusCode);
 
 public:
 	void initServer(const std::vector<ConfigData> &parsedConfigs);
 	int runServer();
+	void cleanUpForServerShutdown(HttpStatusCode const &statusCode);
 
 	class PollException : public std::exception
 	{

@@ -37,6 +37,9 @@ public:
 
 	Request *getRequest() const;
 	Response *getResponse() const;
+
+	unsigned short int const &getPortNumber() const;
+	struct in_addr const &getIPv4Address() const;
 };
 
 #endif
