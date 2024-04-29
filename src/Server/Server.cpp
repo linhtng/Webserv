@@ -142,11 +142,14 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 			return (HEADER_DELIMITER_FOUND);
 		}
 	}
-	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+	if (bytes == 0) // client has shutdown
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if (errno == EWOULDBLOCK || errno == EAGAIN) // if cannot search for the delimiter
-		return (BAD_REQUEST);
-	throw RecvException();
+	else
+	{
+		if (request_header.find(CRLF CRLF) == std::string::npos) // if cannot search for the delimiter
+			return (BAD_REQUEST);
+		throw RecvException();
+	}	
 }
 
 Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd)
@@ -164,9 +167,9 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	while ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 		request->appendToBody(buf, bytes);
 
-	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+	if (bytes == 0) // client has shutdown
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if (errno == EWOULDBLOCK || errno == EAGAIN)
+	else
 	{
 		size_t body_size = request->getBody().size();
 		size_t content_length = request->getContentLength();
@@ -177,7 +180,6 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		else
 			return (BAD_REQUEST);
 	}
-	throw RecvException();
 }
 
 Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
@@ -200,12 +202,17 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 		if (request_status == READY_TO_WRITE || request_status == BAD_REQUEST || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
-	if (bytes == 0 || errno == ECONNRESET || errno == ETIMEDOUT) // client has shutdown or timeout
+	if (bytes == 0) // client has shutdown
 		return (REQUEST_CLIENT_DISCONNECTED);
-	else if ((errno == EWOULDBLOCK || errno == EAGAIN)) // no delimiter
-		return (BODY_IN_CHUNK);
-
-	throw RecvException();
+	else
+	{
+		std::vector<std::byte> delimiter = {std::byte('\r'), std::byte('\n')};
+		std::vector<std::byte> body = request->getBody();
+		auto delimiter_pos = std::search(body.begin(), body.end(), delimiter.begin(), delimiter.end());
+		if (delimiter_pos == body.end()) // no delimiter
+			return (BODY_IN_CHUNK);
+		throw RecvException();
+	}
 }
 
 Server::RequestStatus Server::processChunkData(int const &client_fd)
@@ -350,7 +357,7 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 
 	if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE)
 		return (RESPONSE_CLIENT_DISCONNECTED);
-	if (bytes_sent >= response_len || errno == EWOULDBLOCK || errno == EAGAIN) // finish sending response
+	if (bytes_sent >= response_len) // finish sending response
 	{
 		Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
 			inet_ntoa(getClientIPv4Address(client_fd)),
@@ -360,7 +367,7 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 		clients[client_fd].removeResponse();
 		return (KEEP_ALIVE); // keep the connection alive by default
 	}
-	else if (bytes == 0 || errno == ECONNRESET) // client has shutdown or disconnect
+	else if (bytes == 0) // client has shutdown
 		return (RESPONSE_CLIENT_DISCONNECTED);
 	throw SendException();
 }
