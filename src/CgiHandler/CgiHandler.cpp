@@ -4,38 +4,39 @@ CgiHandler::CgiHandler()
 {
 }
 
-CgiHandler::CgiHandler(const Request &request, Location &cgiBin)
+CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
 {
-    parseCgiRequest(request, cgiBin);
+    parseCgiRequest(request, server);
 }
 
 CgiHandler::~CgiHandler()
 {
 }
 
-void CgiHandler::parseCgiRequest(const Request &request, Location &cgiBin)
+void CgiHandler::parseCgiRequest(const Request &request, const ConfigData &server)
 {
-    env["AUTH_TYPE"] = "Basic";
+    std::string target = request.getTarget();
     env["REQUEST_METHOD"] = request.getMethod();
     env["CONTENT_TYPE"] = request.getContentType();
     env["CONTENT_LENGTH"] = request.getContentLength();
     // env["QUERY_STRING"] = request.getQuery();
-    env["SCRIPT_NAME"] = request.getTarget();
-    env["PATH_INFO"] = setPathInfo(request, cgiBin);
-    // env["PATH_TRANSLATED"] = request.getConfig().ge()  +request.getTarget();
-    env["SERVER_PORT"] = request.getConfig().getServerPort();
-    env["SERVER_NAME"] = request.getConfig().getServerName();
-    env["SERVER_PROTOCOL"] = "HTTP/1.1";
+    // PATH_INFO = test.py
+    env["PATH_INFO"] = target;
+    // PATH_TRANSLATED = /cgi-bin/test.py
+    env["PATH_TRANSLATED"] = server.getCgiDir() + target;
+    env["SERVER_PORT"] = server.getServerPortString();
+    env["SERVER_NAME"] = server.getServerName();
+    env["SERVER_PROTOCOL"] = SERVER_PROTOCOL;
     env["GATEWAY_INTERFACE"] = GATEWAY_INTERFACE;
-    env["REDIRECT_STATUS"] = "200";
-    env["HTTP_HOST"] = request.getHost();
+    env["REMOTE_ADDR"] = request.getHost();
     env["HTTP_USER_AGENT"] = request.getUserAgent();
+    env["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
 }
 
-// PATH_INFO = full path to the requested file, i.e. root of cgi-bin + target
-std::string CgiHandler::setPathInfo(const Request &request, Location &cgiBin)
+void CgiHandler::printEnv()
 {
-    std::string path_info = cgiBin.getLocationRoot() + cgiBin.getLocationRoute() + request.getTarget();
-    std::cout << "PATH_INFO: " << path_info << std::endl;
-    return path_info;
+    for (auto &pair : env)
+    {
+        std::cout << pair.first << " = " << pair.second << std::endl;
+    }
 }

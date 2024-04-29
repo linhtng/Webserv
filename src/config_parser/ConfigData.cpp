@@ -8,23 +8,28 @@ ConfigData::ConfigData(std::string &input)
     analyzeConfigData();
 }
 
+ConfigData::ConfigData(const ConfigData &other)
+{
+    *this = other;
+}
+
 ConfigData &ConfigData::operator=(const ConfigData &other)
 {
-    if (this == &other)
+    if (this != &other)
     {
-        return *this;
+        serverBlock = other.serverBlock;
+        serverPort = other.serverPort;
+        serverPortString = other.serverPortString;
+        serverName = other.serverName;
+        serverHost = other.serverHost;
+        defaultErrorPages = other.defaultErrorPages;
+        maxClientBodySize = other.maxClientBodySize;
+        locationBlocks = other.locationBlocks;
+        locations = other.locations;
+        cgiDir = other.cgiDir;
+        cgiExtension = other.cgiExtension;
+        cgiExecutor = other.cgiExecutor;
     }
-    serverBlock = other.serverBlock;
-    serverPort = other.serverPort;
-    serverName = other.serverName;
-    serverHost = other.serverHost;
-    defaultErrorPages = other.defaultErrorPages;
-    maxClientBodySize = other.maxClientBodySize;
-    locationBlocks = other.locationBlocks;
-    locations = other.locations;
-    cgiDir = other.cgiDir;
-    cgiExtension = other.cgiExtension;
-    cgiExecutor = other.cgiExecutor;
     return *this;
 }
 
@@ -154,12 +159,18 @@ void ConfigData::extractServerPort()
     {
         throw std::runtime_error("Invalid port number: " + serverPortStr);
     }
+    serverPortString = serverPortStr;
     serverPort = std::stoi(serverPortStr);
 }
 
 int ConfigData::getServerPort() const
 {
     return serverPort;
+}
+
+std::string ConfigData::getServerPortString() const
+{
+    return serverPortString;
 }
 
 /* Handling error:
@@ -271,7 +282,7 @@ void ConfigData::extractCgiDir()
     {
         cgiDirStr = DefaultValues::CGI_DIR;
     }
-    if (!FileSystemUtils::pathExists(cgiDirStr))
+    if (!FileSystemUtils::pathExistsAndAccessible(cgiDirStr))
         throw std::runtime_error("Invalid CGI directory: " + cgiDirStr);
     cgiDir = cgiDirStr;
 }
