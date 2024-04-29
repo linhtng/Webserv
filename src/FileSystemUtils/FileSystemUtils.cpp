@@ -19,8 +19,11 @@ bool FileSystemUtils::isDir(const std::string &target)
 	return S_ISDIR(path_stat.st_mode);
 }
 
+#include <iostream>
+
 bool FileSystemUtils::isFile(const std::string &target)
 {
+	std::cout << "Checking if " << target << " is a file" << std::endl;
 	struct stat path_stat;
 	if (stat(target.c_str(), &path_stat) == -1)
 	{

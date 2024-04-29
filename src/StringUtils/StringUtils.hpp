@@ -19,6 +19,7 @@ namespace StringUtils
 	bool isDigitsOnly(const std::string &str);
 	void replaceAll(std::string &str, const std::string &from, const std::string &to);
 	std::unordered_map<std::string, std::string> parseQueryString(const std::string &queryString);
+	std::string trimChar(const std::string &str, char ch);
 }
 
 #endif

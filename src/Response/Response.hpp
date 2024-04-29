@@ -4,20 +4,17 @@
 #include "../defines.hpp"
 #include "../Request/Request.hpp"
 #include "../HttpMessage/HttpMessage.hpp"
-#include "../DefaultErrorPage/DefaultErrorPage.hpp"
-#include "../DirectoryListingPage/DirectoryListingPage.hpp"
 #include "../StringUtils/StringUtils.hpp"
 #include "../FileSystemUtils/FileSystemUtils.hpp"
 #include "../config_parser/Location.hpp"
+#include "../BinaryData/BinaryData.hpp"
 
 #include <string>
 #include <chrono>
 #include <vector>
 // TODO: check imports below
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <iomanip>
+
+#include <iomanip> //TODO: check header for put_time
 
 class Request;
 
@@ -28,12 +25,17 @@ class Response : public HttpMessage
 private:
 	std::string _serverHeader;
 	std::string _locationHeader;
-	std::chrono::system_clock::time_point _lastModified;
+	std::chrono::system_clock::time_point _lastModified; // consider removing because functions for it don't work on our macOS version
 
 	Request const &_request;
 	Location _location;
 	std::string _redirectionRoute;
+	std::string _route;
+	std::string _fileName;
+	std::string _fileExtension;
 
+	void splitTarget();
+	bool isFileName(const std::string &fileName, std::string &name, std::string &extension);
 	std::string formatDate() const;
 	std::string formatStatusLine() const;
 	std::string formatHeader() const;

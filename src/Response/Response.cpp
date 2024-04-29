@@ -65,13 +65,25 @@ std::string Response::formatStatusLine() const
 
 std::string Response::formatHeader() const
 {
-	printResponseProperties();
+	// printResponseProperties();
 	std::string header;
+	std::cout << RED << "1" << RESET << std::endl;
 	header += this->formatStatusLine() + CRLF;
+	std::cout << RED << "2" << RESET << std::endl;
 	header += "Date: " + this->formatDate() + CRLF;
+	std::cout << RED << "3" << RESET << std::endl;
 	header += "Server: " + this->_config.getServerName() + CRLF;
+	std::cout << RED << "4" << RESET << std::endl;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
+	std::cout << RED << "5" << RESET << std::endl;
 	header += "Connection: " + this->formatConnection() + CRLF;
+	std::cout << RED << "6" << RESET << std::endl;
+	std::cout << RED << "Location header: " << this->_locationHeader << RESET << std::endl;
+	std::cout << RED << "7" << RESET << std::endl;
+	if (!this->_locationHeader.empty())
+	{
+		header += "Location: " + this->_locationHeader + CRLF;
+	}
 	header += CRLF;
 	return header;
 }
@@ -79,11 +91,13 @@ std::string Response::formatHeader() const
 std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
+	std::cout << RED << "Formatting response" << RESET << std::endl;
 	for (char ch : this->formatHeader())
 	{
 		response.push_back(static_cast<std::byte>(ch));
 	}
 	std::vector<std::byte> body = this->_body;
+	std::cout << RED << "Formatted response" << RESET << std::endl;
 	response.insert(response.end(), body.begin(), body.end());
 	return response;
 }
@@ -110,8 +124,8 @@ std::vector<std::byte> Response::formatResponse() const
 		std::cerr << "Error: " << e.what() << std::endl;
 	}
 	return "Unknown";
-} */
-/*
+}
+
 std::string setLastModified(const std::filesystem::path &filePath)
 {
 	try
@@ -124,8 +138,8 @@ std::string setLastModified(const std::filesystem::path &filePath)
 	catch (const std::filesystem::filesystem_error &e)
 	{
 	}
-} */
-
+}
+ */
 void Response::setDateToCurrent()
 {
 	this->_date = std::chrono::system_clock::now();
@@ -138,23 +152,32 @@ void Response::prepareResponse()
 
 void Response::prepareErrorResponse()
 {
-	this->_body = DefaultErrorPage::getErrorPage(this->_statusCode);
+	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
 	// set Content-Type to http
 }
 
 void Response::prepareStandardHeaders()
 {
+	/*
 	this->_httpVersionMajor = 1;
 	this->_httpVersionMinor = 1;
+	*/
 	this->setDateToCurrent();
-	this->_serverHeader = this->_config.getServerName();
-	this->_connection = this->_request.getConnection();
+	this->_serverHeader = SERVER_SOFTWARE;
+	// lastModified should be set when we know the resource
 }
 
 void Response::prepareRedirectResponse()
 {
-	this->_statusCode = HttpStatusCode::MOVED_PERMANENTLY;
+	if (this->_method == HttpMethod::POST)
+	{
+		this->_statusCode = HttpStatusCode::PERMANENT_REDIRECT;
+	}
+	else
+	{
+		this->_statusCode = HttpStatusCode::MOVED_PERMANENTLY;
+	}
 	this->_locationHeader = this->_redirectionRoute;
 }
 
@@ -163,12 +186,14 @@ void Response::prepareRedirectResponse()
 bool Response::isRedirect()
 {
 	this->_redirectionRoute = this->_location.getRedirectionRoute();
+	std::cout << RED << "Redirection route: " << this->_redirectionRoute << RESET << std::endl;
 	return this->_redirectionRoute != "";
 }
 
 bool Response::targetFound()
 {
-	if (!FileSystemUtils::pathExists(this->_target))
+	std::cout << GREEN << "Checking if path exists: " << this->_location.getLocationRoot() + this->_target << RESET << std::endl;
+	if (!FileSystemUtils::pathExists(this->_location.getLocationRoot() + this->_target))
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		return false;
@@ -178,6 +203,57 @@ bool Response::targetFound()
 		return true;
 		// check permissions
 	}
+}
+
+// probably would be nice to move this to utils
+bool Response::isFileName(const std::string &fileName, std::string &name, std::string &extension)
+{
+	std::vector<std::string> fileNameParts = StringUtils::splitByDelimiter(fileName, ".");
+	if (fileNameParts.size() < 2)
+	{
+		return false;
+	}
+	extension = fileNameParts.back();
+	name = fileName;
+	return true;
+}
+
+// probably would be nice to move this to utils
+void Response::splitTarget()
+{
+	// split string in two by last slash
+	std::regex splittingPattern("^([a-zA-Z0-9/]*)/([^/]*)$");
+	std::smatch matches;
+	if (std::regex_match(this->_target, matches, splittingPattern))
+	{
+		std::string afterLastSlash = matches[matches.size() - 1];
+		// is there was nothing after last slash, everything is route
+		if (afterLastSlash.empty())
+		{
+			this->_route = _target;
+		}
+		else
+		{
+			// if there was something after last slash, check if it contains a dot and extract extension
+			if (isFileName(afterLastSlash, this->_fileName, this->_fileExtension))
+			{
+				// then everything before the last slash is route
+				this->_route = matches[1];
+			}
+			else
+			{
+				// otherwise everything is route
+				this->_route = _target;
+			}
+		}
+	}
+	// trim slashes
+	std::cout << RED << "Route: " << this->_route << RESET << std::endl;
+	std::cout << RED << "File name: " << this->_fileName << RESET << std::endl;
+	this->_route = "/" + StringUtils::trimChar(this->_route, '/');
+	this->_fileName = StringUtils::trimChar(this->_fileName, '/');
+	std::cout << RED << "after Route: " << this->_route << RESET << std::endl;
+	std::cout << RED << "after File name: " << this->_fileName << RESET << std::endl;
 }
 
 bool Response::isCGI()
@@ -195,31 +271,49 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
-	if (FileSystemUtils::isDir(this->_target))
+	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
+	if (this->_fileName != "")
 	{
+		path += "/" + this->_fileName;
+	}
+	if (FileSystemUtils::isDir(path))
+	{
+		std::string dirPath = path;
 		if (this->_location.getDirectoryListing())
 		{
+			std::cout << RED << "Directory listing" << RESET << std::endl;
 			// serve directory listing
-			this->_body = DirectoryListingPage::getDirectoryListingPage(this->_target);
+			this->_body = BinaryData::getDirectoryListingPage(dirPath);
 			this->_statusCode = HttpStatusCode::OK;
 		}
 		else if (!this->_location.getDefaultFile().empty())
 		{
+			std::cout << RED << "Getting index file" << RESET << std::endl;
+			// check if this should be target or some location property
+			this->_body = BinaryData::getFileData(dirPath + this->_location.getDefaultFile());
+			this->_statusCode = HttpStatusCode::OK;
 			// server index file
 		}
 		else
 		{
+			std::cout << RED << "Not Directory listing or Index file" << RESET << std::endl;
 			// 403 Forbidden
 		}
 	}
 	else
 	{
-		if (FileSystemUtils::isFile(this->_target))
+		if (FileSystemUtils::isFile(path))
 		{
+			std::cout << RED << "Getting file" << RESET << std::endl;
+			this->_body = BinaryData::getFileData(this->_route);
+			this->_statusCode = HttpStatusCode::OK;
 			// serve file
 		}
 		else
 		{
+			std::cout << RED << "Not a file, some weird shit" << RESET << std::endl;
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			prepareErrorResponse();
 			// 404 Not Found
 		}
 	}
@@ -235,6 +329,7 @@ void Response::handleDelete()
 
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
 {
+	(void)_request;
 	this->prepareStandardHeaders();
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
@@ -244,15 +339,16 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	}
 	else
 	{
+		splitTarget();
 		// try to match location
-		if (_config.hasMatchingLocation(_target))
+		if (_config.hasMatchingLocation(_route))
 		{
-			std::cout << RED << "Location found" << RESET << std::endl;
-			this->_location = _config.getMatchingLocation(_target);
+			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
+			this->_location = _config.getMatchingLocation(_route);
 		}
 		else
 		{
-			std::cout << RED << "Location not found" << RESET << std::endl;
+			std::cout << RED << "Location '" << _route << "' not found" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
 			this->prepareErrorResponse();
 			return;
@@ -267,6 +363,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 		// make sure target exists
 		if (!targetFound())
 		{
+			std::cout << RED << "Target not found" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
 			this->prepareErrorResponse();
 			return;
