@@ -67,19 +67,11 @@ std::string Response::formatHeader() const
 {
 	// printResponseProperties();
 	std::string header;
-	std::cout << RED << "1" << RESET << std::endl;
 	header += this->formatStatusLine() + CRLF;
-	std::cout << RED << "2" << RESET << std::endl;
 	header += "Date: " + this->formatDate() + CRLF;
-	std::cout << RED << "3" << RESET << std::endl;
 	header += "Server: " + this->_config.getServerName() + CRLF;
-	std::cout << RED << "4" << RESET << std::endl;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
-	std::cout << RED << "5" << RESET << std::endl;
 	header += "Connection: " + this->formatConnection() + CRLF;
-	std::cout << RED << "6" << RESET << std::endl;
-	std::cout << RED << "Location header: " << this->_locationHeader << RESET << std::endl;
-	std::cout << RED << "7" << RESET << std::endl;
 	if (!this->_locationHeader.empty())
 	{
 		header += "Location: " + this->_locationHeader + CRLF;
@@ -271,7 +263,7 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
-	std::cout << "location root" << this->_location.getLocationRoot() << std::endl;
+	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
 	std::cout << "route" << this->_route << std::endl;
 	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
 	if (this->_fileName != "")
@@ -361,6 +353,15 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 			std::cout << RED << "Redirect" << RESET << std::endl;
 			this->prepareRedirectResponse();
 			return;
+		}
+		// handle aliases - should override root
+		if (!_location.getLocationAlias().empty()) // replace with proper function
+		{
+			std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
+			// set root to empty
+			_location.setLocationRoot("");
+			// set route to alias
+			_location.setLocationRoute(_location.getLocationAlias());
 		}
 		// make sure target exists
 		if (!targetFound())

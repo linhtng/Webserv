@@ -296,3 +296,13 @@ std::string Location::getDefaultFile()
 // {
 //     return cgiExecutor;
 // }
+
+void Location::setLocationRoot(const std::string &root)
+{
+    this->root = root;
+}
+
+void Location::setLocationRoute(const std::string &route)
+{
+    locationRoute = route;
+}

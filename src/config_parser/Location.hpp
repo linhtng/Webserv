@@ -35,6 +35,8 @@ public:
     std::string getDefaultFile();
     std::string getCgiExtension();
     std::string getCgiExecutor();
+    void setLocationRoot(const std::string &root);
+    void setLocationRoute(const std::string &route);
 
 private:
     std::string locationBlock;
