@@ -184,8 +184,9 @@ bool Response::isRedirect()
 
 bool Response::targetFound()
 {
-	std::cout << GREEN << "Checking if path exists: " << this->_location.getLocationRoot() + this->_route + '/' + this->_fileName << RESET << std::endl;
-	if (!FileSystemUtils::pathExists(this->_location.getLocationRoot() + this->_route + '/' + this->_fileName))
+	std::string fullPath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::cout << GREEN << "Checking if path exists: " << fullPath << RESET << std::endl;
+	if (!FileSystemUtils::pathExists(fullPath))
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		return false;
@@ -264,7 +265,7 @@ void Response::handlePost()
 void Response::handleGet()
 {
 	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
-	std::cout << "route" << this->_route << std::endl;
+	std::cout << "route: " << this->_route << std::endl;
 	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
 	if (this->_fileName != "")
 	{
