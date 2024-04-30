@@ -271,6 +271,8 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
+	std::cout << "location root" << this->_location.getLocationRoot() << std::endl;
+	std::cout << "route" << this->_route << std::endl;
 	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
 	if (this->_fileName != "")
 	{
@@ -305,7 +307,7 @@ void Response::handleGet()
 		if (FileSystemUtils::isFile(path))
 		{
 			std::cout << RED << "Getting file" << RESET << std::endl;
-			this->_body = BinaryData::getFileData(this->_route);
+			this->_body = BinaryData::getFileData(path);
 			this->_statusCode = HttpStatusCode::OK;
 			// serve file
 		}

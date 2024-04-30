@@ -79,12 +79,12 @@ std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string path)
 
 std::vector<std::byte> BinaryData::getFileData(std::string path)
 {
+	std::cout << RED << "path: " << path << RESET << std::endl;
 	std::ifstream fileStream(path, std::ios::binary);
 	if (!fileStream)
 	{
 		throw std::runtime_error("Failed to open file: " + path);
 	}
-
 	std::stringstream buffer;
 	buffer << fileStream.rdbuf();
 	std::string fileContent = buffer.str();
