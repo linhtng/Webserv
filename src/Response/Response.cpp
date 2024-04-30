@@ -184,8 +184,8 @@ bool Response::isRedirect()
 
 bool Response::targetFound()
 {
-	std::cout << GREEN << "Checking if path exists: " << this->_location.getLocationRoot() + this->_target << RESET << std::endl;
-	if (!FileSystemUtils::pathExists(this->_location.getLocationRoot() + this->_target))
+	std::cout << GREEN << "Checking if path exists: " << this->_location.getLocationRoot() + this->_route + '/' + this->_fileName << RESET << std::endl;
+	if (!FileSystemUtils::pathExists(this->_location.getLocationRoot() + this->_route + '/' + this->_fileName))
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		return false;
@@ -321,6 +321,17 @@ void Response::handleDelete()
 {
 }
 
+void Response::handleAlias()
+{
+	std::string alias = _location.getLocationAlias();
+	if (!alias.empty())
+	{
+		std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
+		this->_route = _location.getLocationAlias();
+		_location.setLocationRoot("");
+	}
+}
+
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
 {
 	(void)_request;
@@ -355,14 +366,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 			return;
 		}
 		// handle aliases - should override root
-		if (!_location.getLocationAlias().empty()) // replace with proper function
-		{
-			std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
-			// set root to empty
-			_location.setLocationRoot("");
-			// set route to alias
-			_location.setLocationRoute(_location.getLocationAlias());
-		}
+		handleAlias();
 		// make sure target exists
 		if (!targetFound())
 		{
