@@ -25,6 +25,7 @@ int main(int argc, char **argv)
         // request.printRequestProperties();
         // std::cout << std::endl;
         CgiHandler cgiHandler(request, server);
+        cgiHandler.executeCgiScript();
         // cgiHandler.printEnv();
     }
     catch (std::exception &e)
