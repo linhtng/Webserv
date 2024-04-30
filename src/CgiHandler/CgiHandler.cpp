@@ -30,48 +30,53 @@ void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
     envMap["GATEWAY_INTERFACE"] = GATEWAY_INTERFACE;
     envMap["HTTP_USER_AGENT"] = request.getUserAgent();
     envMap["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
+}
 
-    // for (auto env : envMap)
-    // {
-    //     const std::string envStr = env.first + "=" + env.second;
-    //     // std::cout << "New env:" << std::endl;
-    //     // std::cout << envStr << std::endl;
-    //     // std::cout << envStr.c_str() << std::endl;
-    //     cgiEnv.push_back(envStr.c_str());
-    // }
-    // cgiEnv.push_back(nullptr);
-    // for (const char *env : cgiEnv)
-    // {
-    //     if (env != nullptr)
-    //         std::cout << env << std::endl;
-    // }
+std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)
+{
+    std::vector<const char *> cgiEnv;
+    for (const std::string &env : cgiEnvStr)
+    {
+        cgiEnv.push_back(env.c_str());
+    }
+    cgiEnv.push_back(nullptr);
+    return cgiEnv;
+}
+
+void CgiHandler::printEnv()
+{
+    for (auto env : envMap)
+    {
+        std::cout << env.first << ": " << env.second << std::endl;
+    }
+}
+
+/* Create a new process to execute the CGI script:
+- open cgi pipe
+- fork and execute in the child process
+- wait for the child process to finish
+- close the pipe
+*/
+void CgiHandler::createCgiProcess()
+{
+}
+
+void CgiHandler::executeCgiScript()
+{
     std::vector<std::string> cgiEnvStr;
     for (auto env : envMap)
     {
         const std::string envStr = env.first + "=" + env.second;
         cgiEnvStr.push_back(envStr);
     }
-}
-
-std::vector<const char *> CgiHandler::createCgiEnvCharStr()
-{
-    std::vector<const char *> cgiEnvChar;
-    for (const std::string &env : cgiEnv)
+    std::vector<const char *> cgiEnv = createCgiEnvCharStr(cgiEnvStr);
+    char **cgiEnvp = const_cast<char **>(cgiEnv.data());
+    while (*cgiEnvp)
     {
-        cgiEnvChar.push_back(env.c_str());
+        std::cout << *cgiEnvp << std::endl;
+        cgiEnvp++;
     }
-    cgiEnvChar.push_back(nullptr);
-    return cgiEnvChar;
-}
-
-void CgiHandler::printEnv()
-{
-    for (const char *env : cgiEnv)
-    {
-        if (env == nullptr)
-        {
-            break;
-        }
-        std::cout << env << std::endl;
-    }
+    // fork
+    // execve
+    // waitpid
 }

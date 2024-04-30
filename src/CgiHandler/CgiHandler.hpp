@@ -23,6 +23,7 @@ public:
     CgiHandler(const Request &request, const ConfigData &server);
     ~CgiHandler();
 
+    void createCgiProcess();
     void executeCgiScript();
     void sendCgiResponse();
     void printEnv();
@@ -31,6 +32,5 @@ private:
     void setupCgiEnv(const Request &request, const ConfigData &server);
     std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
     std::map<std::string, std::string> envMap;
-    std::vector<const char *> cgiEnv;
     std::string cgiPath;
 };
