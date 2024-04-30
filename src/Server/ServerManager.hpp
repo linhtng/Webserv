@@ -21,7 +21,7 @@ class ServerManager
 
 private:
 	std::vector<ConfigData> serverConfigs;
-	std::unordered_map<int, Server> servers;
+	std::unordered_map<int, std::unique_ptr<Server>> servers;
 	std::unordered_map<int, int> client_to_server_map;
 	std::list<pollfd> pollfds;
 	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;

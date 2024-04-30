@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <iostream>
 #include <string>
+#include <memory>
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
 #include "../config_parser/ConfigData.hpp"
@@ -14,16 +15,16 @@ class Client
 private:
 	struct sockaddr_in address;
 	socklen_t addrlen;
-	Request *request;
-	Response *response;
+	std::unique_ptr<Request> request;
+	std::unique_ptr<Response> response;
 	bool is_connection_close;
+	Client();
+
 
 public:
-	Client();
-	~Client();
 
-	struct sockaddr_in &getAndSetAddress();
-	socklen_t &getAndSetAddrlen();
+	Client(struct sockaddr_in client_address, socklen_t client_addrlen);
+	~Client();
 
 	void createRequest(std::string const &request_header, ConfigData const &config);
 	void createResponse();
@@ -35,8 +36,8 @@ public:
 
 	bool isNewRequest() const;
 
-	Request *getRequest() const;
-	Response *getResponse() const;
+	const Request &getRequest() const;
+	const Response &getResponse() const;
 	bool const &getIsConnectionClose() const;
 
 	unsigned short int const &getPortNumber() const;

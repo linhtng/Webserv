@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <regex>
+#include <memory>
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
@@ -50,7 +51,7 @@ public:
 private:
 	int server_fd;
 	ConfigData config;
-	std::unordered_map<int, Client> clients;
+	std::unordered_map<int, std::unique_ptr<Client>> clients;
 	struct sockaddr_in address;
 
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
@@ -58,10 +59,12 @@ private:
 	RequestStatus formRequestBodyWithChunk(int const &client_fd);
 	RequestStatus processChunkData(int const &client_fd);
 	RequestStatus extractChunkSize(int const &client_fd);
+	Server();
 
 public:
-	Server();
+
 	Server(ConfigData &config);
+	~Server();
 
 	void setUpServerSocket();
 	std::vector<int> acceptNewConnections();

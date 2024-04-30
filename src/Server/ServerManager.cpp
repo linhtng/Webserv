@@ -55,14 +55,15 @@ void ServerManager::createServers()
 {
 	for (ConfigData &config : serverConfigs)
 	{
-		Server server(config);
-		server.setUpServerSocket(); // set up each server socket
+		std::unique_ptr<Server> server = std::make_unique<Server>(config);
+		server->setUpServerSocket(); // set up each server socket
 		Logger::log(e_log_level::INFO, SERVER, "Server %s created - Host: %s, Port: %d",
 			config.getServerName().c_str(),
 			config.getServerHost().c_str(),
 			config.getServerPort());
-		servers[server.getServerFd()] = std::move(server);	  // insert server into map
-		pollfds.push_back({server.getServerFd(), POLLIN, 0}); // add the server socket to poll fd
+		int serverFd = server->getServerFd();
+    servers[serverFd] = std::move(server);    // insert server into map
+    pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
 	}
 }
 
@@ -98,8 +99,8 @@ void ServerManager::startServerLoop()
 				int client_fd = it->fd;
 				int server_fd = client_to_server_map[client_fd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-					inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
-					ntohs(servers[server_fd].getClientPortNumber(client_fd)));
+					inet_ntoa(servers[server_fd]->getClientIPv4Address(client_fd)),
+					ntohs(servers[server_fd]->getClientPortNumber(client_fd)));
 				handleClientDisconnection(it);
 			}
 			else
@@ -145,9 +146,9 @@ void ServerManager::checkClientTimeout(int const &ready)
 				int client_fd = it->fd;
 				int server_fd = client_to_server_map[client_fd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-					inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
-					ntohs(servers[server_fd].getClientPortNumber(client_fd)));
-				servers[server_fd].createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
+					inet_ntoa(servers[server_fd]->getClientIPv4Address(client_fd)),
+					ntohs(servers[server_fd]->getClientPortNumber(client_fd)));
+				servers[server_fd]->createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
 				handleClientDisconnection(it);
 			}
 		}
@@ -159,7 +160,7 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 	if (servers.find(it->fd) != servers.end()) // if the fd is server fd, accept new connection
 	{
 		int server_fd = it->fd;
-		std::vector<int> clients_fds = servers[server_fd].acceptNewConnections();
+		std::vector<int> clients_fds = servers[server_fd]->acceptNewConnections();
 		for (const int &client_fd : clients_fds)
 		{
 			pollfds.push_back({client_fd, POLLIN, 0});	 // add the new fd to poll fd
@@ -171,7 +172,7 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 	{
 		int client_fd = it->fd;
 		int server_fd = client_to_server_map[client_fd];
-		Server::RequestStatus request_status = servers[server_fd].receiveRequest(client_fd);
+		Server::RequestStatus request_status = servers[server_fd]->receiveRequest(client_fd);
 		client_last_active_time[client_fd] = std::chrono::steady_clock::now();
 		if (request_status == Server::REQUEST_DISCONNECT_CLIENT)
 			handleClientDisconnection(it);
@@ -184,7 +185,7 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 {
 	int client_fd = it->fd;
 	int server_fd = client_to_server_map[client_fd];
-	Server::ResponseStatus response_status = servers[server_fd].sendResponse(client_fd);
+	Server::ResponseStatus response_status = servers[server_fd]->sendResponse(client_fd);
 	client_last_active_time[client_fd] = std::chrono::steady_clock::now();
 	if (response_status == Server::KEEP_ALIVE)
 		*it = {client_fd, POLLIN, 0};
@@ -199,26 +200,27 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 {
 	int client_fd = it->fd;
 	int server_fd = client_to_server_map[client_fd];
-	servers[server_fd].removeClient(client_fd);
+	servers[server_fd]->removeClient(client_fd);
 	close(client_fd);
 	client_to_server_map.erase(client_fd);
 	client_last_active_time.erase(client_fd);
 	it = pollfds.erase(it);
 	it--;
-	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d is removed",
-		inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
-		ntohs(servers[server_fd].getClientPortNumber(client_fd)));
 }
 
 // if the server shutdown, send error response to all clients and close all clients
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 {
 	for (auto & pair :client_to_server_map)
-		servers[pair.second].createAndSendErrorResponse(statusCode, pair.first);
+		servers[pair.second]->createAndSendErrorResponse(statusCode, pair.first);
 	for (const pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
 	for (auto & server: servers)
-		Logger::log(e_log_level::INFO, SERVER, "Server %s shut down", server.second.getConfig().getServerName().c_str());
+	{
+		Logger::log(e_log_level::INFO, SERVER, "Server %s shut down", server.second->getConfig().getServerName().c_str());
+		server.second.reset();
+	}
+
 }
 
 const char *ServerManager::PollException::what() const throw()
