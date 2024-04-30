@@ -100,6 +100,7 @@ public:
 	size_t getChunkSize() const;
 	std::vector<std::byte> getBodyBuf() const;
 	size_t getBytesToReceive() const;
+	std::string getMethodStr() const;
 
 	// EXCEPTIONS
 

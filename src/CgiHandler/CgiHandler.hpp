@@ -28,8 +28,9 @@ public:
     void printEnv();
 
 private:
-    void parseCgiRequest(const Request &request, const ConfigData &server);
-
-    std::map<std::string, std::string> env;
+    void setupCgiEnv(const Request &request, const ConfigData &server);
+    std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
+    std::map<std::string, std::string> envMap;
+    std::vector<const char *> cgiEnv;
     std::string cgiPath;
 };
