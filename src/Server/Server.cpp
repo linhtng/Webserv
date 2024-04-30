@@ -91,20 +91,24 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 	if (clients[client_fd].isNewRequest()) // if the request is not created yet, create the request with the request header
 	{
+		std::string request_header;
 		std::vector<std::byte> request_body_buf;
 
-		request_status = formRequestHeader(client_fd, request_body_buf);
-		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == HEADER_IN_CHUNK)
+		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
+		if (request_status == REQUEST_DISCONNECT_CLIENT)
 			return request_status;
-		if (request_status == BAD_REQUEST)
+		if (request_status == BAD_HEADER)
 		{
-			clients[client_fd].createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+			clients[client_fd].setIsConnectionClose(true);
+			if (request_header.size() == MAX_HEADER_LENGTH)
+				clients[client_fd].createErrorRequest(config, HttpStatusCode::PAYLOAD_TOO_LARGE);
+			else
+				clients[client_fd].createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
 			clients[client_fd].createResponse(); // create response object
 			return (READY_TO_WRITE);
 		}
 
-		clients[client_fd].createRequest(clients[client_fd].getRequestHeaderBuf(), this->config); // create request object
-		clients[client_fd].clearRequestHeaderBuf();
+		clients[client_fd].createRequest(request_header, this->config); // create request object
 		Request *request = clients[client_fd].getRequest();
 		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
 			inet_ntoa(getClientIPv4Address(client_fd)),
@@ -114,51 +118,58 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		request->appendToBodyBuf(request_body_buf);
 	}
 
-	if (clients[client_fd].getRequest()->isBodyExpected() && request_status != BAD_REQUEST)
+	if (clients[client_fd].getRequest()->isBodyExpected())
 	{
 		request_status = clients[client_fd].getRequest()->isChunked()
 			? formRequestBodyWithChunk(client_fd)
 			: formRequestBodyWithContentLength(client_fd);
-		if (request_status == REQUEST_CLIENT_DISCONNECTED || request_status == BODY_IN_CHUNK)
+		if (request_status == REQUEST_DISCONNECT_CLIENT || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
 
 	if (request_status == BAD_REQUEST)
+	{
+		clients[client_fd].setIsConnectionClose(true);
 		clients[client_fd].createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+	}
 
 	clients[client_fd].createResponse(); // create response object
 	return (READY_TO_WRITE);
 }
 
-Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::vector<std::byte> &request_body_buf)
+Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf)
 {
 	ssize_t bytes;
-	char buf[BUFFER_SIZE];
+	char buf[MAX_HEADER_LENGTH];
 
 	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-		clients[client_fd].appendToRequestHeaderBuf(buf, bytes);
-		size_t delimiter_pos = clients[client_fd].getRequestHeaderBuf().find(CRLF CRLF);
+		request_header.append(buf, bytes);
+		size_t delimiter_pos = request_header.find(CRLF CRLF);
 		if (delimiter_pos != std::string::npos)
 		{
-			size_t body_length = clients[client_fd].getRequestHeaderBuf().size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
+			size_t body_length = request_header.size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
 			for (size_t i = 0; i < body_length; ++i)
-				request_body_buf.push_back(static_cast<std::byte>(clients[client_fd].getRequestHeaderBuf()[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
-			clients[client_fd].resizeRequestHeaderBuf(delimiter_pos);
+				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
+			request_header.resize(delimiter_pos);
 			return (HEADER_DELIMITER_FOUND);
 		}
 		else
-		{
-			if ((bytes = recv(client_fd, buf, sizeof(buf), MSG_PEEK)) > 0)
-				return (HEADER_IN_CHUNK);
-			else
-				return (BAD_REQUEST);
-		}
+			return (BAD_HEADER); //cannot find delimiter or the header is larger than the max header length
 	}
-	if (bytes == 0) // client has shutdown
-		return (REQUEST_CLIENT_DISCONNECTED);
 	else
-		throw RecvException();
+	{
+		if (bytes == 0)
+			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		else
+			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
+				config.getServerName().c_str(),
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		return (REQUEST_DISCONNECT_CLIENT);
+	}
 }
 
 Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd)
@@ -193,11 +204,19 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		else
 			return (BAD_REQUEST);	
 	}
-
-	if (bytes == 0) // client has shutdown
-		return (REQUEST_CLIENT_DISCONNECTED);
 	else
-		throw RecvException();
+	{
+		if (bytes == 0)
+			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		else
+			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
+				config.getServerName().c_str(),
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		return (REQUEST_DISCONNECT_CLIENT);
+	}
 }
 
 Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
@@ -218,10 +237,19 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 		request->appendToBodyBuf(buf, bytes);
 		return (processChunkData(client_fd));
 	}
-	if (bytes == 0) // client has shutdown
-		return (REQUEST_CLIENT_DISCONNECTED);
 	else
-		throw RecvException();
+	{
+		if (bytes == 0)
+			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		else
+			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
+				config.getServerName().c_str(),
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		return (REQUEST_DISCONNECT_CLIENT);
+	}
 }
 
 Server::RequestStatus Server::processChunkData(int const &client_fd)
@@ -366,16 +394,25 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 				inet_ntoa(getClientIPv4Address(client_fd)),
 				ntohs(getClientPortNumber(client_fd)),
 				clients[client_fd].getResponse()->getStatusCode());
-			if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE)
-				return (RESPONSE_CLIENT_DISCONNECTED);
+			if (clients[client_fd].getRequest()->getConnection() == ConnectionValue::CLOSE || clients[client_fd].getIsConnectionClose() == true)
+				return (RESPONSE_DISCONNECT_CLIENT);
 			clients[client_fd].removeRequest();
 			clients[client_fd].removeResponse();
 			return (KEEP_ALIVE); // keep the connection alive by default
 	}
-
-	if (bytes == 0) // client has shutdown
-		return (RESPONSE_CLIENT_DISCONNECTED);
-	throw SendException();
+	else
+	{
+		if (bytes == 0)
+			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		else
+			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to send response from Client %s:%d",
+				config.getServerName().c_str(),
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
+		return (RESPONSE_DISCONNECT_CLIENT);
+	}
 }
 
 void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd)
@@ -438,19 +475,4 @@ const char *Server::SocketSetOptionException::what() const throw()
 const char *Server::AcceptException::what() const throw()
 {
 	return "Server::accept() failed";
-}
-
-const char *Server::TimeoutException::what() const throw()
-{
-	return "Server::Operation timeout";
-}
-
-const char *Server::RecvException::what() const throw()
-{
-	return "Server::recv() failed";
-}
-
-const char *Server::SendException::what() const throw()
-{
-	return "Server::send() failed";
 }

@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 Client::Client()
-	: addrlen(sizeof(address)), request(NULL), response(NULL)
+	: addrlen(sizeof(address)), request(NULL), response(NULL), is_connection_close(false)
 {
 }
 
@@ -73,9 +73,14 @@ Response *Client::getResponse() const
 	return (response);
 }
 
-std::string const &Client::getRequestHeaderBuf() const
+// std::string const &Client::getRequestHeaderBuf() const
+// {
+// 	return (request_header_buf);
+// }
+
+bool const &Client::getIsConnectionClose() const
 {
-	return (request_header_buf);
+	return (is_connection_close);
 }
 
 unsigned short int const &Client::getPortNumber() const
@@ -88,17 +93,22 @@ in_addr const &Client::getIPv4Address() const
 	return (address.sin_addr);
 }
 
-void Client::appendToRequestHeaderBuf(char buf[], const ssize_t &bytes)
-{
-	request_header_buf.append(buf, bytes);
-}
+// void Client::appendToRequestHeaderBuf(char buf[], const ssize_t &bytes)
+// {
+// 	request_header_buf.append(buf, bytes);
+// }
 
-void Client::resizeRequestHeaderBuf(const size_t &size)
-{
-	request_header_buf.resize(size);
-}
+// void Client::resizeRequestHeaderBuf(const size_t &size)
+// {
+// 	request_header_buf.resize(size);
+// }
 
-void Client::clearRequestHeaderBuf()
+// void Client::clearRequestHeaderBuf()
+// {
+// 	request_header_buf.clear();
+// }
+
+void Client::setIsConnectionClose(bool const &status)
 {
-	request_header_buf.clear();
+	is_connection_close = status;
 }

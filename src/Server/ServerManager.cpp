@@ -92,9 +92,14 @@ void ServerManager::startServerLoop()
 				// std::cout << "POLLOUT" << std::endl;
 				handleReadyToWrite(it);
 			}
-			else if (it->revents & POLLHUP || it->revents & POLLERR)
+			else if (it->revents & POLLHUP && client_to_server_map.find(it->fd) != client_to_server_map.end())
 			{
-				// std::cout << "POLLERR" << std::endl;
+				// std::cout << "POLLHUP on client" << std::endl;
+				int client_fd = it->fd;
+				int server_fd = client_to_server_map[client_fd];
+				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
+					inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
+					ntohs(servers[server_fd].getClientPortNumber(client_fd)));
 				handleClientDisconnection(it);
 			}
 			else
@@ -168,7 +173,7 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 		int server_fd = client_to_server_map[client_fd];
 		Server::RequestStatus request_status = servers[server_fd].receiveRequest(client_fd);
 		client_last_active_time[client_fd] = std::chrono::steady_clock::now();
-		if (request_status == Server::REQUEST_CLIENT_DISCONNECTED)
+		if (request_status == Server::REQUEST_DISCONNECT_CLIENT)
 			handleClientDisconnection(it);
 		else if (request_status == Server::READY_TO_WRITE)
 			*it = {client_fd, POLLOUT, 0};
@@ -200,7 +205,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	client_last_active_time.erase(client_fd);
 	it = pollfds.erase(it);
 	it--;
-	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
+	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d is removed",
 		inet_ntoa(servers[server_fd].getClientIPv4Address(client_fd)),
 		ntohs(servers[server_fd].getClientPortNumber(client_fd)));
 }

@@ -3,6 +3,7 @@
 
 #define BACKLOG 100
 #define BUFFER_SIZE 1024
+#define MAX_HEADER_LENGTH 8192
 
 #include <vector>
 #include <unordered_map>
@@ -30,8 +31,8 @@ public:
 	enum RequestStatus
 	{
 		HEADER_DELIMITER_FOUND,
-		HEADER_IN_CHUNK,
-		REQUEST_CLIENT_DISCONNECTED,
+		BAD_HEADER,
+		REQUEST_DISCONNECT_CLIENT,
 		BODY_IN_CHUNK,
 		READY_TO_WRITE,
 		PARSED_CHUNK_SIZE,
@@ -41,7 +42,7 @@ public:
 
 	enum ResponseStatus
 	{
-		RESPONSE_CLIENT_DISCONNECTED,
+		RESPONSE_DISCONNECT_CLIENT,
 		KEEP_ALIVE,
 		RESPONSE_INTERRUPTED
 	};
@@ -52,7 +53,7 @@ private:
 	std::unordered_map<int, Client> clients;
 	struct sockaddr_in address;
 
-	RequestStatus formRequestHeader(int const &client_fd, std::vector<std::byte> &request_body_buf);
+	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
 	RequestStatus formRequestBodyWithChunk(int const &client_fd);
 	RequestStatus processChunkData(int const &client_fd);
@@ -106,24 +107,6 @@ public:
 	};
 
 	class AcceptException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
-	class TimeoutException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
-	class RecvException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
-	class SendException : public std::exception
 	{
 	public:
 		virtual const char *what() const throw();
