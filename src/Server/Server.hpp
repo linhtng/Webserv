@@ -2,7 +2,7 @@
 #define SERVER_HPP
 
 #define BACKLOG 100
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 200000
 #define MAX_HEADER_LENGTH 8192
 
 #include <vector>
@@ -43,9 +43,9 @@ public:
 
 	enum ResponseStatus
 	{
+		RESPONSE_IN_CHUNK,
 		RESPONSE_DISCONNECT_CLIENT,
 		KEEP_ALIVE,
-		RESPONSE_INTERRUPTED
 	};
 
 private:
@@ -62,7 +62,6 @@ private:
 	Server();
 
 public:
-
 	Server(ConfigData &config);
 	~Server();
 

@@ -20,6 +20,8 @@ private:
 	bool is_connection_close;
 	Client();
 
+		size_t _bytesSend;
+
 
 public:
 
@@ -44,6 +46,9 @@ public:
 	struct in_addr const &getIPv4Address() const;
 
 	void setIsConnectionClose(bool const &status);
+
+		void setBytesSent(size_t const &bytes);
+	size_t const &getBytesSent() const;
 };
 
 #endif

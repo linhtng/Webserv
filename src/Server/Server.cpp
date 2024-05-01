@@ -11,7 +11,7 @@ Server::Server(ConfigData &config)
 
 Server::~Server()
 {
-		std::cout << YELLOW << "destructor of server is called" << RESET << std::endl;
+	std::cout << YELLOW << "destructor of server is called" << RESET << std::endl;
 }
 
 // set up server socket
@@ -60,7 +60,7 @@ std::vector<int> Server::acceptNewConnections()
 
 			// Client client;
 			int client_fd = accept(server_fd,
-								   (struct sockaddr*)&client_address,
+								   (struct sockaddr *)&client_address,
 								   &client_addrlen);
 			std::cout << "client_fd: " << client_fd << std::endl;
 			if (client_fd < 0)
@@ -74,8 +74,8 @@ std::vector<int> Server::acceptNewConnections()
 			clients[client_fd] = std::make_unique<Client>(client_address, client_addrlen);
 			new_client_fds.push_back(client_fd);
 			Logger::log(e_log_level::INFO, CLIENT, "New connection from %s:%d",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 			if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 				throw SocketSetNonBlockingException();
 		}
@@ -115,18 +115,18 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		clients[client_fd]->createRequest(request_header, this->config); // create request object
 		Request request = clients[client_fd]->getRequest();
 		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
-			inet_ntoa(getClientIPv4Address(client_fd)),
-			ntohs(getClientPortNumber(client_fd)),
-			request.getMethod(),
-			request.getTarget().c_str());
+					inet_ntoa(getClientIPv4Address(client_fd)),
+					ntohs(getClientPortNumber(client_fd)),
+					request.getMethod(),
+					request.getTarget().c_str());
 		request.appendToBodyBuf(request_body_buf);
 	}
 
 	if (clients[client_fd]->getRequest().isBodyExpected())
 	{
 		request_status = clients[client_fd]->getRequest().isChunked()
-			? formRequestBodyWithChunk(client_fd)
-			: formRequestBodyWithContentLength(client_fd);
+							 ? formRequestBodyWithChunk(client_fd)
+							 : formRequestBodyWithContentLength(client_fd);
 		if (request_status == REQUEST_DISCONNECT_CLIENT || request_status == BODY_IN_CHUNK)
 			return (request_status);
 	}
@@ -159,19 +159,19 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 			return (HEADER_DELIMITER_FOUND);
 		}
 		else
-			return (BAD_HEADER); //cannot find delimiter or the header is larger than the max header length
+			return (BAD_HEADER); // cannot find delimiter or the header is larger than the max header length
 	}
 	else
 	{
 		if (bytes == 0)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		else
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-				config.getServerName().c_str(),
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						config.getServerName().c_str(),
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		return (REQUEST_DISCONNECT_CLIENT);
 	}
 }
@@ -206,19 +206,19 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		else if (body_size == content_length) // read till the end
 			return (READY_TO_WRITE);
 		else
-			return (BAD_REQUEST);	
+			return (BAD_REQUEST);
 	}
 	else
 	{
 		if (bytes == 0)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		else
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-				config.getServerName().c_str(),
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						config.getServerName().c_str(),
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		return (REQUEST_DISCONNECT_CLIENT);
 	}
 }
@@ -245,13 +245,13 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 	{
 		if (bytes == 0)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		else
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-				config.getServerName().c_str(),
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						config.getServerName().c_str(),
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		return (REQUEST_DISCONNECT_CLIENT);
 	}
 }
@@ -276,8 +276,7 @@ Server::RequestStatus Server::processChunkData(int const &client_fd)
 	if (body.size() >= total_body_size) // last buffer
 	{
 		std::string final_chunk_ending = CRLF "0" CRLF CRLF;
-		if (body.size() > final_chunk_ending.length()
-			&& std::memcmp(body.data() + body.size() - final_chunk_ending.length(), final_chunk_ending.data(), final_chunk_ending.length()) == 0) //if the chunk contains CRLF 0 CRLF CRLF at the end
+		if (body.size() > final_chunk_ending.length() && std::memcmp(body.data() + body.size() - final_chunk_ending.length(), final_chunk_ending.data(), final_chunk_ending.length()) == 0) // if the chunk contains CRLF 0 CRLF CRLF at the end
 		{
 			request.resizeBody(body.size() - final_chunk_ending.length());
 			return (READY_TO_WRITE);
@@ -285,10 +284,10 @@ Server::RequestStatus Server::processChunkData(int const &client_fd)
 		if (static_cast<char>(body[request.getBytesToReceive()]) != '\r' || static_cast<char>(body[request.getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
 			return (BAD_REQUEST);
 
-		std::vector<std::byte> body_buf(body.begin() + total_body_size, body.end()); //extract the body buffer
+		std::vector<std::byte> body_buf(body.begin() + total_body_size, body.end()); // extract the body buffer
 		request.appendToBodyBuf(body_buf);
 
-		request.resizeBody(request.getBytesToReceive()); //extrac the body
+		request.resizeBody(request.getBytesToReceive()); // extrac the body
 		request.setChunkSize(0);
 		return (BODY_IN_CHUNK);
 	}
@@ -324,7 +323,7 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 			request.setChunkSize(std::stoi(chunk_size, nullptr, 16));
 
 			request.setBytesToReceive(request.getBytesToReceive() + request.getChunkSize());
-			request.eraseBodyBuf(0, std::distance(body_buf.begin(), delimiter_pos) + (sizeof(CRLF) - 1)); //remove the chunk size from body buffer
+			request.eraseBodyBuf(0, std::distance(body_buf.begin(), delimiter_pos) + (sizeof(CRLF) - 1)); // remove the chunk size from body buffer
 			return (PARSED_CHUNK_SIZE);
 		}
 		else // if the chunk size contains non-hexadecimal character
@@ -346,12 +345,12 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 {
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
-	std::ofstream ofs("test.txt");
-	std::vector<std::byte> body = clients[client_fd]->getRequest().getBody();
-	const std::byte *dataPtr = body.data();
-	std::size_t dataSize = body.size();
-	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
-	ofs.close();
+	// std::ofstream ofs("test.txt");
+	// std::vector<std::byte> body = clients[client_fd]->getRequest().getBody();
+	// const std::byte *dataPtr = body.data();
+	// std::size_t dataSize = body.size();
+	// ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
+	// ofs.close();
 	//--------------------------------------------------------------
 
 	// sample response to be sent to browser
@@ -388,33 +387,48 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	// std::cout << "-----full response end-----" << std::endl;
 	// std::cout << std::endl;
 
+	Response response = clients[client_fd]->getResponse();
+
 	std::vector<std::byte>
-		full_response = clients[client_fd]->getResponse().formatResponse();
+		full_response = response.formatResponse();
+
+	std::cout << "full_response size: " << full_response.size() << std::endl;
+	std::cout << "response.getBytesSent() 0: " << clients[client_fd]->getBytesSent() << std::endl;
 
 	ssize_t bytes;
-	if ((bytes = send(client_fd, static_cast<const void*>(full_response.data()), full_response.size(), 0)) > 0)
+	if ((bytes = send(client_fd, &(*(full_response.begin() + clients[client_fd]->getBytesSent())), std::min(full_response.size() - clients[client_fd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
 	{
+		std::cout << "bytes" << bytes << std::endl;
+		std::cout << "response.getBytesSent() 1: " << clients[client_fd]->getBytesSent() << std::endl;
+		std::cout << "setBytesSent: " << clients[client_fd]->getBytesSent() + bytes << std::endl;
+		clients[client_fd]->setBytesSent(clients[client_fd]->getBytesSent() + bytes);
+		std::cout << "response.getBytesSent() 2: " << clients[client_fd]->getBytesSent() << std::endl;
+		if (clients[client_fd]->getBytesSent() < full_response.size())
+			return (RESPONSE_IN_CHUNK);
+		else
+		{
 			Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)),
-				clients[client_fd]->getResponse().getStatusCode());
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)),
+						response.getStatusCode());
 			if (clients[client_fd]->getRequest().getConnection() == ConnectionValue::CLOSE || clients[client_fd]->getIsConnectionClose() == true)
 				return (RESPONSE_DISCONNECT_CLIENT);
 			clients[client_fd]->removeRequest();
 			clients[client_fd]->removeResponse();
 			return (KEEP_ALIVE); // keep the connection alive by default
+		}
 	}
 	else
 	{
 		if (bytes == 0)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		else
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to send response from Client %s:%d",
-				config.getServerName().c_str(),
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+						config.getServerName().c_str(),
+						inet_ntoa(getClientIPv4Address(client_fd)),
+						ntohs(getClientPortNumber(client_fd)));
 		return (RESPONSE_DISCONNECT_CLIENT);
 	}
 }
@@ -449,8 +463,8 @@ in_addr const &Server::getClientIPv4Address(int const &client_fd)
 void Server::removeClient(int const &client_fd)
 {
 	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d is removed",
-		inet_ntoa(getClientIPv4Address(client_fd)),
-		ntohs(getClientPortNumber(client_fd)));
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
 	clients.erase(client_fd);
 }
 

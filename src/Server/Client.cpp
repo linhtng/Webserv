@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 Client::Client(sockaddr_in client_address, socklen_t client_addrlen)
-		: address(client_address), addrlen(client_addrlen), request(nullptr), response(nullptr), is_connection_close(false)
+	: address(client_address), addrlen(client_addrlen), request(nullptr), response(nullptr), is_connection_close(false), _bytesSend(0)
 {
 	std::cout << YELLOW << "constructor of client is called" << RESET << std::endl;
 }
@@ -9,6 +9,15 @@ Client::Client(sockaddr_in client_address, socklen_t client_addrlen)
 Client::~Client()
 {
 	std::cout << YELLOW << "destrcutor of client is called" << RESET << std::endl;
+}
+
+void Client::setBytesSent(size_t const &bytes)
+{
+	_bytesSend = bytes;
+}
+size_t const &Client::getBytesSent() const
+{
+	return (_bytesSend);
 }
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
@@ -28,6 +37,7 @@ void Client::createResponse()
 {
 	removeResponse();
 	response = std::make_unique<Response>(*request); // Create a Response object with the corresponding request
+	setBytesSent(0);
 }
 
 void Client::removeRequest()
@@ -45,12 +55,14 @@ bool Client::isNewRequest() const
 	return request ? false : true;
 }
 
-const Request &Client::getRequest() const {
-    return *request;
+const Request &Client::getRequest() const
+{
+	return *request;
 }
 
-const Response &Client::getResponse() const {
-    return *response;
+const Response &Client::getResponse() const
+{
+	return *response;
 }
 
 bool const &Client::getIsConnectionClose() const
