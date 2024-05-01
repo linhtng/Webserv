@@ -32,17 +32,6 @@ void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
     envMap["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
 }
 
-std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)
-{
-    std::vector<const char *> cgiEnv;
-    for (const std::string &env : cgiEnvStr)
-    {
-        cgiEnv.push_back(env.c_str());
-    }
-    cgiEnv.push_back(nullptr);
-    return cgiEnv;
-}
-
 void CgiHandler::printEnv()
 {
     for (auto env : envMap)
@@ -59,10 +48,38 @@ void CgiHandler::printEnv()
 */
 void CgiHandler::createCgiProcess()
 {
+    int dataToCgiPipe[2];
+    int dataFromCgiPipe[2];
+
+    if (pipe(dataToCgiPipe) == -1 || pipe(dataFromCgiPipe) == -1)
+    {
+        throw std::runtime_error("Error: pipe() failed");
+    }
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        throw std::runtime_error("Error: fork() failed");
+    }
+    if (pid == 0) // child process
+    {
+        // close unused pipe ends
+        close(dataToCgiPipe[WRITE_END]);
+        close(dataFromCgiPipe[READ_END]);
+
+        // redirect stdin and stdout
+        dup2(dataToCgiPipe[READ_END], STDIN_FILENO);
+        dup2(dataFromCgiPipe[WRITE_END], STDOUT_FILENO);
+
+        executeCgiScript();
+    }
+    // parent process
+    close(dataToCgiPipe[READ_END]);
+    close(dataFromCgiPipe[WRITE_END]);
 }
 
 void CgiHandler::executeCgiScript()
 {
+    /* setup char *const envp[] for execve */
     std::vector<std::string> cgiEnvStr;
     for (auto env : envMap)
     {
@@ -71,12 +88,24 @@ void CgiHandler::executeCgiScript()
     }
     std::vector<const char *> cgiEnv = createCgiEnvCharStr(cgiEnvStr);
     char **cgiEnvp = const_cast<char **>(cgiEnv.data());
-    while (*cgiEnvp)
+    while (*cgiEnvp != nullptr)
     {
         std::cout << *cgiEnvp << std::endl;
         cgiEnvp++;
     }
-    // fork
-    // execve
-    // waitpid
+
+    /* setup char *const argv[] for execve */
+    // std::vector<const char *> cgiArgVec;
+    // cgiArgVec.push_back(envMap["PATH_TRANSLATED"].c_str());
+}
+
+std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)
+{
+    std::vector<const char *> cgiEnv;
+    for (const std::string &env : cgiEnvStr)
+    {
+        cgiEnv.push_back(env.c_str());
+    }
+    cgiEnv.push_back(nullptr);
+    return cgiEnv;
 }

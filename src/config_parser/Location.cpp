@@ -26,6 +26,7 @@ Location &Location::operator=(const Location &other)
     alias = other.alias;
     directoryListing = other.directoryListing;
     defaultFile = other.defaultFile;
+    saveDir = other.saveDir;
     return *this;
 }
 
@@ -62,6 +63,7 @@ void Location::analyzeLocationData()
     }
     setDirectoryListing();
     setDefaultFile();
+    setSaveDir();
     // setCgiExtension();
     // setCgiExecutor();
 }
@@ -81,6 +83,7 @@ void Location::printLocationData()
     std::cout << "Alias: " << alias << std::endl;
     std::cout << "Directory listing: " << (directoryListing ? "on" : "off") << std::endl;
     std::cout << "Default file: " << defaultFile << std::endl;
+    std::cout << "Save dir: " << saveDir << std::endl;
     std::cout << std::endl;
 }
 
@@ -241,6 +244,11 @@ void Location::setDefaultFile()
     }
 }
 
+void Location::setSaveDir()
+{
+    saveDir = extractDirectiveValue("save_dir");
+}
+
 // void Location::setCgiExtension()
 // {
 //     std::string cgiExtenValue = extractDirectiveValue("cgi_exten");
@@ -257,6 +265,7 @@ void Location::setDefaultFile()
 //     cgiExecutor = extractDirectiveValue("cgi_executor");
 // }
 
+/* GETTERS */
 std::unordered_set<HttpMethod> Location::getAcceptedMethods()
 {
     return acceptedMethods;
@@ -287,15 +296,10 @@ std::string Location::getDefaultFile()
     return defaultFile;
 }
 
-// std::string Location::getCgiExtension()
-// {
-//     return cgiExtension;
-// }
-
-// std::string Location::getCgiExecutor()
-// {
-//     return cgiExecutor;
-// }
+std::string Location::getSaveDir()
+{
+    return saveDir;
+}
 
 void Location::setLocationRoot(const std::string &root)
 {

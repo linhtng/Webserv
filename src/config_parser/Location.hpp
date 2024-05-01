@@ -33,8 +33,7 @@ public:
     std::string getLocationAlias();
     bool getDirectoryListing();
     std::string getDefaultFile();
-    std::string getCgiExtension();
-    std::string getCgiExecutor();
+    std::string getSaveDir();
     void setLocationRoot(const std::string &root);
     void setLocationRoute(const std::string &route);
 
@@ -47,6 +46,7 @@ private:
     std::string alias;
     bool directoryListing;
     std::string defaultFile;
+    std::string saveDir;
     // std::string cgiExtension;
     // std::string cgiExecutor;
     // ... other properties ...
@@ -61,6 +61,7 @@ private:
     void setLocationAlias();
     void setDirectoryListing();
     void setDefaultFile();
+    void setSaveDir();
     // void setCgiExtension();
     // void setCgiExecutor();
 };

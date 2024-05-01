@@ -26,7 +26,6 @@ int main(int argc, char **argv)
         // std::cout << std::endl;
         CgiHandler cgiHandler(request, server);
         cgiHandler.executeCgiScript();
-        // cgiHandler.printEnv();
     }
     catch (std::exception &e)
     {
