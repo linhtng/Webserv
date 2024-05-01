@@ -109,6 +109,7 @@ void Location::setLocationRoute()
     {
         throw std::runtime_error("Invalid location block: " + locationBlock);
     }
+    locationRoute = StringUtils::trimChar(locationRoute, '/');
 }
 
 /* Regex pattern: limit_except\s+((\S+\s*)+)\{
@@ -162,6 +163,7 @@ void Location::setRedirection()
     //     redirectionRoute = match[1].str();
     // }
     redirectionRoute = extractDirectiveValue("return");
+    redirectionRoute = StringUtils::trimChar(redirectionRoute, '/');
 }
 
 void Location::setLocationRoot()
@@ -172,6 +174,7 @@ void Location::setLocationRoot()
     {
         root = match[1].str();
     }
+    root = StringUtils::trimChar(root, '/');
 }
 
 void Location::setLocationAlias()
@@ -182,6 +185,7 @@ void Location::setLocationAlias()
     {
         alias = match[1].str();
     }
+    alias = StringUtils::trimChar(alias, '/');
 }
 
 void Location::setDirectoryListing()
@@ -247,6 +251,7 @@ void Location::setDefaultFile()
 void Location::setSaveDir()
 {
     saveDir = extractDirectiveValue("save_dir");
+    saveDir = StringUtils::trimChar(saveDir, '/');
 }
 
 // void Location::setCgiExtension()

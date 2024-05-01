@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "../defines.hpp"
+#include "../StringUtils/StringUtils.hpp"
 
 class Location
 {
