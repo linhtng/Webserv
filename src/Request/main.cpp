@@ -63,7 +63,7 @@ int main()
 	printResponseBytes(response.formatResponse());
 
 	// Request with redirect
-	Request requestRedirect(config, "GET /testPage.html HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n");
+	Request requestRedirect(config, "GET /hi/testPage.html HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n");
 	// requestRedirect.printRequestProperties();
 	Response responseRedirect(requestRedirect);
 	printResponseBytes(responseRedirect.formatResponse());

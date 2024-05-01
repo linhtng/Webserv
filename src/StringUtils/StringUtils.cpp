@@ -96,3 +96,23 @@ std::string StringUtils::trimChar(const std::string &str, char ch)
 	size_t end = str.find_last_not_of(ch);
 	return str.substr(start, end - start + 1);
 }
+
+/* template <typename T, typename... Args>
+	std::string StringUtils::joinPath(T &&head, Args &&...tail)
+	{
+		if constexpr (sizeof...(Args) == 0)
+		{
+			// Handle the case where there are no arguments
+			return "";
+		}
+		std::string trimmedHead = trimChar(std::forward<T>(head), '/');
+		std::string concatenatedTail = joinPath(std::forward<Args>(tail)...);
+		if (concatenatedTail.empty())
+		{
+			return trimmedHead;
+		}
+		else
+		{
+			return trimmedHead + '/' + concatenatedTail;
+		}
+	} */

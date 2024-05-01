@@ -49,7 +49,8 @@ private:
 	void prepareStandardHeaders();
 	void prepareRedirectResponse();
 
-	bool isRedirect();
+	bool isRedirect(); // consts?
+	void handleAlias();
 	bool targetFound();
 	bool isCGI();
 	void executeCGI();

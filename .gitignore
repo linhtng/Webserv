@@ -3,4 +3,4 @@ webserv
 .vscode/
 *.o
 /src/Server/server
-/src/Response/response_test
+/src/Request/request_test
