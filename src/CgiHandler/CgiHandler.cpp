@@ -32,17 +32,6 @@ void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
     envMap["SERVER_SOFTWARE"] = SERVER_SOFTWARE;
 }
 
-std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)
-{
-    std::vector<const char *> cgiEnv;
-    for (const std::string &env : cgiEnvStr)
-    {
-        cgiEnv.push_back(env.c_str());
-    }
-    cgiEnv.push_back(nullptr);
-    return cgiEnv;
-}
-
 void CgiHandler::printEnv()
 {
     for (auto env : envMap)
@@ -79,4 +68,15 @@ void CgiHandler::executeCgiScript()
     // fork
     // execve
     // waitpid
+}
+
+std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)
+{
+    std::vector<const char *> cgiEnv;
+    for (const std::string &env : cgiEnvStr)
+    {
+        cgiEnv.push_back(env.c_str());
+    }
+    cgiEnv.push_back(nullptr);
+    return cgiEnv;
 }
