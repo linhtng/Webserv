@@ -96,42 +96,6 @@ std::vector<std::byte> Response::formatResponse() const
 
 // RESPONSE PREPARATION
 
-/* std::string getLastModified(const std::filesystem::path &filePath)
-{
-	try
-	{
-		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
-		// Convert file_time_type to time_t
-		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
-		std::tm *time = std::localtime(&lastModifiedTimeT);
-		if (time)
-		{
-			char buffer[100];
-			std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time);
-			return std::string(buffer);
-		}
-	}
-	catch (const std::filesystem::filesystem_error &e)
-	{
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
-	return "Unknown";
-}
-
-std::string setLastModified(const std::filesystem::path &filePath)
-{
-	try
-	{
-		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
-		// Convert file_time_type to time_t
-		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
-		std::tm *time = std::localtime(&lastModifiedTimeT);
-	}
-	catch (const std::filesystem::filesystem_error &e)
-	{
-	}
-}
- */
 void Response::setDateToCurrent()
 {
 	this->_date = std::chrono::system_clock::now();
@@ -146,18 +110,13 @@ void Response::prepareErrorResponse()
 {
 	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
-	// set Content-Type to http
+	// TODO: ? set Content-Type to http
 }
 
 void Response::prepareStandardHeaders()
 {
-	/*
-	this->_httpVersionMajor = 1;
-	this->_httpVersionMinor = 1;
-	*/
 	this->setDateToCurrent();
 	this->_serverHeader = SERVER_SOFTWARE;
-	// lastModified should be set when we know the resource
 }
 
 void Response::prepareRedirectResponse()
@@ -172,8 +131,6 @@ void Response::prepareRedirectResponse()
 	}
 	this->_locationHeader = this->_redirectionRoute;
 }
-
-// CONSTRUCTOR
 
 bool Response::isRedirect()
 {
@@ -244,6 +201,7 @@ void Response::splitTarget()
 	// trim slashes
 	this->_route = StringUtils::trimChar(this->_route, '/');
 	this->_fileName = StringUtils::trimChar(this->_fileName, '/');
+
 	std::cout << RED << "splitTarget(): Route: " << this->_route << RESET << std::endl;
 	std::cout << RED << "splitTarget(): File name: " << this->_fileName << RESET << std::endl;
 	std::cout << RED << "splitTarget(): File extension: " << this->_fileExtension << RESET << std::endl;
@@ -335,6 +293,8 @@ void Response::handleAlias()
 		std::cout << "route after alias replacement: " << this->_route << std::endl;
 	}
 }
+
+// CONSTRUCTOR
 
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
 {

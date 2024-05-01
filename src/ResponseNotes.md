@@ -25,9 +25,6 @@ Always there
 ## Date
 Always there
 
-## Last-Modified
-Unnecessary, used for conditional requests
-
 ## Content-Type
 Needs to indicate retuned type and potentially encoding, needs more work
 
