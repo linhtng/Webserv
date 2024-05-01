@@ -37,21 +37,6 @@ std::string Request::getTransferEncoding() const
 	return this->_transferEncoding;
 }
 
-size_t Request::getChunkSize() const
-{
-	return this->_chunkSize;
-}
-
-std::vector<std::byte> Request::getBodyBuf() const
-{
-	return this->_bodyBuf;
-}
-
-size_t Request::getBytesToReceive() const
-{
-	return this->_bytesToReceive;
-}
-
 std::string Request::getMethodStr() const
 {
 	return this->_requestLine.method;
@@ -73,37 +58,6 @@ void Request::appendToBody(char newBodyChunk[], const ssize_t &bytes)
 void Request::resizeBody(const size_t &n)
 {
 	this->_body.resize(n);
-}
-
-void Request::appendToBodyBuf(const std::vector<std::byte> &buf)
-{
-	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
-}
-
-void Request::appendToBodyBuf(char buf[], const ssize_t &bytes)
-{
-	for (ssize_t i = 0; i < bytes; ++i)
-		this->_bodyBuf.push_back(static_cast<std::byte>(buf[i]));
-}
-
-void Request::eraseBodyBuf(const size_t &start, const size_t &end)
-{
-	this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
-}
-
-void Request::clearBodyBuf()
-{
-	this->_bodyBuf.clear();
-}
-
-void Request::setChunkSize(const size_t &bytes)
-{
-	_chunkSize = bytes;
-}
-
-void Request::setBytesToReceive(size_t bytes)
-{
-	this->_bytesToReceive = bytes;
 }
 
 // UTILITIES
@@ -428,9 +382,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
 	: HttpMessage(config),
 	  _bodyExpected(false),
-	  _port(0),
-	  _chunkSize(0),
-	  _bytesToReceive(0)
+	  _port(0)
 {
 	try
 	{
@@ -450,6 +402,6 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 }
 
 Request::Request(const ConfigData &config, HttpStatusCode statusCode)
-	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0), _chunkSize(0), _bytesToReceive(0)
+	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0)
 {
 }

@@ -20,8 +20,13 @@ private:
 	bool is_connection_close;
 	Client();
 
-		size_t _bytesSend;
+	// Helper properties for sending
+	size_t _bytesSent;
 
+	// Helper properties for parsing
+	size_t _chunkSize;
+	std::vector<std::byte> _bodyBuf;
+	size_t _bytesToReceive;
 
 public:
 
@@ -47,8 +52,34 @@ public:
 
 	void setIsConnectionClose(bool const &status);
 
-		void setBytesSent(size_t const &bytes);
+	void setBytesSent(size_t const &bytes);
 	size_t const &getBytesSent() const;
+
+	void appendToBodyBuf(const std::vector<std::byte> &buf);
+	void appendToBodyBuf(char buf[], const ssize_t &bytes);
+	void eraseBodyBuf(const size_t &start, const size_t &end);
+	void clearBodyBuf();
+	void setChunkSize(const size_t &bytes);
+	void setBytesToReceive(size_t bytes);
+
+	size_t getChunkSize() const;
+	std::vector<std::byte> getBodyBuf() const;
+	size_t getBytesToReceive() const;
+
+	void appendToRequestBody(const std::vector<std::byte> &newBodyChunk);
+	void appendToRequestBody(char newBodyChunk[], const ssize_t &bytes);
+	void resizeRequestBody(const size_t &n);
+
+	std::vector<std::byte> getRequestBody() const;
+	HttpMethod getRequestMethod() const;
+	std::string getRequestTarget() const;
+
+	bool isRequestBodyExpected() const;
+	bool isRequestChunked() const;
+
+	size_t getRequestContentLength() const;
+
+	ConnectionValue getConnection() const;
 };
 
 #endif

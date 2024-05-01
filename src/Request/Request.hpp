@@ -41,11 +41,6 @@ private:
 	std::string _transferEncoding;
 	std::string _boundary;
 
-	// Helper properties for parsing
-	size_t _chunkSize;
-	std::vector<std::byte> _bodyBuf;
-	size_t _bytesToReceive;
-
 	// OPTIONAL: handle Expect header
 
 	// METHODS
@@ -84,12 +79,6 @@ public:
 	void appendToBody(const std::vector<std::byte> &newBodyChunk);
 	void appendToBody(char newBodyChunk[], const ssize_t &bytes);
 	void resizeBody(const size_t &n);
-	void appendToBodyBuf(const std::vector<std::byte> &buf);
-	void appendToBodyBuf(char buf[], const ssize_t &bytes);
-	void eraseBodyBuf(const size_t &start, const size_t &end);
-	void clearBodyBuf();
-	void setChunkSize(const size_t &bytes);
-	void setBytesToReceive(size_t bytes);
 
 	// GETTERS
 
@@ -97,9 +86,6 @@ public:
 	std::string getUserAgent() const;
 	bool isBodyExpected() const;
 	std::string getTransferEncoding() const;
-	size_t getChunkSize() const;
-	std::vector<std::byte> getBodyBuf() const;
-	size_t getBytesToReceive() const;
 	std::string getMethodStr() const;
 
 	// EXCEPTIONS

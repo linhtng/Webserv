@@ -1,7 +1,8 @@
 #include "Client.hpp"
 
 Client::Client(sockaddr_in client_address, socklen_t client_addrlen)
-	: address(client_address), addrlen(client_addrlen), request(nullptr), response(nullptr), is_connection_close(false), _bytesSend(0)
+	: address(client_address), addrlen(client_addrlen), request(nullptr), response(nullptr), is_connection_close(false), _bytesSent(0), _chunkSize(0),
+	  _bytesToReceive(0)
 {
 	std::cout << YELLOW << "constructor of client is called" << RESET << std::endl;
 }
@@ -13,18 +14,18 @@ Client::~Client()
 
 void Client::setBytesSent(size_t const &bytes)
 {
-	_bytesSend = bytes;
+	_bytesSent = bytes;
 }
 size_t const &Client::getBytesSent() const
 {
-	return (_bytesSend);
+	return (_bytesSent);
 }
 
 void Client::createRequest(std::string const &request_header, ConfigData const &config)
 {
 	removeRequest();
 	request = std::make_unique<Request>(config, request_header); // Create a Request object with the provided header
-	request->setChunkSize(0);
+	setChunkSize(0);
 }
 
 void Client::createErrorRequest(ConfigData const &config, HttpStatusCode statusCode)
@@ -83,4 +84,110 @@ in_addr const &Client::getIPv4Address() const
 void Client::setIsConnectionClose(bool const &status)
 {
 	is_connection_close = status;
+}
+
+void Client::appendToBodyBuf(const std::vector<std::byte> &buf)
+{
+	this->_bodyBuf.insert(this->_bodyBuf.end(), buf.begin(), buf.end());
+}
+
+void Client::appendToBodyBuf(char buf[], const ssize_t &bytes)
+{
+	for (ssize_t i = 0; i < bytes; ++i)
+		this->_bodyBuf.push_back(static_cast<std::byte>(buf[i]));
+}
+
+void Client::eraseBodyBuf(const size_t &start, const size_t &end)
+{
+	this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
+}
+
+void Client::clearBodyBuf()
+{
+	this->_bodyBuf.clear();
+}
+
+void Client::setChunkSize(const size_t &bytes)
+{
+	_chunkSize = bytes;
+}
+
+void Client::setBytesToReceive(size_t bytes)
+{
+	this->_bytesToReceive = bytes;
+}
+
+
+size_t Client::getChunkSize() const
+{
+	return this->_chunkSize;
+}
+
+std::vector<std::byte> Client::getBodyBuf() const
+{
+	return this->_bodyBuf;
+}
+
+size_t Client::getBytesToReceive() const
+{
+	return this->_bytesToReceive;
+}
+
+void Client::appendToRequestBody(const std::vector<std::byte> &newBodyChunk)
+{
+	if (request)
+	{
+		std::cout << "here append to body" << std::endl;
+		request->appendToBody(newBodyChunk);
+	}
+
+}
+
+void Client::appendToRequestBody(char newBodyChunk[], const ssize_t &bytes)
+{
+	if (request)
+		request->appendToBody(newBodyChunk, bytes);
+}
+
+void Client::resizeRequestBody(const size_t &n)
+{
+	if (request)
+		request->resizeBody(n);
+}
+
+std::vector<std::byte> Client::getRequestBody() const
+{
+	return (request->getBody());
+}
+
+HttpMethod Client::getRequestMethod() const
+{
+	return (request->getMethod());
+}
+
+std::string Client::getRequestTarget() const
+{
+	return (request->getTarget());
+}
+
+bool Client::isRequestBodyExpected() const
+{
+	request->printRequestProperties();
+	std::cout << "inside is body expected" << request->isBodyExpected() << std::endl;
+	return (request->isBodyExpected());
+}
+
+bool Client::isRequestChunked() const
+{
+	return (request->isChunked());
+}
+
+size_t Client::getRequestContentLength() const
+{
+	return (request->getContentLength());
+}
+
+ConnectionValue Client::getConnection() const
+{
+	return (request->getConnection());
 }

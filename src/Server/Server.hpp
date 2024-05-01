@@ -2,7 +2,7 @@
 #define SERVER_HPP
 
 #define BACKLOG 100
-#define BUFFER_SIZE 200000
+#define BUFFER_SIZE 1024
 #define MAX_HEADER_LENGTH 8192
 
 #include <vector>
