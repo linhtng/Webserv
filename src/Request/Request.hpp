@@ -21,6 +21,7 @@ private:
 		std::string method;
 		std::string requestTarget;
 		std::string HTTPVersionMajor;
+		std::string HTTPVersionMinor;
 		/*
 		When a major version of HTTP does not define any minor versions, the minor version "0" is implied. A recipient that receives a message with a major version number that it implements and a minor version number higher than what it implements SHOULD process the message as if it were in the highest minor version within that major version to which the recipient is conformant.
 		*/
@@ -57,7 +58,8 @@ private:
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
 	// parsing
-	int parseVersion();
+	int parseMajorVersion();
+	int parseMinorVersion();
 	HttpMethod matchValidMethod();
 	HttpMethod parseMethod();
 	std::string parseTarget();

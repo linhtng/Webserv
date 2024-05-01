@@ -20,6 +20,7 @@ namespace StringUtils
 	void replaceAll(std::string &str, const std::string &from, const std::string &to);
 	std::unordered_map<std::string, std::string> parseQueryString(const std::string &queryString);
 	std::string trimChar(const std::string &str, char ch);
+	void replaceFirstOccurrence(std::string &str, const std::string &toReplace, const std::string &replaceWith);
 
 	template <typename T, typename... Args>
 	std::string joinPath(T &&head, Args &&...tail)

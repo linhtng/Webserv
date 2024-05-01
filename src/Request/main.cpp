@@ -52,21 +52,21 @@ int main()
 	std::cout << std::endl;
 
 	// Simple request
-	Request request(config, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 100");
+	// Request request(config, "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 100");
 	// request.printRequestProperties();
 
 	// Request based on error code
-	Request request2(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
+	// Request request2(config, HttpStatusCode::IM_A_TEAPOT);
 	// request2.printRequestProperties();
-	std::cout << std::endl;
-	Response response(request2);
-	printResponseBytes(response.formatResponse());
+	// std::cout << std::endl;
+	// Response response(request2);
+	// printResponseBytes(response.formatResponse());
 
 	// Request with redirect
-	Request requestRedirect(config, "GET /hi/webservPage.html HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n");
-	// requestRedirect.printRequestProperties();
+	Request requestRedirect(config, "GET /kapouet/pouic/toto/pouet HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n");
+	requestRedirect.printRequestProperties();
 	Response responseRedirect(requestRedirect);
-	// responseRedirect.printResponseProperties();
+	responseRedirect.printResponseProperties();
 	// printResponseBytes(responseRedirect.formatResponse());
 
 	return 0;

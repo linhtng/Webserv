@@ -3,6 +3,7 @@
 
 void Request::printRequestProperties() const
 {
+	std::cout << "Request properties:" << std::endl;
 	std::cout << "Method: " << this->_method << std::endl;
 	std::cout << "Request target: " << this->_target << std::endl;
 	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
@@ -151,6 +152,7 @@ void Request::extractRequestLine(const std::string &requestLine)
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
+		this->_requestLine.HTTPVersionMinor = match[4];
 	}
 	else
 	{
@@ -203,9 +205,10 @@ std::string Request::parseTarget()
 	return target;
 }
 
-int Request::parseVersion()
+int Request::parseMajorVersion()
 {
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
+	std::cout << "major: " << this->_requestLine.HTTPVersionMajor << std::endl;
 	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
 	if (major > 1)
 	{
@@ -220,11 +223,30 @@ int Request::parseVersion()
 	return major;
 }
 
+int Request::parseMinorVersion()
+{
+	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
+	std::cout << "minor: " << this->_requestLine.HTTPVersionMinor << std::endl;
+	int minor = std::stoi(this->_requestLine.HTTPVersionMinor);
+	if (minor > 1)
+	{
+		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
+		throw BadRequestException();
+	}
+	else if (minor < 0)
+	{
+		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
+		throw BadRequestException();
+	}
+	return minor;
+}
+
 void Request::parseRequestLine()
 {
 	this->_method = parseMethod();
 	this->_target = parseTarget();
-	this->_httpVersionMajor = parseVersion();
+	this->_httpVersionMajor = parseMajorVersion();
+	this->_httpVersionMinor = parseMinorVersion();
 }
 
 // HEADERS
@@ -438,6 +460,7 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	}
 	catch (const BadRequestException &e)
 	{
+		std::cout << "EXCEPTION: " << e.what() << std::endl;
 		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
@@ -445,6 +468,7 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	}
 	catch (const std::exception &e)
 	{
+		std::cout << "EXCEPTION: " << e.what() << std::endl;
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 	}
 }
