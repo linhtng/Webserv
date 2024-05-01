@@ -7,6 +7,7 @@ void Request::printRequestProperties() const
 	std::cout << "Method: " << this->_method << std::endl;
 	std::cout << "Request target: " << this->_target << std::endl;
 	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
+	std::cout << "HTTP version minor: " << this->_httpVersionMinor << std::endl;
 	std::cout << "Status code: " << this->_statusCode << std::endl;
 	std::cout << "Host: " << this->_host << std::endl;
 	std::cout << "Port: " << this->_port << std::endl;
@@ -152,7 +153,10 @@ void Request::extractRequestLine(const std::string &requestLine)
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
-		this->_requestLine.HTTPVersionMinor = match[4];
+		if (match[4].matched)
+		{
+			this->_requestLine.HTTPVersionMinor = match[4];
+		}
 	}
 	else
 	{
@@ -227,16 +231,19 @@ int Request::parseMinorVersion()
 {
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
 	std::cout << "minor: " << this->_requestLine.HTTPVersionMinor << std::endl;
+	if (this->_requestLine.HTTPVersionMinor.empty())
+	{
+		this->_requestLine.HTTPVersionMinor = "1";
+	}
 	int minor = std::stoi(this->_requestLine.HTTPVersionMinor);
 	if (minor > 1)
 	{
 		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
 		throw BadRequestException();
 	}
-	else if (minor < 0)
+	else if (minor < 1)
 	{
-		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
-		throw BadRequestException();
+		this->_connection = ConnectionValue::CLOSE;
 	}
 	return minor;
 }

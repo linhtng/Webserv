@@ -420,12 +420,15 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 
 	for (const auto &locationPair : this->locations)
 	{
-		const std::string &pathPattern = locationPair.first;
+		const std::string &pathPattern = StringUtils::trimChar(locationPair.first, '/');
+		std::cout << "Path pattern: " << pathPattern << std::endl;
+		std::cout << "locationRoute.find(pathPattern)" << locationRoute.find(pathPattern) << std::endl;
 		if (locationRoute.find(pathPattern) == 0)
 		{
 			matchingLocations.push_back(locationPair.second);
 		}
 	}
+	std::cout << "Matching locations size: " << matchingLocations.size() << std::endl;
 	if (matchingLocations.size() == 0)
 	{
 		throw std::runtime_error("No matching location found for route: " + locationRoute);
@@ -435,6 +438,7 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 		// Sort the matching locations by path length in descending order
 		std::sort(matchingLocations.begin(), matchingLocations.end(), [](Location &a, Location &b)
 				  { return a.getLocationRoute().size() > b.getLocationRoute().size(); });
+		std::cout << "Matching location: " << matchingLocations[0].getLocationRoute() << std::endl;
 		return matchingLocations[0];
 	}
 }

@@ -35,7 +35,7 @@ private:
 	std::string _fileExtension;
 
 	void splitTarget();
-	bool isFileName(const std::string &fileName, std::string &name, std::string &extension);
+	bool extractFileName(const std::string &fileName, std::string &name, std::string &extension);
 	std::string formatDate() const;
 	std::string formatStatusLine() const;
 	std::string formatHeader() const;

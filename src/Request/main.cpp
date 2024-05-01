@@ -63,11 +63,12 @@ int main()
 	// printResponseBytes(response.formatResponse());
 
 	// Request with redirect
-	Request requestRedirect(config, "GET /kapouet/pouic/toto/pouet HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n");
+	Request requestRedirect(config, "GET /kapouet/pouic/toto/pouet HTTP/1.0\r\nHost: localhost:8080\r\nConnection: close\r\n");
 	requestRedirect.printRequestProperties();
 	Response responseRedirect(requestRedirect);
 	responseRedirect.printResponseProperties();
-	// printResponseBytes(responseRedirect.formatResponse());
+	std::cout << std::endl;
+	printResponseBytes(responseRedirect.formatResponse());
 
 	return 0;
 }

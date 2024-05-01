@@ -53,19 +53,19 @@ HttpMessage::HttpMessage(ConfigData const &config,
 						 HttpMethod method,
 						 std::string target,
 						 ConnectionValue connection,
-						 size_t contentLength,
-						 bool chunked,
 						 int httpVersionMajor,
-						 int httpVersionMinor)
+						 int httpVersionMinor,
+						 size_t contentLength,
+						 bool chunked)
 	: _config(config),
 	  _statusCode(statusCode),
 	  _method(method),
 	  _target(target),
 	  _connection(connection),
-	  _contentLength(contentLength),
-	  _chunked(chunked),
 	  _httpVersionMajor(httpVersionMajor),
-	  _httpVersionMinor(httpVersionMinor)
+	  _httpVersionMinor(httpVersionMinor),
+	  _contentLength(contentLength),
+	  _chunked(chunked)
 {
 }
 
