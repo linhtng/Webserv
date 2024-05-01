@@ -52,6 +52,11 @@ size_t Request::getBytesToReceive() const
 	return this->_bytesToReceive;
 }
 
+std::string Request::getMethodStr() const
+{
+	return this->_requestLine.method;
+}
+
 // MODIFIERS
 
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
@@ -83,7 +88,7 @@ void Request::appendToBodyBuf(char buf[], const ssize_t &bytes)
 
 void Request::eraseBodyBuf(const size_t &start, const size_t &end)
 {
-		this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
+	this->_bodyBuf.erase(_bodyBuf.begin() + start, _bodyBuf.begin() + end);
 }
 
 void Request::clearBodyBuf()
@@ -425,7 +430,7 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	  _bodyExpected(false),
 	  _port(0),
 	  _chunkSize(0),
-		_bytesToReceive(0)
+	  _bytesToReceive(0)
 {
 	try
 	{

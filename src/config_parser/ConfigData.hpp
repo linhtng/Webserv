@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include "Location.hpp"
 #include "../StringUtils/StringUtils.hpp"
+#include "../FileSystemUtils/FileSystemUtils.hpp"
 #include "../defines.hpp"
 
 #define MAX_PORT 65535
@@ -28,6 +29,9 @@ namespace DirectiveKeys
     const std::string SERVER_NAME = "server_name";
     const std::string ERROR_PAGE = "error_page";
     const std::string ClientBodySize = "client_max_body_size";
+    const std::string CGI_DIR = "cgi_dir";
+    const std::string CGI_EXTENSION = "cgi_exten";
+    const std::string CGI_EXECUTOR = "cgi_executor";
     // Add more directive keys here
 }
 
@@ -37,6 +41,7 @@ namespace DefaultValues
     const std::string HOST = "127.0.0.1";
     const std::string SERVER_NAME = "localhost";
     const long long MAX_CLIENT_BODY_SIZE = 1048576;
+    const std::string CGI_DIR = "./cgi-bin";
 }
 
 class ConfigData
@@ -44,23 +49,29 @@ class ConfigData
 public:
     ConfigData();
     ConfigData(std::string &input);
+    ConfigData(const ConfigData &other);
+    ConfigData &operator=(const ConfigData &other);
     ~ConfigData();
 
     void analyzeConfigData();
     void printConfigData();
 
     int getServerPort() const;
+    std::string getServerPortString() const;
     std::string getServerName() const;
     std::string getServerHost() const;
     std::unordered_map<int, std::string> getDefaultErrorPages() const;
     size_t getMaxClientBodySize() const;
     std::map<std::string, Location> getLocations() const;
+    std::string getCgiDir() const;
+    std::string getCgiExtension() const;
+    std::string getCgiExecutor() const;
     bool hasMatchingLocation(std::string locationRoute) const;
     Location getMatchingLocation(std::string locationRoute) const;
 
 private:
     std::string serverBlock;
-    // std::vector<int> serverPorts;
+    std::string serverPortString;
     int serverPort;
     std::string serverHost;
     std::string serverName;
@@ -69,6 +80,9 @@ private:
     size_t maxClientBodySize;
     std::vector<std::string> locationBlocks;
     std::map<std::string, Location> locations;
+    std::string cgiDir;
+    std::string cgiExtension;
+    std::string cgiExecutor;
 
     std::string extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey);
     void extractServerPort();
@@ -79,5 +93,8 @@ private:
     bool validErrorCode(std::string &errorCode);
     void extractMaxClientBodySize();
     void extractLocationBlocks();
+    void extractCgiDir();
+    void extractCgiExtension();
+    void extractCgiExecutor();
     void splitLocationBlocks();
 };

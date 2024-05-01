@@ -18,16 +18,15 @@ int main(int argc, char **argv)
     {
         ConfigParser parser(fileName);
         parser.extractServerConfigs();
-
         std::vector<ConfigData> servers = parser.getServerConfigs();
-
         ConfigData server = servers[0];
-        Location cgiLocation = server.getMatchingLocation("/cgi-bin");
-        // cgiLocation.printLocationData();
 
-        Request request(server, "GET /time.py HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 100");
-        CgiHandler cgiHandler(request, cgiLocation);
-        // parser.printCluster(); // debug
+        Request request(server, "GET /time.py HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 100\r\nContent-Type: multipart/form-data");
+        // request.printRequestProperties();
+        // std::cout << std::endl;
+        CgiHandler cgiHandler(request, server);
+        cgiHandler.executeCgiScript();
+        // cgiHandler.printEnv();
     }
     catch (std::exception &e)
     {

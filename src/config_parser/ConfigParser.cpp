@@ -38,7 +38,6 @@ void ConfigParser::extractServerConfigs()
     for (int i = 0; i < serverCount; i++)
     {
         ConfigData serverConfig(configBlock[i]);
-        serverConfig.analyzeConfigData();
         servers.push_back(serverConfig);
     }
     std::unordered_set<std::string> serverCombinations;

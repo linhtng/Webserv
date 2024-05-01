@@ -67,19 +67,11 @@ std::string Response::formatHeader() const
 {
 	// printResponseProperties();
 	std::string header;
-	std::cout << RED << "1" << RESET << std::endl;
 	header += this->formatStatusLine() + CRLF;
-	std::cout << RED << "2" << RESET << std::endl;
 	header += "Date: " + this->formatDate() + CRLF;
-	std::cout << RED << "3" << RESET << std::endl;
 	header += "Server: " + this->_config.getServerName() + CRLF;
-	std::cout << RED << "4" << RESET << std::endl;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
-	std::cout << RED << "5" << RESET << std::endl;
 	header += "Connection: " + this->formatConnection() + CRLF;
-	std::cout << RED << "6" << RESET << std::endl;
-	std::cout << RED << "Location header: " << this->_locationHeader << RESET << std::endl;
-	std::cout << RED << "7" << RESET << std::endl;
 	if (!this->_locationHeader.empty())
 	{
 		header += "Location: " + this->_locationHeader + CRLF;
@@ -192,8 +184,10 @@ bool Response::isRedirect()
 
 bool Response::targetFound()
 {
-	std::cout << GREEN << "Checking if path exists: " << this->_location.getLocationRoot() + this->_target << RESET << std::endl;
-	if (!FileSystemUtils::pathExists(this->_location.getLocationRoot() + this->_target))
+	std::string fullPathNotTrimmed = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::string fullPath = StringUtils::trimChar(fullPathNotTrimmed, '/');
+	std::cout << GREEN << "Checking if path exists: " << fullPath << RESET << std::endl;
+	if (!FileSystemUtils::pathExists(fullPath))
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		return false;
@@ -271,6 +265,8 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
+	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
+	std::cout << "route: " << this->_route << std::endl;
 	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
 	if (this->_fileName != "")
 	{
@@ -305,7 +301,7 @@ void Response::handleGet()
 		if (FileSystemUtils::isFile(path))
 		{
 			std::cout << RED << "Getting file" << RESET << std::endl;
-			this->_body = BinaryData::getFileData(this->_route);
+			this->_body = BinaryData::getFileData(path);
 			this->_statusCode = HttpStatusCode::OK;
 			// serve file
 		}
@@ -325,6 +321,17 @@ void Response::handleHead()
 
 void Response::handleDelete()
 {
+}
+
+void Response::handleAlias()
+{
+	std::string alias = _location.getLocationAlias();
+	if (!alias.empty())
+	{
+		std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
+		this->_route = _location.getLocationAlias();
+		_location.setLocationRoot("");
+	}
 }
 
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
@@ -360,6 +367,8 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 			this->prepareRedirectResponse();
 			return;
 		}
+		// handle aliases - should override root
+		handleAlias();
 		// make sure target exists
 		if (!targetFound())
 		{

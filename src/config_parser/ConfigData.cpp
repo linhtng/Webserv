@@ -8,6 +8,31 @@ ConfigData::ConfigData(std::string &input)
     analyzeConfigData();
 }
 
+ConfigData::ConfigData(const ConfigData &other)
+{
+    *this = other;
+}
+
+ConfigData &ConfigData::operator=(const ConfigData &other)
+{
+    if (this != &other)
+    {
+        serverBlock = other.serverBlock;
+        serverPort = other.serverPort;
+        serverPortString = other.serverPortString;
+        serverName = other.serverName;
+        serverHost = other.serverHost;
+        defaultErrorPages = other.defaultErrorPages;
+        maxClientBodySize = other.maxClientBodySize;
+        locationBlocks = other.locationBlocks;
+        locations = other.locations;
+        cgiDir = other.cgiDir;
+        cgiExtension = other.cgiExtension;
+        cgiExecutor = other.cgiExecutor;
+    }
+    return *this;
+}
+
 ConfigData::~ConfigData() {}
 
 void ConfigData::analyzeConfigData()
@@ -18,6 +43,9 @@ void ConfigData::analyzeConfigData()
     extractDefaultErrorPages();
     extractMaxClientBodySize();
     extractLocationBlocks();
+    extractCgiDir();
+    extractCgiExtension();
+    extractCgiExecutor();
 }
 
 // Generic print function
@@ -51,8 +79,9 @@ void ConfigData::printConfigData()
     std::cout << "Error pages: ";
     print(defaultErrorPages);
     std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
-    // std::cout << "Location blocks: ";
-    // printVector(locationBlocks);
+    std::cout << "CGI directory: " << cgiDir << std::endl;
+    std::cout << "CGI extension: " << cgiExtension << std::endl;
+    std::cout << "CGI executor: " << cgiExecutor << std::endl;
     // std::cout << "Locations: ";
     for (auto &location : locations)
     {
@@ -130,12 +159,18 @@ void ConfigData::extractServerPort()
     {
         throw std::runtime_error("Invalid port number: " + serverPortStr);
     }
+    serverPortString = serverPortStr;
     serverPort = std::stoi(serverPortStr);
 }
 
 int ConfigData::getServerPort() const
 {
     return serverPort;
+}
+
+std::string ConfigData::getServerPortString() const
+{
+    return serverPortString;
 }
 
 /* Handling error:
@@ -240,6 +275,28 @@ bool ConfigData::validErrorCode(std::string &errorCodeStr)
     return true;
 }
 
+void ConfigData::extractCgiDir()
+{
+    std::string cgiDirStr = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_DIR);
+    if (cgiDirStr.empty())
+    {
+        cgiDirStr = DefaultValues::CGI_DIR;
+    }
+    if (!FileSystemUtils::pathExistsAndAccessible(cgiDirStr))
+        throw std::runtime_error("Invalid CGI directory: " + cgiDirStr);
+    cgiDir = cgiDirStr;
+}
+
+void ConfigData::extractCgiExtension()
+{
+    cgiExtension = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXTENSION);
+}
+
+void ConfigData::extractCgiExecutor()
+{
+    cgiExecutor = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXECUTOR);
+}
+
 /* In nginx, setting size to 0 means no limit on client body size.
 But we don't allow that. 0 is invalid.
 */
@@ -270,8 +327,6 @@ void ConfigData::extractMaxClientBodySize()
         {
             multiplier = units[unit];
         }
-
-        // TODO: Linh, I replaced long long with size_t here, please check if everything is good
         size_t numberPartSizeT;
         try
         {
@@ -375,4 +430,19 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 {
     Location location = this->locations.at(locationRoute);
     return location;
+}
+
+std::string ConfigData::getCgiDir() const
+{
+    return cgiDir;
+}
+
+std::string ConfigData::getCgiExtension() const
+{
+    return cgiExtension;
+}
+
+std::string ConfigData::getCgiExecutor() const
+{
+    return cgiExecutor;
 }
