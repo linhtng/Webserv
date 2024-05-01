@@ -200,7 +200,7 @@ bool Response::targetFound()
 }
 
 // probably would be nice to move this to utils
-bool Response::isFileName(const std::string &fileName, std::string &name, std::string &extension)
+bool Response::extractFileName(const std::string &fileName, std::string &name, std::string &extension)
 {
 	std::vector<std::string> fileNameParts = StringUtils::splitByDelimiter(fileName, ".");
 	if (fileNameParts.size() < 2)
@@ -229,7 +229,7 @@ void Response::splitTarget()
 		else
 		{
 			// if there was something after last slash, check if it contains a dot and extract extension
-			if (isFileName(afterLastSlash, this->_fileName, this->_fileExtension))
+			if (extractFileName(afterLastSlash, this->_fileName, this->_fileExtension))
 			{
 				// then everything before the last slash is route
 				this->_route = matches[1];
@@ -242,12 +242,11 @@ void Response::splitTarget()
 		}
 	}
 	// trim slashes
-	std::cout << RED << "Route: " << this->_route << RESET << std::endl;
-	std::cout << RED << "File name: " << this->_fileName << RESET << std::endl;
-	this->_route = "/" + StringUtils::trimChar(this->_route, '/');
+	this->_route = StringUtils::trimChar(this->_route, '/');
 	this->_fileName = StringUtils::trimChar(this->_fileName, '/');
-	std::cout << RED << "after Route: " << this->_route << RESET << std::endl;
-	std::cout << RED << "after File name: " << this->_fileName << RESET << std::endl;
+	std::cout << RED << "splitTarget(): Route: " << this->_route << RESET << std::endl;
+	std::cout << RED << "splitTarget(): File name: " << this->_fileName << RESET << std::endl;
+	std::cout << RED << "splitTarget(): File extension: " << this->_fileExtension << RESET << std::endl;
 }
 
 bool Response::isCGI()
@@ -267,11 +266,11 @@ void Response::handleGet()
 {
 	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
 	std::cout << "route: " << this->_route << std::endl;
-	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
-	if (this->_fileName != "")
-	{
-		path += "/" + this->_fileName;
-	}
+
+	std::string path = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+
+	std::cout << "Joined path: " << path << std::endl;
+
 	if (FileSystemUtils::isDir(path))
 	{
 		std::string dirPath = path;
@@ -329,8 +328,11 @@ void Response::handleAlias()
 	if (!alias.empty())
 	{
 		std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
-		this->_route = _location.getLocationAlias();
+		std::cout << RED << "route: " << this->_route << std::endl;
+		std::cout << RED << "location route: " << _location.getLocationRoute() << std::endl;
+		StringUtils::replaceFirstOccurrence(this->_route, _location.getLocationRoute(), _location.getLocationAlias());
 		_location.setLocationRoot("");
+		std::cout << "route after alias replacement: " << this->_route << std::endl;
 	}
 }
 
@@ -348,14 +350,14 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	{
 		splitTarget();
 		// try to match location
-		if (_config.hasMatchingLocation(_route))
+		try
 		{
-			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
 			this->_location = _config.getMatchingLocation(_route);
+			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
 		}
-		else
+		catch (const std::exception &e)
 		{
-			std::cout << RED << "Location '" << _route << "' not found" << RESET << std::endl;
+			std::cout << RED << "Didn't find location for: " << _route << "' found" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
 			this->prepareErrorResponse();
 			return;
