@@ -29,6 +29,8 @@
 #define MULTIFORM_BOUNDARY_REGEX "multipart/form-data;" RWS_REGEX "boundary=([^\\s;]+)"
 #define GATEWAY_INTERFACE "CGI/1.1"
 #define SERVER_PROTOCOL "HTTP/1.1"
+#define READ_END 0
+#define WRITE_END 1
 
 enum ConnectionValue
 {

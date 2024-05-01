@@ -203,7 +203,7 @@ void ConfigData::extractServerHost()
     std::string serverHostStr = extractDirectiveValue(serverBlock, DirectiveKeys::HOST);
     if (serverHostStr.empty() || serverHostStr == "localhost")
     {
-        serverHost = "127.0.0.1";
+        serverHost = DefaultValues::HOST;
         return;
     }
     // Check if serverHostStr is a valid IP address
