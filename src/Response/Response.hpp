@@ -25,7 +25,6 @@ class Response : public HttpMessage
 private:
 	std::string _serverHeader;
 	std::string _locationHeader;
-	std::chrono::system_clock::time_point _lastModified; // consider removing because functions for it don't work on our macOS version
 
 	Request const &_request;
 	Location _location;

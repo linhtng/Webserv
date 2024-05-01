@@ -1,6 +1,10 @@
 TODO:
 - standardise this-> stuff
 - check that i didn't mess up with matches array (0th elem is always full string)
+- remomve includes of iostream that were for debugging
+- add consts where applicable
+- organise the whole routing slash thing
+- figure out boundary shit
 
 POST /upload HTTP/1.1
 Host: localhost:8081
