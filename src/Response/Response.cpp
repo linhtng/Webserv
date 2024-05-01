@@ -184,7 +184,8 @@ bool Response::isRedirect()
 
 bool Response::targetFound()
 {
-	std::string fullPath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::string fullPathNotTrimmed = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::string fullPath = StringUtils::trimChar(fullPathNotTrimmed, '/');
 	std::cout << GREEN << "Checking if path exists: " << fullPath << RESET << std::endl;
 	if (!FileSystemUtils::pathExists(fullPath))
 	{
