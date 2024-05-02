@@ -1,0 +1,60 @@
+body {
+    font-family: "Jersey 25", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    background-color: #000;
+    color: #ccc;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 1px;
+    font-size: 20px;
+}
+
+header {
+    position: relative;
+    background: url('server.jpg') no-repeat center center;
+    background-size: cover;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+header h1 {
+    position: relative;
+    color: #fff;
+    font-size: 60px;
+    text-shadow: 3px 3px 10px #000, -1px -1px 10px #000;
+    z-index: 2;
+}
+
+section {
+    max-width: 1024px;
+    width: 90%;
+    margin: 0px auto;
+    padding: 15px 5px;
+}
+
+h2 {
+    color: #fff;
+}
+
+code {
+    background: #222;
+    padding: 10px;
+    display: block;
+    margin: 10px 0;
+    font-size: 16px;
+    border-radius: 2px;
+}
