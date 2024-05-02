@@ -31,6 +31,11 @@ public:
 private:
     void setupCgiEnv(const Request &request, const ConfigData &server);
     std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
+    void closeCgiPipes();
+
     std::map<std::string, std::string> envMap;
-    std::string cgiPath;
+    std::string cgiExecutorPathname;
+    std::string cgiBinDir;
+    int dataToCgiPipe[2];
+    int dataFromCgiPipe[2];
 };

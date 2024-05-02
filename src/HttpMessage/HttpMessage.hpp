@@ -17,10 +17,10 @@ protected:
 	HttpMethod _method;
 	std::string _target;
 	ConnectionValue _connection;
-	size_t _contentLength;
-	bool _chunked;
 	int _httpVersionMajor;
 	int _httpVersionMinor;
+	size_t _contentLength;
+	bool _chunked;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
 	std::string _contentType;
@@ -31,10 +31,10 @@ protected:
 				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
 				std::string target = "",
 				ConnectionValue connection = KEEP_ALIVE,
-				size_t contentLength = 0,
-				bool chunked = false,
 				int httpVersionMajor = 1,
-				int httpVersionMinor = 1);
+				int httpVersionMinor = 1,
+				size_t contentLength = 0,
+				bool chunked = false);
 
 public:
 	virtual ~HttpMessage() = default;

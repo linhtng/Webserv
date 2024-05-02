@@ -20,15 +20,7 @@ namespace StringUtils
 	void replaceAll(std::string &str, const std::string &from, const std::string &to);
 	std::unordered_map<std::string, std::string> parseQueryString(const std::string &queryString);
 	std::string trimChar(const std::string &str, char ch);
-
-	// base case for recursive joinPath
-	/* std::string joinPath()
-	{
-		return "";
-	} */
-
-	/* template <typename T, typename... Args>
-	inline std::string joinPath(T &&head, Args &&...tail); */
+	void replaceFirstOccurrence(std::string &str, const std::string &toReplace, const std::string &replaceWith);
 
 	template <typename T, typename... Args>
 	std::string joinPath(T &&head, Args &&...tail)
@@ -36,7 +28,6 @@ namespace StringUtils
 		std::string trimmedHead = trimChar(std::forward<T>(head), '/');
 		if constexpr (sizeof...(Args) == 0)
 		{
-			// std::cout << "NO ARGS" << std::endl;
 			return trimmedHead;
 		}
 		else

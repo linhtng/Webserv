@@ -96,42 +96,6 @@ std::vector<std::byte> Response::formatResponse() const
 
 // RESPONSE PREPARATION
 
-/* std::string getLastModified(const std::filesystem::path &filePath)
-{
-	try
-	{
-		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
-		// Convert file_time_type to time_t
-		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
-		std::tm *time = std::localtime(&lastModifiedTimeT);
-		if (time)
-		{
-			char buffer[100];
-			std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", time);
-			return std::string(buffer);
-		}
-	}
-	catch (const std::filesystem::filesystem_error &e)
-	{
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
-	return "Unknown";
-}
-
-std::string setLastModified(const std::filesystem::path &filePath)
-{
-	try
-	{
-		auto lastModifiedTime = std::filesystem::last_write_time(filePath);
-		// Convert file_time_type to time_t
-		std::time_t lastModifiedTimeT = std::filesystem::file_time_type::clock::to_time_t(lastModifiedTime);
-		std::tm *time = std::localtime(&lastModifiedTimeT);
-	}
-	catch (const std::filesystem::filesystem_error &e)
-	{
-	}
-}
- */
 void Response::setDateToCurrent()
 {
 	this->_date = std::chrono::system_clock::now();
@@ -146,18 +110,13 @@ void Response::prepareErrorResponse()
 {
 	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
-	// set Content-Type to http
+	// TODO: ? set Content-Type to http
 }
 
 void Response::prepareStandardHeaders()
 {
-	/*
-	this->_httpVersionMajor = 1;
-	this->_httpVersionMinor = 1;
-	*/
 	this->setDateToCurrent();
 	this->_serverHeader = SERVER_SOFTWARE;
-	// lastModified should be set when we know the resource
 }
 
 void Response::prepareRedirectResponse()
@@ -172,8 +131,6 @@ void Response::prepareRedirectResponse()
 	}
 	this->_locationHeader = this->_redirectionRoute;
 }
-
-// CONSTRUCTOR
 
 bool Response::isRedirect()
 {
@@ -200,7 +157,7 @@ bool Response::targetFound()
 }
 
 // probably would be nice to move this to utils
-bool Response::isFileName(const std::string &fileName, std::string &name, std::string &extension)
+bool Response::extractFileName(const std::string &fileName, std::string &name, std::string &extension)
 {
 	std::vector<std::string> fileNameParts = StringUtils::splitByDelimiter(fileName, ".");
 	if (fileNameParts.size() < 2)
@@ -229,7 +186,7 @@ void Response::splitTarget()
 		else
 		{
 			// if there was something after last slash, check if it contains a dot and extract extension
-			if (isFileName(afterLastSlash, this->_fileName, this->_fileExtension))
+			if (extractFileName(afterLastSlash, this->_fileName, this->_fileExtension))
 			{
 				// then everything before the last slash is route
 				this->_route = matches[1];
@@ -242,12 +199,12 @@ void Response::splitTarget()
 		}
 	}
 	// trim slashes
-	std::cout << RED << "Route: " << this->_route << RESET << std::endl;
-	std::cout << RED << "File name: " << this->_fileName << RESET << std::endl;
-	this->_route = "/" + StringUtils::trimChar(this->_route, '/');
+	this->_route = StringUtils::trimChar(this->_route, '/');
 	this->_fileName = StringUtils::trimChar(this->_fileName, '/');
-	std::cout << RED << "after Route: " << this->_route << RESET << std::endl;
-	std::cout << RED << "after File name: " << this->_fileName << RESET << std::endl;
+
+	std::cout << RED << "splitTarget(): Route: " << this->_route << RESET << std::endl;
+	std::cout << RED << "splitTarget(): File name: " << this->_fileName << RESET << std::endl;
+	std::cout << RED << "splitTarget(): File extension: " << this->_fileExtension << RESET << std::endl;
 }
 
 bool Response::isCGI()
@@ -267,11 +224,11 @@ void Response::handleGet()
 {
 	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
 	std::cout << "route: " << this->_route << std::endl;
-	std::string path = StringUtils::trimChar(this->_location.getLocationRoot(), '/') + this->_route;
-	if (this->_fileName != "")
-	{
-		path += "/" + this->_fileName;
-	}
+
+	std::string path = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+
+	std::cout << "Joined path: " << path << std::endl;
+
 	if (FileSystemUtils::isDir(path))
 	{
 		std::string dirPath = path;
@@ -329,10 +286,15 @@ void Response::handleAlias()
 	if (!alias.empty())
 	{
 		std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
-		this->_route = _location.getLocationAlias();
+		std::cout << RED << "route: " << this->_route << std::endl;
+		std::cout << RED << "location route: " << _location.getLocationRoute() << std::endl;
+		StringUtils::replaceFirstOccurrence(this->_route, _location.getLocationRoute(), _location.getLocationAlias());
 		_location.setLocationRoot("");
+		std::cout << "route after alias replacement: " << this->_route << std::endl;
 	}
 }
+
+// CONSTRUCTOR
 
 Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
 {
@@ -348,14 +310,14 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	{
 		splitTarget();
 		// try to match location
-		if (_config.hasMatchingLocation(_route))
+		try
 		{
-			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
 			this->_location = _config.getMatchingLocation(_route);
+			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
 		}
-		else
+		catch (const std::exception &e)
 		{
-			std::cout << RED << "Location '" << _route << "' not found" << RESET << std::endl;
+			std::cout << RED << "Didn't find location for: " << _route << "' found" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
 			this->prepareErrorResponse();
 			return;

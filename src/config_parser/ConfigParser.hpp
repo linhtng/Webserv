@@ -31,4 +31,6 @@ private:
 
     std::string removeComments(std::string &fullFileContent);
     void splitServerBlocks();
+    void checkForDuplicateNameAndPort();
+    void checkForDuplicateHostAndPort();
 };

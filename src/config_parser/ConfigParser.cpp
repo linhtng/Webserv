@@ -40,19 +40,50 @@ void ConfigParser::extractServerConfigs()
         ConfigData serverConfig(configBlock[i]);
         servers.push_back(serverConfig);
     }
-    std::unordered_set<std::string> serverCombinations;
+    checkForDuplicateHostAndPort();
+    checkForDuplicateNameAndPort();
+}
+
+void ConfigParser::checkForDuplicateNameAndPort()
+{
+    std::unordered_set<std::string> uniqueKeys;
     for (const auto &server : servers)
     {
-        int portNumber = server.getServerPort();
+        std::string key = server.getServerName() + ":" + std::to_string(server.getServerPort());
+        if (!uniqueKeys.insert(key).second)
         {
-            std::string combination = server.getServerName() + ":" + std::to_string(portNumber);
-            if (!serverCombinations.insert(combination).second)
-            {
-                throw std::runtime_error("Duplicate server configuration: " + combination);
-            }
+            throw std::runtime_error("Duplicate server configuration: " + key);
         }
     }
 }
+
+void ConfigParser::checkForDuplicateHostAndPort()
+{
+    std::unordered_set<std::string> uniqueKeys;
+    for (const auto &server : servers)
+    {
+        std::string key = server.getServerHost() + ":" + std::to_string(server.getServerPort());
+        if (!uniqueKeys.insert(key).second)
+        {
+            throw std::runtime_error("Duplicate server configuration: " + key);
+        }
+    }
+}
+
+// void checkDuplicateConfig(std::string config1, std::string config2)
+// {
+//     if (config1 == config2)
+//     {
+//         throw std::runtime_error("Duplicate configuration: " + config1);
+//     }
+// }
+// {
+//     std::string combination = serverName + ":" + std::to_string(portNumber);
+//     if (!serverCombinations.insert(combination).second)
+//     {
+//         throw std::runtime_error("Duplicate server configuration: " + combination);
+//     }
+// }
 
 void ConfigParser::printCluster()
 {
