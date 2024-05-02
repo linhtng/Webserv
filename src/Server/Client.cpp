@@ -117,7 +117,6 @@ void Client::setBytesToReceive(size_t bytes)
 	this->_bytesToReceive = bytes;
 }
 
-
 size_t Client::getChunkSize() const
 {
 	return this->_chunkSize;
@@ -136,11 +135,7 @@ size_t Client::getBytesToReceive() const
 void Client::appendToRequestBody(const std::vector<std::byte> &newBodyChunk)
 {
 	if (request)
-	{
-		std::cout << "here append to body" << std::endl;
 		request->appendToBody(newBodyChunk);
-	}
-
 }
 
 void Client::appendToRequestBody(char newBodyChunk[], const ssize_t &bytes)
@@ -172,8 +167,6 @@ std::string Client::getRequestTarget() const
 
 bool Client::isRequestBodyExpected() const
 {
-	request->printRequestProperties();
-	std::cout << "inside is body expected" << request->isBodyExpected() << std::endl;
 	return (request->isBodyExpected());
 }
 

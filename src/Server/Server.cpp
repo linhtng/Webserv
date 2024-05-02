@@ -103,13 +103,9 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return request_status;
 		if (request_status == BAD_HEADER)
 		{
-			std::cout << "here BAD_HEADER" << std::endl;
 			clients[client_fd]->setIsConnectionClose(true);
 			if (request_header.size() == MAX_HEADER_LENGTH)
-			{
-				std::cout << "here payload too large" << std::endl;
 				clients[client_fd]->createErrorRequest(config, HttpStatusCode::PAYLOAD_TOO_LARGE);
-			}
 
 			else
 				clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
@@ -124,15 +120,16 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 					clients[client_fd]->getRequestMethod(),
 					clients[client_fd]->getRequestTarget().c_str());
 		clients[client_fd]->appendToBodyBuf(request_body_buf);
+		if (!clients[client_fd]->isRequestBodyExpected())
+		{
+			clients[client_fd]->createResponse(); // create response object
+			return (READY_TO_WRITE);
+		}
+		return BODY_EXPECTED;
 	}
-
-	std::cout << "isRequestBodyExpected()" << clients[client_fd]->isRequestBodyExpected() << std::endl;
 
 	if (clients[client_fd]->isRequestBodyExpected())
 	{
-
-		std::cout << "in request body expected" << std::endl;
-
 		request_status = clients[client_fd]->isRequestChunked()
 							 ? formRequestBodyWithChunk(client_fd)
 							 : formRequestBodyWithContentLength(client_fd);
@@ -165,7 +162,6 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 			for (size_t i = 0; i < body_length; ++i)
 				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
 			request_header.resize(delimiter_pos);
-			std::cout << request_header << std::endl;
 			return (HEADER_DELIMITER_FOUND);
 		}
 		else
@@ -188,21 +184,15 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 
 Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd)
 {
-	std::cout << "here 2" << std::endl;
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
 	if (!clients[client_fd]->getBodyBuf().empty()) // process any remaining data in the request body buffer
 	{
-		std::cout << "here 3" << std::endl;
 		clients[client_fd]->appendToRequestBody(clients[client_fd]->getBodyBuf());
-		std::cout << "here 4" << std::endl;
 		clients[client_fd]->clearBodyBuf();
-		std::cout << "here 5" << std::endl;
 		size_t body_size = clients[client_fd]->getRequestBody().size();
-		std::cout << "here 6: " << body_size << std::endl;
 		size_t content_length = clients[client_fd]->getRequestContentLength();
-		std::cout << "here 7: " << content_length << std::endl;
 		if (body_size < content_length) // request body send in chunk
 			return (BODY_IN_CHUNK);
 		else if (body_size == content_length) // read till the end
@@ -213,7 +203,6 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 
 	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
-		std::cout << "here 4" << std::endl;
 		clients[client_fd]->appendToRequestBody(buf, bytes);
 		size_t body_size = clients[client_fd]->getRequestBody().size();
 		size_t content_length = clients[client_fd]->getRequestContentLength();
@@ -370,17 +359,10 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	std::vector<std::byte>
 		full_response = response.formatResponse();
 
-	std::cout << "full_response size: " << full_response.size() << std::endl;
-	std::cout << "response.getBytesSent() 0: " << clients[client_fd]->getBytesSent() << std::endl;
-
 	ssize_t bytes;
 	if ((bytes = send(client_fd, &(*(full_response.begin() + clients[client_fd]->getBytesSent())), std::min(full_response.size() - clients[client_fd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
 	{
-		std::cout << "bytes" << bytes << std::endl;
-		std::cout << "response.getBytesSent() 1: " << clients[client_fd]->getBytesSent() << std::endl;
-		std::cout << "setBytesSent: " << clients[client_fd]->getBytesSent() + bytes << std::endl;
 		clients[client_fd]->setBytesSent(clients[client_fd]->getBytesSent() + bytes);
-		std::cout << "response.getBytesSent() 2: " << clients[client_fd]->getBytesSent() << std::endl;
 		if (clients[client_fd]->getBytesSent() < full_response.size())
 			return (RESPONSE_IN_CHUNK);
 		else
