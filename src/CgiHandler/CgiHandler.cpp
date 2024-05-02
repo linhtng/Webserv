@@ -14,6 +14,13 @@ CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
     }
     setupCgiEnv(request, server);
     cgiOutput = "";
+    messageBody = request.getBody();
+    messageBodyStr.reserve(messageBody.size());
+    for (const auto &byte : messageBody)
+    {
+        messageBodyStr.push_back(static_cast<char>(byte));
+    }
+    // std::cout << "messageBodyStr: " << messageBodyStr << std::endl;
     // printEnv();
 }
 
@@ -70,13 +77,12 @@ void CgiHandler::createCgiProcess()
     }
     if (pid == 0) // child process
     {
-        // close unused pipe ends
-        // close(dataToCgiPipe[WRITE_END]);
-        // close(dataFromCgiPipe[READ_END]);
-
         // redirect stdin and stdout
         dup2(dataToCgiPipe[READ_END], STDIN_FILENO);
         dup2(dataFromCgiPipe[WRITE_END], STDOUT_FILENO);
+
+        // write message body to cgi process's stdin
+        write(dataToCgiPipe[WRITE_END], messageBodyStr.c_str(), messageBodyStr.size());
 
         closeCgiPipes();
 
@@ -85,8 +91,7 @@ void CgiHandler::createCgiProcess()
     // parent process
     else if (pid > 0)
     {
-        // closePipeEnd(dataToCgiPipe[READ_END]);
-        // closePipeEnd(dataFromCgiPipe[WRITE_END]);
+        close(dataToCgiPipe[WRITE_END]);
         close(dataFromCgiPipe[WRITE_END]);
         readCgiOutput();
         closeCgiPipes();
@@ -103,7 +108,7 @@ void CgiHandler::readCgiOutput()
         ss.write(buffer, bytesRead);
     }
     cgiOutput = ss.str();
-    std::cout << cgiOutput << std::endl;
+    std::cout << "cgiOutput: " << cgiOutput << std::endl;
 }
 
 void CgiHandler::closePipeEnd(int pipeFd)
