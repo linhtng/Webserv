@@ -47,46 +47,31 @@ void Server::setUpServerSocket()
 	}
 }
 
-std::vector<int> Server::acceptNewConnections()
+int Server::acceptNewConnection()
 {
-	std::vector<int> new_client_fds;
+	int client_fd;
 
-	try
+	struct sockaddr_in client_address;
+	socklen_t client_addrlen = sizeof(client_address);
+	client_fd = accept(server_fd,
+								(struct sockaddr *)&client_address,
+								&client_addrlen);
+	if (client_fd < 0)
 	{
-		while (true)
-		{
-			struct sockaddr_in client_address;
-			socklen_t client_addrlen = sizeof(client_address);
-
-			// Client client;
-			int client_fd = accept(server_fd,
-								   (struct sockaddr *)&client_address,
-								   &client_addrlen);
-			std::cout << "client_fd: " << client_fd << std::endl;
-			if (client_fd < 0)
-			{
-				if (errno == EWOULDBLOCK || errno == EAGAIN) // listen() queue is empty
-					break;
-				else if (errno == ECONNABORTED) // a connection has been aborted
-					continue;
-				throw AcceptException();
-			}
-			clients[client_fd] = std::make_unique<Client>(client_address, client_addrlen);
-			new_client_fds.push_back(client_fd);
-			Logger::log(e_log_level::INFO, CLIENT, "New connection from %s:%d",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
-			if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
-				throw SocketSetNonBlockingException();
-		}
-		return (new_client_fds);
+		Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to accept socket",
+								config.getServerHost().c_str(),
+								config.getServerPort());
+		return (client_fd);
 	}
-	catch (std::exception &e)
-	{
-		for (const int fd : new_client_fds) // close all client fds
-			close(fd);
-		throw;
-	}
+	clients[client_fd] = std::make_unique<Client>(client_address, client_addrlen);
+	Logger::log(e_log_level::INFO, CLIENT, "New connection from Client %s:%d to Server %s:%d",
+							inet_ntoa(getClientIPv4Address(client_fd)),
+							ntohs(getClientPortNumber(client_fd)),
+							config.getServerHost().c_str(),
+							config.getServerPort());
+	if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
+		throw SocketSetNonBlockingException();
+	return (client_fd);
 }
 
 Server::RequestStatus Server::receiveRequest(int const &client_fd)
@@ -118,7 +103,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		}
 
 		clients[client_fd]->createRequest(request_header, this->config); // create request object
-		Logger::log(e_log_level::INFO, CLIENT, "Request from %s:%d - Method: %d, Target: %s",
+		Logger::log(e_log_level::INFO, CLIENT, "Request from Client %s:%d - Method: %d, Target: %s",
 					inet_ntoa(getClientIPv4Address(client_fd)),
 					ntohs(getClientPortNumber(client_fd)),
 					clients[client_fd]->getRequestMethod(),
@@ -186,8 +171,9 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 		}
 		else
 		{
-			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-						config.getServerName().c_str(),
+			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
+						config.getServerHost().c_str(),
+						config.getServerPort(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -237,8 +223,9 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		}
 		else
 		{
-			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-						config.getServerName().c_str(),
+			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
+						config.getServerHost().c_str(),
+						config.getServerPort(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -274,8 +261,9 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 		}
 		else
 		{
-			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
-						config.getServerName().c_str(),
+			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
+						config.getServerHost().c_str(),
+						config.getServerPort(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -390,7 +378,7 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 			return (RESPONSE_IN_CHUNK);
 		else
 		{
-			Logger::log(e_log_level::INFO, CLIENT, "Response sent to %s:%d - Status: %d",
+			Logger::log(e_log_level::INFO, CLIENT, "Response sent to Client %s:%d - Status: %d",
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)),
 						response.getStatusCode());
@@ -408,10 +396,11 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 		else
-			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to send response from Client %s:%d",
-						config.getServerName().c_str(),
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to send response to Client %s:%d",
+				config.getServerHost().c_str(),
+				config.getServerPort(),
+				inet_ntoa(getClientIPv4Address(client_fd)),
+				ntohs(getClientPortNumber(client_fd)));
 		return (RESPONSE_DISCONNECT_CLIENT);
 	}
 }

@@ -159,8 +159,8 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 	if (servers.find(it->fd) != servers.end()) // if the fd is server fd, accept new connection
 	{
 		int server_fd = it->fd;
-		std::vector<int> clients_fds = servers[server_fd]->acceptNewConnections();
-		for (const int &client_fd : clients_fds)
+		int client_fd = servers[server_fd]->acceptNewConnection();
+		if (client_fd >= 0)
 		{
 			pollfds.push_back({client_fd, POLLIN, 0});	 // add the new fd to poll fd
 			client_to_server_map[client_fd] = server_fd; // add client fd to client to server map
@@ -214,7 +214,9 @@ void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 		close(fd.fd);
 	for (auto &server : servers)
 	{
-		Logger::log(e_log_level::INFO, SERVER, "Server %s shut down", server.second->getConfig().getServerName().c_str());
+		Logger::log(e_log_level::INFO, SERVER, "Server %s:%d shut down",
+								server.second->getConfig().getServerHost().c_str(),
+								server.second->getConfig().getServerPort());
 		server.second.reset();
 	}
 }

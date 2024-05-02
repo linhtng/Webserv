@@ -1,7 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#define BACKLOG 100
+#define BACKLOG 512
 #define BUFFER_SIZE 200000
 #define MAX_HEADER_LENGTH 8192
 
@@ -67,7 +67,7 @@ public:
 	~Server();
 
 	void setUpServerSocket();
-	std::vector<int> acceptNewConnections();
+	int acceptNewConnection();
 	RequestStatus receiveRequest(int const &client_fd);
 	ResponseStatus sendResponse(int const &client_fd);
 	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
