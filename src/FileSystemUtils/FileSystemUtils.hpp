@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string>
+#include <fstream>
+#include <vector>
 
 namespace FileSystemUtils
 {
@@ -13,6 +15,7 @@ namespace FileSystemUtils
 	bool pathExistsAndAccessible(const std::string &target);
 	bool isDir(const std::string &target);
 	bool isFile(const std::string &target);
+	void saveFile(std::string savePath, std::vector<std::byte> body);
 }
 
 #endif

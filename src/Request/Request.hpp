@@ -40,7 +40,7 @@ private:
 	std::string _host;
 	int _port;
 	std::string _transferEncoding;
-	std::string _boundary;
+	std::string _charset;
 
 	// Helper properties for parsing
 	size_t _chunkSize;
@@ -80,6 +80,8 @@ private:
 public:
 	Request(const ConfigData &config, const std::string &requestLineAndHeaders);
 	Request(const ConfigData &config, HttpStatusCode statusCode);
+	Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders);
+	Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode);
 
 	// SETTERS
 

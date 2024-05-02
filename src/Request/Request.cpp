@@ -64,12 +64,22 @@ std::string Request::getMethodStr() const
 void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
+	if (this->_body.size() >= this->_config.getMaxClientBodySize())
+	{
+		this->_body.clear();
+		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
+	}
 }
 
 void Request::appendToBody(char newBodyChunk[], const ssize_t &bytes)
 {
 	for (ssize_t i = 0; i < bytes; ++i)
 		this->_body.push_back(static_cast<std::byte>(newBodyChunk[i]));
+	if (this->_body.size() >= this->_config.getMaxClientBodySize())
+	{
+		this->_body.clear();
+		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
+	}
 }
 
 void Request::resizeBody(const size_t &n)
@@ -371,37 +381,65 @@ void Request::parseContentType()
 		return;
 	}
 	std::string contentTypeFullValue = it->second;
-	std::transform(contentTypeFullValue.begin(), contentTypeFullValue.end(), contentTypeFullValue.begin(), ::tolower);
 
 	// split by semicolon
 	std::vector<std::string> split = StringUtils::splitByDelimiter(contentTypeFullValue, ";");
-	this->_contentType = StringUtils::trim(split[0]);
+	try
+	{
+		std::string type = StringUtils::trim(split[0]);
+		std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+		this->_contentType = HttpMessage::_contentTypes.at(type);
+	}
+	catch (const std::out_of_range &e)
+	{
+		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
+		throw BadRequestException();
+	}
 	// is there are subtype params, parse them
 	for (size_t i = 1; i < split.size(); ++i)
 	{
 		std::vector<std::string> paramsSplit = StringUtils::splitByDelimiter(split[i], "=");
 		if (paramsSplit.size() != 2)
 		{
+			this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
 			throw BadRequestException();
 		}
-		this->_contentTypeParams[StringUtils::trim(paramsSplit[0])] = StringUtils::trim(paramsSplit[1]);
+		std::string paramName = StringUtils::trim(paramsSplit[0]);
+		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
+		this->_contentTypeParams[paramName] = StringUtils::trimChar(StringUtils::trim(paramsSplit[1]), '"');
 	}
-	if (this->_contentType == "multipart/form-data")
+	if (this->_contentType == ContentType::MULTIPART_FORM_DATA)
 	{
-		// check for boundary
-		auto it = this->_contentTypeParams.find("boundary");
-		if (it == this->_contentTypeParams.end())
+		// boundary is mandatory for multiforms
+		auto itBoundary = this->_contentTypeParams.find("boundary");
+		if (itBoundary == this->_contentTypeParams.end())
 		{
 			throw BadRequestException();
 		}
-		// check if boundary is valid
-		std::string boundary = it->second;
+		std::string boundary = itBoundary->second;
 		if (boundary.empty())
 		{
 			throw BadRequestException();
 		}
 		this->_boundary = boundary;
 	}
+	auto itCharset = this->_contentTypeParams.find("charset");
+	if (itCharset != this->_contentTypeParams.end())
+	{
+		this->_charset = itCharset->second;
+	}
+	if (this->_charset.empty())
+	{
+		this->_charset = "utf-8";
+	}
+	if (this->_charset != "utf-8")
+	{
+		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
+		throw BadRequestException();
+	}
+	std::cout << "contentType: " << this->_contentType << std::endl;
+	std::cout << "boundary: " << this->_boundary << std::endl;
+	std::cout << "charset: " << this->_charset << std::endl;
 }
 
 // HEADERS GENERAL
@@ -449,6 +487,7 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	// handle headers
 	for (size_t i = 1; i < split.size(); ++i)
 	{
+		std::cout << "	header: " << split[i] << std::endl;
 		extractHeaderLine(split[i]);
 	}
 	parseHeaders();

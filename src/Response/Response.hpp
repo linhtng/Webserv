@@ -12,6 +12,7 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <algorithm>
 // TODO: check imports below
 
 #include <iomanip> //TODO: check header for put_time
@@ -23,9 +24,17 @@ class HttpMessage;
 class Response : public HttpMessage
 {
 private:
+	struct MultipartDataPart
+	{
+		std::map<std::string, std::string> headers;
+		std::vector<std::byte> body;
+	};
+
 	std::string _serverHeader;
 	std::string _locationHeader;
+	std::string _upgradeHeader;
 
+	std::vector<MultipartDataPart> _parts;
 	Request const &_request;
 	Location _location;
 	std::string _redirectionRoute;
@@ -47,6 +56,9 @@ private:
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
 	void prepareRedirectResponse();
+	void processMultiformData();
+	void processMultiformDataPart(std::vector<std::byte> part);
+	void postMultipartDataPart(const MultipartDataPart &part);
 
 	bool isRedirect(); // consts?
 	void handleAlias();

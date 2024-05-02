@@ -44,6 +44,10 @@ std::string Response::formatConnection() const
 	{
 		return "close";
 	}
+	else if (this->_connection == ConnectionValue::UPGRADE)
+	{
+		return "Upgrade";
+	}
 	else
 	{
 		return "keep-alive";
@@ -71,6 +75,10 @@ std::string Response::formatHeader() const
 	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " + this->_config.getServerName() + CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
+	if (!this->_upgradeHeader.empty())
+	{
+		header += "Upgrade: " + this->_upgradeHeader + CRLF;
+	}
 	header += "Connection: " + this->formatConnection() + CRLF;
 	if (!this->_locationHeader.empty())
 	{
@@ -110,6 +118,11 @@ void Response::prepareErrorResponse()
 {
 	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
+	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
+	{
+		this->_connection = ConnectionValue::UPGRADE;
+		this->_upgradeHeader = "HTTP/1.1";
+	}
 	// TODO: ? set Content-Type to http
 }
 
@@ -216,8 +229,86 @@ void Response::executeCGI()
 {
 }
 
+void Response::postMultipartDataPart(const MultipartDataPart &part)
+{
+	auto it = part.headers.find("content-disposition");
+	if (it == part.headers.end())
+	{
+		// if no content-disposition, reject
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		// prepare error response?
+		return;
+	}
+	// check if filename param exists in content-disposition header
+	// split into params
+	/* A multipart/form-data body requires a Content-Disposition header to provide information for each subpart of the form (e.g. for every form field and any files that are part of field data). The first directive is always form-data, and the header must also include a name parameter to identify the relevant field. Additional directives are case-insensitive and have arguments that use quoted-string syntax after the '=' sign. Multiple parameters are separated by a semicolon (';'). */
+	std::vector<std::string> split = StringUtils::splitByDelimiter(it->second, ";");
+	// first part is always form-data
+	if (split.size() < 1)
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		// prepareErrorResponse();
+		return;
+	}
+	std::string firstAlwaysFormData = StringUtils::trim(split[0]);
+	if (firstAlwaysFormData != "form-data")
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		// prepareErrorResponse();
+		return;
+	}
+	// extract params liek name and filename
+
+	// this is code duplication, TODO: fix
+	std::unordered_map<std::string, std::string> params;
+	for (size_t i = 1; i < split.size(); ++i)
+	{
+		std::vector<std::string> paramsSplit = StringUtils::splitByDelimiter(split[i], "=");
+		if (paramsSplit.size() != 2)
+		{
+			// if no =, reject
+			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+			// prepareErrorResponse();
+			return;
+		}
+		std::string paramName = StringUtils::trim(paramsSplit[0]);
+		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
+		params[paramName] = StringUtils::trimChar(StringUtils::trim(paramsSplit[1]), '"');
+	}
+	// TODO: move this to the initial multipart processing part later
+	// if no filename, no upload
+	auto filenameIt = params.find("filename");
+	if (filenameIt == params.end())
+	{
+		// handle non-upload ones
+		// prepareErrorResponse();
+		return;
+	}
+	std::string fileName = filenameIt->second;
+	std::string savePath = StringUtils::joinPath(this->_location.getSaveDir(), fileName);
+	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;
+	// save the file
+	FileSystemUtils::saveFile(savePath, part.body);
+}
+
 void Response::handlePost()
 {
+	// check if upload is allowed
+	if (this->_location.getSaveDir().empty())
+	{
+		this->_statusCode = HttpStatusCode::FORBIDDEN;
+		prepareErrorResponse();
+		return;
+	}
+	// iterate throu parts and save them to files
+	for (size_t i = 0; i < this->_parts.size(); i++)
+	{
+		postMultipartDataPart(this->_parts[i]);
+		// TODO: error handling
+	}
+	// set the Location header to contain path to the uploads directory
+	this->_locationHeader = '/' + this->_location.getSaveDir();
+	this->_statusCode = HttpStatusCode::CREATED;
 }
 
 void Response::handleGet()
@@ -275,6 +366,9 @@ void Response::handleGet()
 
 void Response::handleHead()
 {
+	handleGet();
+	this->_contentLength = this->_body.size();
+	this->_body.clear();
 }
 
 void Response::handleDelete()
@@ -295,11 +389,133 @@ void Response::handleAlias()
 	}
 }
 
+void Response::processMultiformDataPart(std::vector<std::byte> part)
+{
+	MultipartDataPart dataPart;
+	std::string partString(reinterpret_cast<const char *>(part.data()), part.size());
+	std::stringstream partStream(partString);
+	std::string line;
+	bool isHeader = true;
+
+	while (std::getline(partStream, line))
+	{
+		if (line.empty())
+		{
+			// Headers are done, the rest is the body
+			isHeader = false;
+			continue;
+		}
+		if (isHeader)
+		{
+			// Parse headers
+			size_t pos = line.find(':');
+			if (pos != std::string::npos)
+			{
+				std::string headerName = StringUtils::trim(line.substr(0, pos));
+				std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::tolower);
+				std::string headerValue = StringUtils::trim(line.substr(pos + 1));
+				dataPart.headers[headerName] = headerValue;
+			}
+		}
+		else
+		{
+			// Convert the body part back to bytes
+			std::vector<std::byte> bodyPart;
+			bodyPart.reserve(line.size());
+			for (char ch : line)
+			{
+				bodyPart.push_back(static_cast<std::byte>(ch));
+			}
+			dataPart.body.insert(dataPart.body.end(), bodyPart.begin(), bodyPart.end());
+		}
+	}
+	this->_parts.push_back(dataPart);
+	// TODO: Store dataPart for later processing
+}
+
+void Response::processMultiformData()
+{
+	if (this->_request.getContentType() != ContentType::MULTIPART_FORM_DATA)
+	{
+		return;
+	}
+	std::cout << GREEN << "Processing multiform data" << RESET << std::endl;
+	const std::vector<std::byte> &messageBody = this->_request.getBody();
+	const std::string delimiter = "--" + this->_boundary;
+	const std::string endDelimiter = delimiter + "--";
+	// convert delimiters to byte vectors for direct memory comparison
+	std::vector<std::byte> delimiterBytes;
+	delimiterBytes.reserve(delimiter.size());
+	for (char ch : delimiter)
+	{
+		delimiterBytes.push_back(static_cast<std::byte>(ch));
+	}
+	std::vector<std::byte> endDelimiterBytes;
+	endDelimiterBytes.reserve(endDelimiter.size());
+	for (char ch : endDelimiter)
+	{
+		endDelimiterBytes.push_back(static_cast<std::byte>(ch));
+	}
+	// find the start of the first part
+	auto partStart = std::search(messageBody.begin(), messageBody.end(), delimiterBytes.begin(), delimiterBytes.end());
+	if (partStart == messageBody.end())
+	{
+		throw std::runtime_error("First boundary not found in multiform data");
+		return;
+	}
+
+	// Skip the delimiter
+	partStart += delimiterBytes.size();
+
+	// find endDelimiter
+
+	auto endDelimiterIt = std::search(partStart, messageBody.end(), endDelimiterBytes.begin(), endDelimiterBytes.end());
+	if (endDelimiterIt == messageBody.end())
+	{
+		throw std::runtime_error("Wrong multiform format");
+		return;
+	}
+
+	while (partStart != messageBody.end())
+	{
+		// Find the end of the current part
+		auto partEnd = std::search(partStart, messageBody.end(), delimiterBytes.begin(), delimiterBytes.end());
+		if (partEnd == messageBody.end())
+		{
+			throw std::runtime_error("Wrong multiform format");
+			break;
+		}
+		// Extract the current part
+		std::vector<std::byte> part(partStart, partEnd);
+		processMultiformDataPart(part);
+		// if this was the last part, stop
+		if (partEnd == endDelimiterIt)
+		{
+			break;
+		}
+		// If not the end, move to the start of the next part
+		partStart = partEnd + delimiterBytes.size();
+	}
+	std::cout << GREEN << "Processed multiform data, parts detected: " << this->_parts.size() << RESET << std::endl;
+}
+
 // CONSTRUCTOR
 
-Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection()), _request(request)
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection(), request.getHttpVersionMajor(), request.getHttpVersionMinor(), request.getBoundary()), _request(request)
 {
-	(void)_request;
+	//(void)_request;
+	try
+	{
+		processMultiformData();
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << RED << "Error processing multiform data: " << e.what() << RESET << std::endl;
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+		{
+			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		}
+	}
 	this->prepareStandardHeaders();
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
@@ -368,7 +584,10 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 				break;
 			}
 		}
-
+		if (this->_method != HttpMethod::HEAD)
+		{
+			this->_contentLength = this->_body.size();
+		}
 		// check target, if REDIRECT, return response with 301, 308 with Location header
 		// check target, return 404 if resourse NOT FOUND
 		// - CGI:
@@ -396,7 +615,6 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 		//		- check if directory, reject if it is
 		//		- delete the file
 		//		- return headers with no body
-
 		// Locations that are allowed - is it in config? ask Linh
 	}
 }
