@@ -38,7 +38,8 @@ public:
 		READY_TO_WRITE,
 		PARSED_CHUNK_SIZE,
 		BAD_REQUEST,
-		BODY_EXPECTED
+		BODY_EXPECTED,
+		SERVER_ERROR
 	};
 
 	enum ResponseStatus

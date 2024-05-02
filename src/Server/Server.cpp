@@ -101,14 +101,18 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
 		if (request_status == REQUEST_DISCONNECT_CLIENT)
 			return request_status;
-		if (request_status == BAD_HEADER)
+		if (request_status == BAD_HEADER || request_status == SERVER_ERROR)
 		{
 			clients[client_fd]->setIsConnectionClose(true);
-			if (request_header.size() == MAX_HEADER_LENGTH)
-				clients[client_fd]->createErrorRequest(config, HttpStatusCode::PAYLOAD_TOO_LARGE);
-
+			if (request_status == SERVER_ERROR)
+				clients[client_fd]->createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
 			else
-				clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+			{
+				if (request_header.size() == MAX_HEADER_LENGTH)
+					clients[client_fd]->createErrorRequest(config, HttpStatusCode::PAYLOAD_TOO_LARGE);
+				else
+					clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+			}
 			clients[client_fd]->createResponse(); // create response object
 			return (READY_TO_WRITE);
 		}
@@ -142,7 +146,11 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		clients[client_fd]->setIsConnectionClose(true);
 		clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
 	}
-
+	else if (request_status == SERVER_ERROR)
+	{
+		clients[client_fd]->setIsConnectionClose(true);
+		clients[client_fd]->createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
+	}
 	clients[client_fd]->createResponse(); // create response object
 	return (READY_TO_WRITE);
 }
@@ -170,15 +178,20 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 	else
 	{
 		if (bytes == 0)
+		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
+			return (REQUEST_DISCONNECT_CLIENT);
+		}
 		else
+		{
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
 						config.getServerName().c_str(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
-		return (REQUEST_DISCONNECT_CLIENT);
+			return (SERVER_ERROR);
+		}
 	}
 }
 
@@ -216,15 +229,20 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	else
 	{
 		if (bytes == 0)
+		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
+			return (REQUEST_DISCONNECT_CLIENT);
+		}
 		else
+		{
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
 						config.getServerName().c_str(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
-		return (REQUEST_DISCONNECT_CLIENT);
+			return (SERVER_ERROR);
+		}
 	}
 }
 
@@ -248,15 +266,20 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 	else
 	{
 		if (bytes == 0)
+		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
+			return (REQUEST_DISCONNECT_CLIENT);
+		}
 		else
+		{
 			Logger::log(e_log_level::INFO, SERVER, "Server %s fails to receive request from Client %s:%d",
 						config.getServerName().c_str(),
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
-		return (REQUEST_DISCONNECT_CLIENT);
+			return (SERVER_ERROR);
+		}
 	}
 }
 
