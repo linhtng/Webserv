@@ -19,11 +19,12 @@ protected:
 	ConnectionValue _connection;
 	int _httpVersionMajor;
 	int _httpVersionMinor;
+	std::string _boundary;
 	size_t _contentLength;
 	bool _chunked;
 	std::vector<std::byte> _body;
 	std::chrono::system_clock::time_point _date;
-	std::string _contentType;
+	ContentType _contentType;
 	std::unordered_map<std::string, std::string> _contentTypeParams;
 
 	HttpMessage(ConfigData const &config,
@@ -33,6 +34,7 @@ protected:
 				ConnectionValue connection = KEEP_ALIVE,
 				int httpVersionMajor = 1,
 				int httpVersionMinor = 1,
+				std::string boundary = "",
 				size_t contentLength = 0,
 				bool chunked = false);
 
@@ -48,11 +50,13 @@ public:
 	std::vector<std::byte> getBody() const;
 	ConnectionValue getConnection() const;
 	std::chrono::system_clock::time_point getDate() const;
-	std::string getContentType() const;
+	ContentType getContentType() const;
 	HttpStatusCode getStatusCode() const;
+	std::string getBoundary() const;
 	bool isChunked() const;
 
 	static const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages;
+	static const std::unordered_map<std::string, ContentType> _contentTypes;
 };
 
 #endif
