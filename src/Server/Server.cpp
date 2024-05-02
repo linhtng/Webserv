@@ -128,7 +128,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		return BODY_EXPECTED;
 	}
 
-	if (clients[client_fd]->isRequestBodyExpected())
+	if (clients[client_fd]->isRequestBodyExpected() && clients[client_fd]->getRequestStatusCode() == HttpStatusCode::UNDEFINED_STATUS)
 	{
 		request_status = clients[client_fd]->isRequestChunked()
 							 ? formRequestBodyWithChunk(client_fd)

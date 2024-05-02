@@ -175,6 +175,11 @@ bool Client::isRequestChunked() const
 	return (request->isChunked());
 }
 
+HttpStatusCode Client::getRequestStatusCode() const
+{
+	return (request->getStatusCode());
+}
+
 size_t Client::getRequestContentLength() const
 {
 	return (request->getContentLength());

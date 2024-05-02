@@ -29,7 +29,6 @@ private:
 	size_t _bytesToReceive;
 
 public:
-
 	Client(struct sockaddr_in client_address, socklen_t client_addrlen);
 	~Client();
 
@@ -76,6 +75,7 @@ public:
 
 	bool isRequestBodyExpected() const;
 	bool isRequestChunked() const;
+	HttpStatusCode getRequestStatusCode() const;
 
 	size_t getRequestContentLength() const;
 
