@@ -250,6 +250,7 @@ void Response::handleGet()
 		else
 		{
 			std::cout << RED << "Not Directory listing or Index file" << RESET << std::endl;
+			this->_statusCode = HttpStatusCode::FORBIDDEN;
 			// 403 Forbidden
 		}
 	}

@@ -37,6 +37,10 @@ namespace StringUtils
 			{
 				return trimmedHead;
 			}
+			else if (trimmedHead.empty())
+			{
+				return concatenatedTail;
+			}
 			else
 			{
 				return trimmedHead + '/' + concatenatedTail;
