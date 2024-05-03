@@ -103,7 +103,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 			return (READY_TO_WRITE);
 		}
 
-		std::cout << YELLOW << "--------------request_header---------------" << std::endl << request_header << RESET << std::endl;
+		// std::cout << YELLOW << "--------------request_header---------------" << std::endl << request_header << RESET << std::endl;
 
 		clients[client_fd]->createRequest(request_header, configs); // create request object
 		Logger::log(e_log_level::INFO, CLIENT, "Request from Client %s:%d - Method: %d, Target: %s",
@@ -112,13 +112,6 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 					clients[client_fd]->getRequestMethod(),
 					clients[client_fd]->getRequestTarget().c_str());
 		clients[client_fd]->appendToBodyBuf(request_body_buf);
-
-		// std::cout << "------body_buf-----------" << std::endl;
-		// for (auto &ch : clients[client_fd]->getBodyBuf())
-		// {
-		// 	std::cout << static_cast<char>(ch);
-		// }
-		// std::cout << std::endl;
 
 		if (clients[client_fd]->isRequestBodyExpected() && request_body_buf.size() > 0)
 		{
@@ -146,6 +139,8 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 					return (BAD_REQUEST);
 			}
 		}
+		else if (clients[client_fd]->isRequestBodyExpected())
+			return (BODY_IN_CHUNK);
 		else
 		{
 			clients[client_fd]->createResponse(); // create response object
@@ -184,6 +179,7 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
 	{
 		request_header.append(buf, bytes);
+		// std::cout << YELLOW << "--------------request_header loop---------------" << std::endl << request_header << RESET << std::endl;
 		size_t delimiter_pos = request_header.find(CRLF CRLF);
 		if (delimiter_pos != std::string::npos)
 		{
@@ -411,12 +407,12 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 {
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
-	std::ofstream ofs("test.txt");
-	std::vector<std::byte> body = clients[client_fd]->getRequestBody();
-	const std::byte *dataPtr = body.data();
-	std::size_t dataSize = body.size();
-	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
-	ofs.close();
+	// std::ofstream ofs("test.txt");
+	// std::vector<std::byte> body = clients[client_fd]->getRequestBody();
+	// const std::byte *dataPtr = body.data();
+	// std::size_t dataSize = body.size();
+	// ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
+	// ofs.close();
 	//--------------------------------------------------------------
 
 	Response response = clients[client_fd]->getResponse();
