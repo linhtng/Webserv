@@ -76,7 +76,7 @@ Server::RequestStatus Server::receiveRequest(int const &clientFd)
 																		? receiveRequestHeader(clientFd)
 																		: receiveRequestBody(clientFd);
 
-	if (requestStatus == REQUEST_DISCONNECT_CLIENT || requestStatus == BODY_IN_CHUNK)
+	if (requestStatus == REQUEST_CLIENT_DISCONNECT || requestStatus == BODY_IN_CHUNK)
 		return (requestStatus);
 	else if (requestStatus == SERVER_ERROR || requestStatus == BAD_REQUEST || requestStatus == PAYLOAD_TOO_LARGE)
 	{
@@ -98,8 +98,8 @@ Server::RequestStatus Server::receiveRequestHeader(int const &clientFd)
 	std::string requestHeader;
 	std::vector<std::byte> requestBodyBuf;
 
-	RequestStatus requestStatus = formRequestHeader(clientFd, requestHeader, requestBodyBuf); // return HEADER_DELIMITER_FOUND or BAD_HEADER or REQUEST_DISCONNECT_CLIENT or SERVER_ERROR
-	if (requestStatus == REQUEST_DISCONNECT_CLIENT || requestStatus == SERVER_ERROR)
+	RequestStatus requestStatus = formRequestHeader(clientFd, requestHeader, requestBodyBuf); // return HEADER_DELIMITER_FOUND or BAD_HEADER or REQUEST_CLIENT_DISCONNECT or SERVER_ERROR
+	if (requestStatus == REQUEST_CLIENT_DISCONNECT || requestStatus == SERVER_ERROR)
 		return (requestStatus);
 	if (requestStatus == BAD_HEADER)
 	{
@@ -124,7 +124,7 @@ Server::RequestStatus Server::receiveRequestHeader(int const &clientFd)
 	{
 		if (clients[clientFd]->getBodyBuf().size() == 0)
 			return (BODY_IN_CHUNK);
-		else // process requestBodyBuf //TODO: to combine
+		else // process any remaining data in the body buffer from request //TODO: to combine
 		{
 			if (request.isChunked())
 			{
@@ -138,9 +138,9 @@ Server::RequestStatus Server::receiveRequestHeader(int const &clientFd)
 				clients[clientFd]->clearBodyBuf();
 				size_t bodySize = clients[clientFd]->getRequestBody().size();
 				size_t contentLength = request.getContentLength();
-				if (bodySize < contentLength) // request body send in chunk
+				if (bodySize < contentLength)
 					return (BODY_IN_CHUNK);
-				else if (bodySize == contentLength) // read till the end
+				else if (bodySize == contentLength)
 					return (READY_TO_WRITE);
 				else
 					return (BAD_REQUEST);
@@ -178,7 +178,7 @@ Server::RequestStatus Server::formRequestHeader(int const &clientFd, std::string
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 									inet_ntoa(getClientIPv4Address(clientFd)),
 									ntohs(getClientPortNumber(clientFd)));
-			return (REQUEST_DISCONNECT_CLIENT);
+			return (REQUEST_CLIENT_DISCONNECT);
 		}
 		else
 		{
@@ -203,34 +203,19 @@ Server::RequestStatus Server::receiveRequestBody(int const &clientFd)
 
 Server::RequestStatus Server::formRequestBodyWithContentLength(int const &clientFd)
 {
-	std::cout << "WithContentLength" << std::endl;
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
 	Request request = clients[clientFd]->getRequest();
-
-	if (!clients[clientFd]->getBodyBuf().empty()) // process any remaining data in the request body buffer
-	{
-		clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
-		clients[clientFd]->clearBodyBuf();
-		size_t bodySize = clients[clientFd]->getRequestBody().size();
-		size_t contentLength = request.getContentLength();
-		if (bodySize < contentLength) // request body send in chunk
-			return (BODY_IN_CHUNK);
-		else if (bodySize == contentLength) // read till the end
-			return (READY_TO_WRITE);
-		else
-			return (BAD_REQUEST);
-	}
 
 	if ((bytes = recv(clientFd, buf, sizeof(buf), 0)) > 0)
 	{
 		clients[clientFd]->appendToRequestBody(buf, bytes);
 		size_t bodySize = clients[clientFd]->getRequestBody().size();
 		size_t contentLength = request.getContentLength();
-		if (bodySize < contentLength) // request body send in chunk
+		if (bodySize < contentLength)
 			return (BODY_IN_CHUNK);
-		else if (bodySize == contentLength) // read till the end
+		else if (bodySize == contentLength)
 			return (READY_TO_WRITE);
 		else
 			return (BAD_REQUEST);
@@ -242,7 +227,7 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 									inet_ntoa(getClientIPv4Address(clientFd)),
 									ntohs(getClientPortNumber(clientFd)));
-			return (REQUEST_DISCONNECT_CLIENT);
+			return (REQUEST_CLIENT_DISCONNECT);
 		}
 		else
 		{
@@ -256,13 +241,12 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 	}
 }
 
-Server::RequestStatus Server::formRequestBodyWithChunk(int const &clientFd)
+Server::RequestStatus Server::formRequestBodyWithChunk(int const &clientFd) // TODO: check
 {
-	std::cout << "in chunk" << std::endl;
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
-	if (!clients[clientFd]->getBodyBuf().empty()) // process any remaining data in the body buffer from request or last chunk
+	if (!clients[clientFd]->getBodyBuf().empty()) // process any remaining data from the former chunk
 	{
 		RequestStatus requestStatus = processChunkData(clientFd);
 		if (requestStatus != BODY_IN_CHUNK)
@@ -281,7 +265,7 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &clientFd)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
 									inet_ntoa(getClientIPv4Address(clientFd)),
 									ntohs(getClientPortNumber(clientFd)));
-			return (REQUEST_DISCONNECT_CLIENT);
+			return (REQUEST_CLIENT_DISCONNECT);
 		}
 		else
 		{
@@ -322,7 +306,6 @@ Server::RequestStatus Server::processChunkData(int const &clientFd)
 				clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
 				clients[clientFd]->clearBodyBuf();
 				body = clients[clientFd]->getRequestBody();
-				std::cout << YELLOW << clients[clientFd]->getBytesToReceive() << RESET << std::endl;
 				if (static_cast<char>(body[clients[clientFd]->getBytesToReceive()]) != '\r' || static_cast<char>(body[clients[clientFd]->getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
 					return (BAD_REQUEST);
 				std::vector<std::byte> bodyBuf(body.begin() + clients[clientFd]->getBytesToReceive() + (sizeof(CRLF) - 1), body.end());
@@ -330,8 +313,6 @@ Server::RequestStatus Server::processChunkData(int const &clientFd)
 				clients[clientFd]->resizeRequestBody(clients[clientFd]->getBytesToReceive());
 				clients[clientFd]->setChunkSize(0);
 				requestStatus = extractChunkSize(clientFd);
-				std::cout << YELLOW << clients[clientFd]->getChunkSize() << RESET << std::endl;
-				std::cout << YELLOW << clients[clientFd]->getBytesToReceive() << RESET << std::endl;
 			} while (requestStatus == PARSED_CHUNK_SIZE);
 			return (requestStatus);
 		}
@@ -407,15 +388,13 @@ Server::ResponseStatus Server::sendResponse(int const &clientFd)
 	//--------------------------------------------------------------
 
 	Response response = clients[clientFd]->getResponse();
-
-	std::vector<std::byte>
-			fullResponse = response.formatResponse();
+	std::vector<std::byte> formatedResponse = response.formatResponse();
 
 	ssize_t bytes;
-	if ((bytes = send(clientFd, &(*(fullResponse.begin() + clients[clientFd]->getBytesSent())), std::min(fullResponse.size() - clients[clientFd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
+	if ((bytes = send(clientFd, &(*(formatedResponse.begin() + clients[clientFd]->getBytesSent())), std::min(formatedResponse.size() - clients[clientFd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
 	{
 		clients[clientFd]->setBytesSent(clients[clientFd]->getBytesSent() + bytes);
-		if (clients[clientFd]->getBytesSent() < fullResponse.size())
+		if (clients[clientFd]->getBytesSent() < formatedResponse.size())
 			return (RESPONSE_IN_CHUNK);
 		else
 		{

@@ -193,11 +193,11 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 	{
 		int clientFd = it->fd;
 		int serverFd = clientToServerMap[clientFd];
-		Server::RequestStatus requestStatus = servers[serverFd]->receiveRequest(clientFd); // TODO: check the status only have REQUEST_DISCONNECT_CLIENT and READY_TO_WRITE and IN_CHUNK
+		Server::RequestStatus requestStatus = servers[serverFd]->receiveRequest(clientFd); // return REQUEST_CLIENT_DISCONNECT or READY_TO_WRITE or BODY_IN_CHUNK
 		clientLastActiveTime[clientFd] = std::chrono::steady_clock::now();
 		if (requestStatus == Server::READY_TO_WRITE)
 			*it = {clientFd, POLLOUT, 0};
-		else if (requestStatus == Server::REQUEST_DISCONNECT_CLIENT)
+		else if (requestStatus == Server::REQUEST_CLIENT_DISCONNECT)
 			handleClientDisconnection(it);
 	}
 }
@@ -206,7 +206,7 @@ void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 {
 	int clientFd = it->fd;
 	int serverFd = clientToServerMap[clientFd];
-	Server::ResponseStatus responseStatus = servers[serverFd]->sendResponse(clientFd); // TODO: check the status only have REQUEST_DISCONNECT_CLIENT and KEEP_ALIVE and IN_CHUNK
+	Server::ResponseStatus responseStatus = servers[serverFd]->sendResponse(clientFd); // return RESPONSE_DISCONNECT_CLIENT or KEEP_ALIVE or RESPONSE_IN_CHUNK
 	clientLastActiveTime[clientFd] = std::chrono::steady_clock::now();
 	if (responseStatus == Server::KEEP_ALIVE)
 		*it = {clientFd, POLLIN, 0};
@@ -224,7 +224,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	clientToServerMap.erase(clientFd);
 	clientLastActiveTime.erase(clientFd);
 	it = pollfds.erase(it);
-	it--; // TODO : check it
+	it--; // TODO : check
 }
 
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
