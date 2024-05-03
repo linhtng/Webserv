@@ -154,38 +154,3 @@ std::vector<std::byte> Client::getRequestBody() const
 {
 	return (request->getBody());
 }
-
-HttpMethod Client::getRequestMethod() const
-{
-	return (request->getMethod());
-}
-
-std::string Client::getRequestTarget() const
-{
-	return (request->getTarget());
-}
-
-bool Client::isRequestBodyExpected() const
-{
-	return (request->isBodyExpected());
-}
-
-bool Client::isRequestChunked() const
-{
-	return (request->isChunked());
-}
-
-HttpStatusCode Client::getRequestStatusCode() const
-{
-	return (request->getStatusCode());
-}
-
-size_t Client::getRequestContentLength() const
-{
-	return (request->getContentLength());
-}
-
-ConnectionValue Client::getConnection() const
-{
-	return (request->getConnection());
-}

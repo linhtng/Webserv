@@ -70,16 +70,6 @@ public:
 	void resizeRequestBody(const size_t &n);
 
 	std::vector<std::byte> getRequestBody() const;
-	HttpMethod getRequestMethod() const;
-	std::string getRequestTarget() const;
-
-	bool isRequestBodyExpected() const;
-	bool isRequestChunked() const;
-	HttpStatusCode getRequestStatusCode() const;
-
-	size_t getRequestContentLength() const;
-
-	ConnectionValue getConnection() const;
 };
 
 #endif
