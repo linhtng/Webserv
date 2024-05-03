@@ -24,18 +24,24 @@ public:
     ~CgiHandler();
 
     void createCgiProcess();
-    void executeCgiScript();
-    void sendCgiResponse();
     void printEnv();
+    std::string getCgiOutput();
 
 private:
     void setupCgiEnv(const Request &request, const ConfigData &server);
     std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
     void closeCgiPipes();
+    void closePipeEnd(int pipeFd);
+    void readCgiOutput();
+    void executeCgiScript();
+    void cgiReadMessageBody();
 
     std::map<std::string, std::string> envMap;
     std::string cgiExecutorPathname;
     std::string cgiBinDir;
-    int dataToCgiPipe[2];
-    int dataFromCgiPipe[2];
+    int dataToCgiPipe[2] = {-1, -1};
+    int dataFromCgiPipe[2] = {-1, -1};
+    std::string cgiOutput;
+    std::vector<std::byte> messageBody;
+    std::string messageBodyStr;
 };

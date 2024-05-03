@@ -1,10 +1,12 @@
 TODO:
 - standardise this-> stuff
 - check that i didn't mess up with matches array (0th elem is always full string)
-- remomve includes of iostream that were for debugging
+- remove includes of iostream that were for debugging
 - add consts where applicable
 - organise the whole routing slash thing
 - figure out boundary shit
+- check that asking for upgrade sends proper header back
+- remove extra debug couts
 
 POST /upload HTTP/1.1
 Host: localhost:8081
@@ -26,6 +28,24 @@ Sec-Fetch-Dest: document
 Referer: http://localhost:8081/upload
 Accept-Encoding: gzip, deflate, br
 Accept-Language: en-US,en;q=0.9
+
+------WebKitFormBoundaryohNq0PAELV5YFbkJ
+Content-Disposition: form-data; name="fileUpload"; filename="test.sh"
+Content-Type: text/x-sh
+
+#!/bin/bash
+for i in {1..100}; do
+    curl -s -o /dev/null http://localhost:8080/ &
+done
+------WebKitFormBoundaryohNq0PAELV5YFbkJ--
+
+
+
+POST /upload HTTP/1.1
+Host: localhost:8081
+Connection: keep-alive
+Content-Length: 274
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohNq0PAELV5YFbkJ
 
 ------WebKitFormBoundaryohNq0PAELV5YFbkJ
 Content-Disposition: form-data; name="fileUpload"; filename="test.sh"

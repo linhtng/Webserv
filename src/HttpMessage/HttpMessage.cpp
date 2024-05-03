@@ -48,6 +48,38 @@ const std::unordered_map<HttpStatusCode, std::string> HttpMessage::_statusCodeMe
 	{GATEWAY_TIMEOUT, "Gateway Timeout"},
 	{HTTP_VERSION_NOT_SUPPORTED, "HTTP Version Not Supported"}};
 
+const std::unordered_map<std::string, ContentType> HttpMessage::_contentTypes =
+	{
+		{"text/plain", ContentType::TEXT_PLAIN},
+		{"text/html", ContentType::TEXT_HTML},
+		{"text/css", ContentType::TEXT_CSS},
+		{"text/javascript", ContentType::TEXT_JAVASCRIPT},
+		{"application/json", ContentType::APPLICATION_JSON},
+		{"application/xml", ContentType::APPLICATION_XML},
+		{"application/pdf", ContentType::APPLICATION_PDF},
+		{"application/zip", ContentType::APPLICATION_ZIP},
+		{"application/octet-stream", ContentType::APPLICATION_OCTET_STREAM},
+		{"image/jpeg", ContentType::IMAGE_JPEG},
+		{"image/png", ContentType::IMAGE_PNG},
+		{"image/gif", ContentType::IMAGE_GIF},
+		{"image/svg+xml", ContentType::IMAGE_SVG},
+		{"image/webp", ContentType::IMAGE_WEBP},
+		{"image/x-icon", ContentType::IMAGE_ICO},
+		{"image/bmp", ContentType::IMAGE_BMP},
+		{"image/tiff", ContentType::IMAGE_TIFF},
+		{"audio/mpeg", ContentType::AUDIO_MPEG},
+		{"audio/ogg", ContentType::AUDIO_OGG},
+		{"audio/wav", ContentType::AUDIO_WAV},
+		{"audio/webm", ContentType::AUDIO_WEBM},
+		{"video/mp4", ContentType::VIDEO_MP4},
+		{"video/ogg", ContentType::VIDEO_OGG},
+		{"video/webm", ContentType::VIDEO_WEBM},
+		{"video/mpeg", ContentType::VIDEO_MPEG},
+		{"video/quicktime", ContentType::VIDEO_QUICKTIME},
+		{"video/x-msvideo", ContentType::VIDEO_AVI},
+		{"multipart/form-data", ContentType::MULTIPART_FORM_DATA},
+		{"application/x-www-form-urlencoded", ContentType::APPLICATION_X_WWW_FORM_URLENCODED}};
+
 HttpMessage::HttpMessage(ConfigData const &config,
 						 HttpStatusCode statusCode,
 						 HttpMethod method,
@@ -55,6 +87,7 @@ HttpMessage::HttpMessage(ConfigData const &config,
 						 ConnectionValue connection,
 						 int httpVersionMajor,
 						 int httpVersionMinor,
+						 std::string boundary,
 						 size_t contentLength,
 						 bool chunked)
 	: _config(config),
@@ -64,6 +97,7 @@ HttpMessage::HttpMessage(ConfigData const &config,
 	  _connection(connection),
 	  _httpVersionMajor(httpVersionMajor),
 	  _httpVersionMinor(httpVersionMinor),
+	  _boundary(boundary),
 	  _contentLength(contentLength),
 	  _chunked(chunked)
 {
@@ -124,7 +158,12 @@ bool HttpMessage::isChunked() const
 	return this->_chunked;
 }
 
-std::string HttpMessage::getContentType() const
+ContentType HttpMessage::getContentType() const
 {
 	return this->_contentType;
+}
+
+std::string HttpMessage::getBoundary() const
+{
+	return this->_boundary;
 }

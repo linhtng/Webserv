@@ -36,3 +36,15 @@ bool FileSystemUtils::isFile(const std::string &target)
 	}
 	return S_ISREG(path_stat.st_mode);
 }
+
+void FileSystemUtils::saveFile(std::string savePath, std::vector<std::byte> body)
+{
+	std::ofstream fileStream(savePath, std::ios::binary);
+	if (!fileStream)
+	{
+		std::cerr << "Failed to open file: " << savePath << std::endl;
+		throw std::runtime_error("Failed to open file: " + savePath);
+	}
+	fileStream.write(reinterpret_cast<const char *>(body.data()), body.size());
+	fileStream.close();
+}

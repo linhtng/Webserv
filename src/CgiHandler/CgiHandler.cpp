@@ -6,13 +6,27 @@ CgiHandler::CgiHandler()
 
 CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
 {
-    setupCgiEnv(request, server);
     cgiExecutorPathname = server.getCgiExecutor();
     cgiBinDir = server.getCgiDir();
+    if (cgiExecutorPathname.empty() || cgiBinDir.empty())
+    {
+        throw std::runtime_error("Error: CGI executor and/or bin not found\n");
+    }
+    setupCgiEnv(request, server);
+    cgiOutput = "";
+    messageBody = request.getBody();
+    messageBodyStr.reserve(messageBody.size());
+    for (const auto &byte : messageBody)
+    {
+        messageBodyStr.push_back(static_cast<char>(byte));
+    }
+    // std::cout << "messageBodyStr: " << messageBodyStr << std::endl;
+    // printEnv();
 }
 
 CgiHandler::~CgiHandler()
 {
+    closeCgiPipes();
 }
 
 void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
@@ -52,6 +66,7 @@ void CgiHandler::createCgiProcess()
 {
     if (pipe(dataToCgiPipe) == -1 || pipe(dataFromCgiPipe) == -1)
     {
+        closeCgiPipes();
         throw std::runtime_error("Error: pipe() failed");
     }
     pid_t pid = fork();
@@ -62,29 +77,53 @@ void CgiHandler::createCgiProcess()
     }
     if (pid == 0) // child process
     {
-        // close unused pipe ends
-        // close(dataToCgiPipe[WRITE_END]);
-        // close(dataFromCgiPipe[READ_END]);
-
         // redirect stdin and stdout
         dup2(dataToCgiPipe[READ_END], STDIN_FILENO);
         dup2(dataFromCgiPipe[WRITE_END], STDOUT_FILENO);
+
+        // write message body to cgi process's stdin
+        write(dataToCgiPipe[WRITE_END], messageBodyStr.c_str(), messageBodyStr.size());
 
         closeCgiPipes();
 
         executeCgiScript();
     }
     // parent process
-    close(dataToCgiPipe[READ_END]);
-    close(dataFromCgiPipe[WRITE_END]);
+    else if (pid > 0)
+    {
+        close(dataToCgiPipe[WRITE_END]);
+        close(dataFromCgiPipe[WRITE_END]);
+        readCgiOutput();
+        closeCgiPipes();
+    }
+}
+
+void CgiHandler::readCgiOutput()
+{
+    char buffer[CGI_OUTPUT_BUFFER_SIZE];
+    ssize_t bytesRead;
+    std::stringstream ss;
+    while ((bytesRead = read(dataFromCgiPipe[READ_END], buffer, sizeof(buffer))) > 0)
+    {
+        ss.write(buffer, bytesRead);
+    }
+    cgiOutput = ss.str();
+    std::cout << "cgiOutput: " << cgiOutput << std::endl;
+}
+
+void CgiHandler::closePipeEnd(int pipeFd)
+{
+    if (pipeFd == -1)
+        return;
+    close(pipeFd);
 }
 
 void CgiHandler::closeCgiPipes()
 {
-    close(dataToCgiPipe[READ_END]);
-    close(dataToCgiPipe[WRITE_END]);
-    close(dataFromCgiPipe[READ_END]);
-    close(dataFromCgiPipe[WRITE_END]);
+    closePipeEnd(dataToCgiPipe[READ_END]);
+    closePipeEnd(dataToCgiPipe[WRITE_END]);
+    closePipeEnd(dataFromCgiPipe[READ_END]);
+    closePipeEnd(dataFromCgiPipe[WRITE_END]);
 }
 
 void printCharArr(char **arr)
@@ -112,7 +151,7 @@ void CgiHandler::executeCgiScript()
     /* setup char *const argv[] for execve */
     std::vector<const char *> cgiArgVec;
     cgiArgVec.push_back(cgiExecutorPathname.c_str());
-    cgiArgVec.push_back(envMap["PATH_TRANSLATED"].c_str());
+    cgiArgVec.push_back(envMap["PATH_INFO"].c_str());
     cgiArgVec.push_back(nullptr);
     char **cgiArgv = const_cast<char **>(cgiArgVec.data());
     // printCharArr(cgiArgv); // Debug
@@ -130,4 +169,11 @@ std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::strin
     }
     cgiEnv.push_back(nullptr);
     return cgiEnv;
+}
+
+/* Getters */
+
+std::string CgiHandler::getCgiOutput()
+{
+    return cgiOutput;
 }
