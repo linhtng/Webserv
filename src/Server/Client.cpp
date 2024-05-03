@@ -21,17 +21,17 @@ size_t const &Client::getBytesSent() const
 	return (_bytesSent);
 }
 
-void Client::createRequest(std::string const &request_header, ConfigData const &config)
+void Client::createRequest(std::string const &request_header, std::vector<ConfigData> const &configs)
 {
 	removeRequest();
-	request = std::make_unique<Request>(config, request_header); // Create a Request object with the provided header
+	request = std::make_unique<Request>(configs, request_header); // Create a Request object with the provided header
 	setChunkSize(0);
 }
 
-void Client::createErrorRequest(ConfigData const &config, HttpStatusCode statusCode)
+void Client::createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode)
 {
 	removeRequest();
-	request = std::make_unique<Request>(config, statusCode); // Create a Request object with the provided header
+	request = std::make_unique<Request>(configs, statusCode); // Create a Request object with the provided header
 }
 
 void Client::createResponse()

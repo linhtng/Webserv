@@ -51,9 +51,11 @@ public:
 
 private:
 	int server_fd;
-	ConfigData config;
+	std::vector<ConfigData> configs;
 	std::unordered_map<int, std::unique_ptr<Client>> clients;
 	struct sockaddr_in address;
+	std::string host;
+	int port;
 
 	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
 	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
@@ -73,10 +75,12 @@ public:
 	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
 
 	int const &getServerFd() const;
-	ConfigData const &getConfig() const;
+	std::string const &getHost();
+	int const &getPort();
 	unsigned short int const &getClientPortNumber(int const &client_fd);
 	in_addr const &getClientIPv4Address(int const &client_fd);
 
+	void appendConfig(ConfigData const& config);
 	void removeClient(int const &client_fd);
 
 	class SocketCreationException : public std::exception

@@ -40,7 +40,7 @@ void ConfigParser::extractServerConfigs()
         ConfigData serverConfig(configBlock[i]);
         servers.push_back(serverConfig);
     }
-    checkForDuplicateHostAndPort();
+    // checkForDuplicateHostAndPort();
     checkForDuplicateNameAndPort();
 }
 

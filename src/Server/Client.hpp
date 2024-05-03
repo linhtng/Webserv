@@ -32,10 +32,10 @@ public:
 	Client(struct sockaddr_in client_address, socklen_t client_addrlen);
 	~Client();
 
-	void createRequest(std::string const &request_header, ConfigData const &config);
+	void createRequest(std::string const &request_header, std::vector<ConfigData> const &configs);
 	void createResponse();
 
-	void createErrorRequest(ConfigData const &config, HttpStatusCode statusCode);
+	void createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode);
 
 	void removeRequest();
 	void removeResponse();

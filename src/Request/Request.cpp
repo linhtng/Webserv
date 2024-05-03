@@ -447,8 +447,8 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	parseHeaders();
 }
 
-Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
-	: HttpMessage(config),
+Request::Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders)
+	: HttpMessage(configs.front()),
 	  _bodyExpected(false),
 	  _port(0)
 {
@@ -471,7 +471,36 @@ Request::Request(const ConfigData &config, const std::string &requestLineAndHead
 	}
 }
 
-Request::Request(const ConfigData &config, HttpStatusCode statusCode)
-	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0)
+Request::Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode)
+	: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0)
 {
 }
+
+// Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
+// 	: HttpMessage(config),
+// 	  _bodyExpected(false),
+// 	  _port(0)
+// {
+// 	try
+// 	{
+// 		processRequest(requestLineAndHeaders);
+// 	}
+// 	catch (const BadRequestException &e)
+// 	{
+// 		std::cout << "EXCEPTION: " << e.what() << std::endl;
+// 		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+// 		{
+// 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+// 		}
+// 	}
+// 	catch (const std::exception &e)
+// 	{
+// 		std::cout << "EXCEPTION: " << e.what() << std::endl;
+// 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+// 	}
+// }
+
+// Request::Request(const ConfigData &config, HttpStatusCode statusCode)
+// 	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0)
+// {
+// }

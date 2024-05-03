@@ -27,6 +27,7 @@ private:
 	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;
 
 	void createServers();
+	const std::pair<const int, std::unique_ptr<Server>> *findServer(ConfigData const &config) const;
 	void startServerLoop();
 	void handlePoll();
 	void checkClientTimeout(int const &ready);
@@ -38,6 +39,7 @@ public:
 	void initServer(const std::vector<ConfigData> &parsedConfigs);
 	int runServer();
 	void cleanUpForServerShutdown(HttpStatusCode const &statusCode);
+	
 
 	class PollException : public std::exception
 	{

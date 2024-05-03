@@ -4,8 +4,11 @@
 #include <fstream>
 
 Server::Server(ConfigData &config)
-	: server_fd(-1), config(config)
+	: server_fd(-1)
 {
+	configs.push_back(config);
+	host = config.getServerHost();
+	port = config.getServerPort();
 	std::cout << YELLOW << "constructor of server is called" << RESET << std::endl;
 }
 
@@ -31,10 +34,10 @@ void Server::setUpServerSocket()
 		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 			throw SocketSetNonBlockingException();
 		address.sin_family = AF_INET;
-		std::cout << "server port: " << config.getServerPort() << std::endl;
-		address.sin_port = htons(config.getServerPort());
-		std::cout << "server host: " << config.getServerHost() << std::endl;
-		address.sin_addr.s_addr = inet_addr(config.getServerHost().c_str());
+		std::cout << "server port: " << port << std::endl;
+		address.sin_port = htons(port);
+		std::cout << "server host: " << host << std::endl;
+		address.sin_addr.s_addr = inet_addr(host.c_str());
 		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
 			throw SocketBindingException();
 		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
@@ -58,17 +61,15 @@ int Server::acceptNewConnection()
 								&client_addrlen);
 	if (client_fd < 0)
 	{
-		Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to accept socket",
-								config.getServerHost().c_str(),
-								config.getServerPort());
+		Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to accept socket", host.c_str(), port);
 		return (client_fd);
 	}
 	clients[client_fd] = std::make_unique<Client>(client_address, client_addrlen);
 	Logger::log(e_log_level::INFO, CLIENT, "New connection from Client %s:%d to Server %s:%d",
 							inet_ntoa(getClientIPv4Address(client_fd)),
 							ntohs(getClientPortNumber(client_fd)),
-							config.getServerHost().c_str(),
-							config.getServerPort());
+							host.c_str(),
+							port);
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 		throw SocketSetNonBlockingException();
 	return (client_fd);
@@ -90,13 +91,13 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 		{
 			clients[client_fd]->setIsConnectionClose(true);
 			if (request_status == SERVER_ERROR)
-				clients[client_fd]->createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
+				clients[client_fd]->createErrorRequest(configs, HttpStatusCode::INTERNAL_SERVER_ERROR);
 			else
 			{
 				if (request_header.size() == MAX_HEADER_LENGTH)
-					clients[client_fd]->createErrorRequest(config, HttpStatusCode::PAYLOAD_TOO_LARGE);
+					clients[client_fd]->createErrorRequest(configs, HttpStatusCode::PAYLOAD_TOO_LARGE);
 				else
-					clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+					clients[client_fd]->createErrorRequest(configs, HttpStatusCode::BAD_REQUEST);
 			}
 			clients[client_fd]->createResponse(); // create response object
 			return (READY_TO_WRITE);
@@ -104,7 +105,7 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 
 		std::cout << YELLOW << "--------------request_header---------------" << std::endl << request_header << RESET << std::endl;
 
-		clients[client_fd]->createRequest(request_header, this->config); // create request object
+		clients[client_fd]->createRequest(request_header, configs); // create request object
 		Logger::log(e_log_level::INFO, CLIENT, "Request from Client %s:%d - Method: %d, Target: %s",
 					inet_ntoa(getClientIPv4Address(client_fd)),
 					ntohs(getClientPortNumber(client_fd)),
@@ -164,12 +165,12 @@ Server::RequestStatus Server::receiveRequest(int const &client_fd)
 	if (request_status == BAD_REQUEST)
 	{
 		clients[client_fd]->setIsConnectionClose(true);
-		clients[client_fd]->createErrorRequest(config, HttpStatusCode::BAD_REQUEST);
+		clients[client_fd]->createErrorRequest(configs, HttpStatusCode::BAD_REQUEST);
 	}
 	else if (request_status == SERVER_ERROR)
 	{
 		clients[client_fd]->setIsConnectionClose(true);
-		clients[client_fd]->createErrorRequest(config, HttpStatusCode::INTERNAL_SERVER_ERROR);
+		clients[client_fd]->createErrorRequest(configs, HttpStatusCode::INTERNAL_SERVER_ERROR);
 	}
 	clients[client_fd]->createResponse(); // create response object
 	return (READY_TO_WRITE);
@@ -207,8 +208,8 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 		else
 		{
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						config.getServerHost().c_str(),
-						config.getServerPort(),
+						host.c_str(),
+						port,
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -259,8 +260,8 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		else
 		{
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						config.getServerHost().c_str(),
-						config.getServerPort(),
+						host.c_str(),
+						port,
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -297,8 +298,8 @@ Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
 		else
 		{
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						config.getServerHost().c_str(),
-						config.getServerPort(),
+						host.c_str(),
+						port,
 						inet_ntoa(getClientIPv4Address(client_fd)),
 						ntohs(getClientPortNumber(client_fd)));
 			return (SERVER_ERROR);
@@ -450,8 +451,8 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 						ntohs(getClientPortNumber(client_fd)));
 		else
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to send response to Client %s:%d",
-				config.getServerHost().c_str(),
-				config.getServerPort(),
+				host.c_str(),
+				port,
 				inet_ntoa(getClientIPv4Address(client_fd)),
 				ntohs(getClientPortNumber(client_fd)));
 		return (RESPONSE_DISCONNECT_CLIENT);
@@ -460,7 +461,7 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 
 void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd)
 {
-	clients[client_fd]->createErrorRequest(config, statusCode);
+	clients[client_fd]->createErrorRequest(configs, statusCode);
 	clients[client_fd]->createResponse();
 	sendResponse(client_fd);
 }
@@ -470,9 +471,14 @@ int const &Server::getServerFd() const
 	return (server_fd);
 }
 
-ConfigData const &Server::getConfig() const
+std::string const &Server::getHost()
 {
-	return (config);
+	return (host);
+}
+
+int const &Server::getPort()
+{
+	return (port);
 }
 
 unsigned short int const &Server::getClientPortNumber(int const &client_fd)
@@ -483,6 +489,11 @@ unsigned short int const &Server::getClientPortNumber(int const &client_fd)
 in_addr const &Server::getClientIPv4Address(int const &client_fd)
 {
 	return (clients[client_fd]->getIPv4Address());
+}
+
+void Server::appendConfig(ConfigData const &config)
+{
+	configs.push_back(config);
 }
 
 void Server::removeClient(int const &client_fd)

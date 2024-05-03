@@ -53,16 +53,40 @@ void ServerManager::createServers()
 {
 	for (ConfigData &config : serverConfigs)
 	{
-		std::unique_ptr<Server> server = std::make_unique<Server>(config);
-		server->setUpServerSocket(); // set up each server socket
-		Logger::log(e_log_level::INFO, SERVER, "Server %s created - Host: %s, Port: %d",
-					config.getServerName().c_str(),
-					config.getServerHost().c_str(),
-					config.getServerPort());
-		int serverFd = server->getServerFd();
-		servers[serverFd] = std::move(server);	  // insert server into map
-		pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
+		const std::pair<const int, std::unique_ptr<Server>> *serverPtr = findServer(config);
+		
+		if (serverPtr == nullptr) //if it is new server
+		{
+			std::unique_ptr<Server> server = std::make_unique<Server>(config);
+			server->setUpServerSocket(); // set up each server socket
+			Logger::log(e_log_level::INFO, SERVER, "Server created - Host: %s, Port: %d, Server Name: %s",
+						config.getServerHost().c_str(),
+						config.getServerPort(),
+						config.getServerName().c_str());
+			int serverFd = server->getServerFd();
+			servers[serverFd] = std::move(server);	  // insert server into map
+			pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
+		}
+		else
+		{
+			serverPtr->second->appendConfig(config);
+			Logger::log(e_log_level::INFO, SERVER, "Configuration of Server Name %s added to Server %s:%d",
+				config.getServerName().c_str(),
+				config.getServerHost().c_str(),
+				config.getServerPort());
+		}
 	}
+}
+
+const std::pair<const int, std::unique_ptr<Server>> *ServerManager::findServer(ConfigData const &config) const
+{
+	for (const auto& server : servers)
+	{
+		if (server.second->getHost() == config.getServerHost()
+				&& server.second->getPort() == config.getServerPort())
+		return &server;
+	}
+	return nullptr;
 }
 
 // start the main server loop
@@ -214,9 +238,7 @@ void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 		close(fd.fd);
 	for (auto &server : servers)
 	{
-		Logger::log(e_log_level::INFO, SERVER, "Server %s:%d shut down",
-								server.second->getConfig().getServerHost().c_str(),
-								server.second->getConfig().getServerPort());
+		Logger::log(e_log_level::INFO, SERVER, "Server %s:%d shut down", server.second->getHost().c_str(), server.second->getPort());
 		server.second.reset();
 	}
 }
