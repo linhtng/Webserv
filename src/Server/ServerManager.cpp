@@ -1,12 +1,12 @@
 #include "ServerManager.hpp"
 
 ServerManager *serverManagerPtr = nullptr;
-volatile sig_atomic_t shutdown_flag = 0; // flag for shutting down the server
+volatile sig_atomic_t shutdownFlag = 0; // flag for shutting down the server
 
 void interruptHandler(int signum)
 {
 	(void)signum;
-	shutdown_flag = 1;
+	shutdownFlag = 1;
 }
 
 void segfaultHandler(int signum)
@@ -26,7 +26,6 @@ void ServerManager::initServer(const std::vector<ConfigData> &sparsedConfigs)
 	serverConfigs = sparsedConfigs;
 }
 
-// run the server
 int ServerManager::runServer()
 {
 	serverManagerPtr = this;
@@ -38,7 +37,7 @@ int ServerManager::runServer()
 		createServers();
 		startServerLoop();
 		Logger::log(e_log_level::INFO, SERVER, "Interrupt signal received");
-		serverManagerPtr->cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
+		cleanUpForServerShutdown(HttpStatusCode::INTERNAL_SERVER_ERROR);
 		return EXIT_SUCCESS;
 	}
 	catch (std::exception &e)
@@ -53,38 +52,37 @@ void ServerManager::createServers()
 {
 	for (ConfigData &config : serverConfigs)
 	{
-		const std::pair<const int, std::unique_ptr<Server>> *serverPtr = findServer(config);
-		
-		if (serverPtr == nullptr) //if it is new server
+		const std::pair<const int, std::unique_ptr<Server>> *serverPtr = findServer(config.getServerHost(), config.getServerPort());
+
+		if (serverPtr == nullptr) // if it is a new server
 		{
 			std::unique_ptr<Server> server = std::make_unique<Server>(config);
-			server->setUpServerSocket(); // set up each server socket
+			server->setUpServerSocket();
 			Logger::log(e_log_level::INFO, SERVER, "Server created - Host: %s, Port: %d, Server Name: %s",
-						config.getServerHost().c_str(),
-						config.getServerPort(),
-						config.getServerName().c_str());
+									server->getHost().c_str(),
+									server->getPort(),
+									config.getServerName().c_str());
 			int serverFd = server->getServerFd();
-			servers[serverFd] = std::move(server);	  // insert server into map
+			servers[serverFd] = std::move(server);		// insert server into map
 			pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
 		}
 		else
 		{
 			serverPtr->second->appendConfig(config);
 			Logger::log(e_log_level::INFO, SERVER, "Configuration of Server Name %s added to Server %s:%d",
-				config.getServerName().c_str(),
-				config.getServerHost().c_str(),
-				config.getServerPort());
+									config.getServerName().c_str(),
+									config.getServerHost().c_str(),
+									config.getServerPort());
 		}
 	}
 }
 
-const std::pair<const int, std::unique_ptr<Server>> *ServerManager::findServer(ConfigData const &config) const
+const std::pair<const int, std::unique_ptr<Server>> *ServerManager::findServer(const std::string &host, const int &port) const
 {
-	for (const auto& server : servers)
+	for (const std::pair<const int, std::unique_ptr<Server>> &server : servers)
 	{
-		if (server.second->getHost() == config.getServerHost()
-				&& server.second->getPort() == config.getServerPort())
-		return &server;
+		if (server.second->getHost() == host && server.second->getPort() == port)
+			return &server;
 	}
 	return nullptr;
 }
@@ -92,37 +90,37 @@ const std::pair<const int, std::unique_ptr<Server>> *ServerManager::findServer(C
 // start the main server loop
 void ServerManager::startServerLoop()
 {
-	while (!shutdown_flag)
+	while (!shutdownFlag)
 	{
 		// std::cout << "before poll" << std::endl;
 		handlePoll();
 		// std::cout << "after poll" << std::endl;
-		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end() && !shutdown_flag; ++it) // loop through all pollfds to check which events have occurred
+		for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end() && !shutdownFlag; ++it) // loop through all pollfds to check which events have occurred
 		{
 			// std::cout << "poll loop fd:" << it->fd << std::endl;
 			if (!it->revents)
 			{
-				std::cout << "no revent" << std::endl;
+				// std::cout << "no revent" << std::endl;
 				continue;
 			}
 			else if (it->revents & POLLIN)
 			{
-				std::cout << "POLLIN" << std::endl;
+				// std::cout << "POLLIN" << std::endl;
 				handleReadyToRead(it);
 			}
 			else if (it->revents & POLLOUT)
 			{
-				std::cout << "POLLOUT" << std::endl;
+				// std::cout << "POLLOUT" << std::endl;
 				handleReadyToWrite(it);
 			}
-			else if (it->revents & POLLHUP && client_to_server_map.find(it->fd) != client_to_server_map.end())
+			else if (it->revents & POLLHUP && clientToServerMap.find(it->fd) != clientToServerMap.end())
 			{
 				// std::cout << "POLLHUP on client" << std::endl;
-				int client_fd = it->fd;
-				int server_fd = client_to_server_map[client_fd];
-				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-							inet_ntoa(servers[server_fd]->getClientIPv4Address(client_fd)),
-							ntohs(servers[server_fd]->getClientPortNumber(client_fd)));
+				int clientFd = it->fd;
+				int serverFd = clientToServerMap[clientFd];
+				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnect",
+										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
 				handleClientDisconnection(it);
 			}
 			else
@@ -134,12 +132,12 @@ void ServerManager::startServerLoop()
 // copy list to vector for poll, and then move vector back to list
 void ServerManager::handlePoll()
 {
-	std::vector<pollfd> pollfds_tmp(pollfds.begin(), pollfds.end()); // create a vector to hold the pollfds temporarily
+	std::vector<pollfd> pollfdsTmp(pollfds.begin(), pollfds.end()); // create a vector to hold the pollfds temporarily
 
-	int ready = poll(pollfds_tmp.data(), pollfds_tmp.size(), TIMEOUT); // call poll using the vector's data
+	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), TIMEOUT); // call poll using the vector's data
 
 	pollfds.clear();
-	pollfds.insert(pollfds.end(), pollfds_tmp.begin(), pollfds_tmp.end()); // move the contents back from the vector
+	pollfds.insert(pollfds.end(), pollfdsTmp.begin(), pollfdsTmp.end()); // move the contents back from the vector
 
 	// std::cout << "fds: ";
 	// for (auto &pollfd : pollfds)
@@ -156,22 +154,22 @@ void ServerManager::handlePoll()
 		checkClientTimeout(ready);
 }
 
-// disconnect client socket if it timeout or poll timeout
+// disconnect client socket if the client timeout or poll timeout
 void ServerManager::checkClientTimeout(int const &ready)
 {
 	for (std::list<pollfd>::iterator it = pollfds.begin(); it != pollfds.end(); ++it)
 	{
-		if (client_to_server_map.find(it->fd) != client_to_server_map.end())
+		if (clientToServerMap.find(it->fd) != clientToServerMap.end())
 		{
-			std::chrono::duration<double> elapsed_seconds = std::chrono::steady_clock::now() - client_last_active_time[it->fd];
-			if (ready == 0 || elapsed_seconds.count() >= TIMEOUT / 1000) // if poll timeout or the client timeout
+			std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - clientLastActiveTime[it->fd];
+			if (ready == 0 || elapsedSeconds.count() >= TIMEOUT / 1000) // if poll timeout or the client timeout
 			{
-				int client_fd = it->fd;
-				int server_fd = client_to_server_map[client_fd];
+				int clientFd = it->fd;
+				int serverFd = clientToServerMap[clientFd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-							inet_ntoa(servers[server_fd]->getClientIPv4Address(client_fd)),
-							ntohs(servers[server_fd]->getClientPortNumber(client_fd)));
-				servers[server_fd]->createAndSendErrorResponse(REQUEST_TIMEOUT, client_fd);
+										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
+				servers[serverFd]->createAndSendErrorResponse(REQUEST_TIMEOUT, clientFd);
 				handleClientDisconnection(it);
 			}
 		}
@@ -182,61 +180,60 @@ void ServerManager::handleReadyToRead(std::list<pollfd>::iterator &it)
 {
 	if (servers.find(it->fd) != servers.end()) // if the fd is server fd, accept new connection
 	{
-		int server_fd = it->fd;
-		int client_fd = servers[server_fd]->acceptNewConnection();
-		if (client_fd >= 0)
+		int serverFd = it->fd;
+		int clientFd = servers[serverFd]->acceptNewConnection();
+		if (clientFd >= 0)
 		{
-			pollfds.push_back({client_fd, POLLIN, 0});	 // add the new fd to poll fd
-			client_to_server_map[client_fd] = server_fd; // add client fd to client to server map
-			client_last_active_time[client_fd] = std::chrono::steady_clock::now();
+			pollfds.push_back({clientFd, POLLIN, 0}); // add the new client fd to poll fd
+			clientToServerMap[clientFd] = serverFd;
+			clientLastActiveTime[clientFd] = std::chrono::steady_clock::now();
 		}
 	}
-	else // if the fd is client fd, parse and build response
+	else // if the fd is client fd, parse the request and build response
 	{
-		int client_fd = it->fd;
-		int server_fd = client_to_server_map[client_fd];
-		Server::RequestStatus request_status = servers[server_fd]->receiveRequest(client_fd);
-		client_last_active_time[client_fd] = std::chrono::steady_clock::now();
-		if (request_status == Server::REQUEST_DISCONNECT_CLIENT)
+		int clientFd = it->fd;
+		int serverFd = clientToServerMap[clientFd];
+		Server::RequestStatus requestStatus = servers[serverFd]->receiveRequest(clientFd); // TODO: check the status only have REQUEST_DISCONNECT_CLIENT and READY_TO_WRITE and IN_CHUNK
+		clientLastActiveTime[clientFd] = std::chrono::steady_clock::now();
+		if (requestStatus == Server::READY_TO_WRITE)
+			*it = {clientFd, POLLOUT, 0};
+		else if (requestStatus == Server::REQUEST_DISCONNECT_CLIENT)
 			handleClientDisconnection(it);
-		else if (request_status == Server::READY_TO_WRITE)
-			*it = {client_fd, POLLOUT, 0};
 	}
 }
 
 void ServerManager::handleReadyToWrite(std::list<pollfd>::iterator &it)
 {
-	int client_fd = it->fd;
-	int server_fd = client_to_server_map[client_fd];
-	Server::ResponseStatus response_status = servers[server_fd]->sendResponse(client_fd);
-	client_last_active_time[client_fd] = std::chrono::steady_clock::now();
-	if (response_status == Server::KEEP_ALIVE)
-		*it = {client_fd, POLLIN, 0};
-	else if (response_status == Server::RESPONSE_DISCONNECT_CLIENT)
+	int clientFd = it->fd;
+	int serverFd = clientToServerMap[clientFd];
+	Server::ResponseStatus responseStatus = servers[serverFd]->sendResponse(clientFd); // TODO: check the status only have REQUEST_DISCONNECT_CLIENT and KEEP_ALIVE and IN_CHUNK
+	clientLastActiveTime[clientFd] = std::chrono::steady_clock::now();
+	if (responseStatus == Server::KEEP_ALIVE)
+		*it = {clientFd, POLLIN, 0};
+	else if (responseStatus == Server::RESPONSE_DISCONNECT_CLIENT)
 		handleClientDisconnection(it);
 }
 
-// if connection has been closed by the client, remove the client, close connection and remove fd
+// if client's connection is closed, remove the client, close fd and remove fd
 void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 {
-	int client_fd = it->fd;
-	int server_fd = client_to_server_map[client_fd];
-	servers[server_fd]->removeClient(client_fd);
-	close(client_fd);
-	client_to_server_map.erase(client_fd);
-	client_last_active_time.erase(client_fd);
+	int clientFd = it->fd;
+	int serverFd = clientToServerMap[clientFd];
+	servers[serverFd]->removeClient(clientFd);
+	close(clientFd);
+	clientToServerMap.erase(clientFd);
+	clientLastActiveTime.erase(clientFd);
 	it = pollfds.erase(it);
-	it--;
+	it--; // TODO : check it
 }
 
-// if the server shutdown, send error response to all clients and close all clients
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
 {
-	for (auto &pair : client_to_server_map)
-		servers[pair.second]->createAndSendErrorResponse(statusCode, pair.first);
+	for (const std::pair<const int, int> &clientToServerPair : clientToServerMap) // send error response to all clients
+		servers[clientToServerPair.second]->createAndSendErrorResponse(statusCode, clientToServerPair.first);
 	for (const pollfd &fd : pollfds) // close all pollfds
 		close(fd.fd);
-	for (auto &server : servers)
+	for (std::pair<const int, std::unique_ptr<Server>> &server : servers)
 	{
 		Logger::log(e_log_level::INFO, SERVER, "Server %s:%d shut down", server.second->getHost().c_str(), server.second->getPort());
 		server.second.reset();

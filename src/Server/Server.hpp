@@ -2,8 +2,8 @@
 #define SERVER_HPP
 
 #define BACKLOG 512
-#define BUFFER_SIZE 200000
-#define MAX_HEADER_LENGTH 8192
+#define BUFFER_SIZE 100000
+#define MAX_REQUEST_HEADER_LENGTH 8192
 
 #include <vector>
 #include <unordered_map>
@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <algorithm>
 #include <unistd.h>
-#include <regex>
 #include <memory>
 #include "Client.hpp"
 #include "../Request/Request.hpp"
@@ -38,8 +37,8 @@ public:
 		READY_TO_WRITE,
 		PARSED_CHUNK_SIZE,
 		BAD_REQUEST,
-		BODY_EXPECTED,
-		SERVER_ERROR
+		SERVER_ERROR,
+		PAYLOAD_TOO_LARGE
 	};
 
 	enum ResponseStatus
@@ -50,18 +49,20 @@ public:
 	};
 
 private:
-	int server_fd;
+	int serverFd;
 	std::vector<ConfigData> configs;
 	std::unordered_map<int, std::unique_ptr<Client>> clients;
 	struct sockaddr_in address;
 	std::string host;
 	int port;
 
-	RequestStatus formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf);
-	RequestStatus formRequestBodyWithContentLength(int const &client_fd);
-	RequestStatus formRequestBodyWithChunk(int const &client_fd);
-	RequestStatus processChunkData(int const &client_fd);
-	RequestStatus extractChunkSize(int const &client_fd);
+	RequestStatus receiveRequestHeader(int const &clientFd);
+	RequestStatus formRequestHeader(int const &clientFd, std::string &requestHeader, std::vector<std::byte> &requestBodyBuf);
+	RequestStatus receiveRequestBody(int const &clientFd);
+	RequestStatus formRequestBodyWithContentLength(int const &clientFd);
+	RequestStatus formRequestBodyWithChunk(int const &clientFd);
+	RequestStatus processChunkData(int const &clientFd);
+	RequestStatus extractChunkSize(int const &clientFd);
 	Server();
 
 public:
@@ -70,18 +71,18 @@ public:
 
 	void setUpServerSocket();
 	int acceptNewConnection();
-	RequestStatus receiveRequest(int const &client_fd);
-	ResponseStatus sendResponse(int const &client_fd);
-	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd);
+	RequestStatus receiveRequest(int const &clientFd);
+	ResponseStatus sendResponse(int const &clientFd);
+	void createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &clientFd);
 
 	int const &getServerFd() const;
 	std::string const &getHost();
 	int const &getPort();
-	unsigned short int const &getClientPortNumber(int const &client_fd);
-	in_addr const &getClientIPv4Address(int const &client_fd);
+	unsigned short int const &getClientPortNumber(int const &clientFd);
+	in_addr const &getClientIPv4Address(int const &clientFd);
 
-	void appendConfig(ConfigData const& config);
-	void removeClient(int const &client_fd);
+	void appendConfig(ConfigData const &config);
+	void removeClient(int const &clientFd);
 
 	class SocketCreationException : public std::exception
 	{
@@ -108,12 +109,6 @@ public:
 	};
 
 	class SocketSetOptionException : public std::exception
-	{
-	public:
-		virtual const char *what() const throw();
-	};
-
-	class AcceptException : public std::exception
 	{
 	public:
 		virtual const char *what() const throw();

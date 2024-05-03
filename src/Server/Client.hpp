@@ -14,25 +14,25 @@ class Client
 
 private:
 	struct sockaddr_in address;
-	socklen_t addrlen;
 	std::unique_ptr<Request> request;
 	std::unique_ptr<Response> response;
-	bool is_connection_close;
-	Client();
+	bool isConnectionClose;
 
 	// Helper properties for sending
-	size_t _bytesSent;
+	size_t bytesSent;
 
 	// Helper properties for parsing
-	size_t _chunkSize;
-	std::vector<std::byte> _bodyBuf;
-	size_t _bytesToReceive;
+	size_t chunkSize;
+	std::vector<std::byte> bodyBuf;
+	size_t bytesToReceive;
+
+	Client();
 
 public:
-	Client(struct sockaddr_in client_address, socklen_t client_addrlen);
+	Client(struct sockaddr_in clientAddress);
 	~Client();
 
-	void createRequest(std::string const &request_header, std::vector<ConfigData> const &configs);
+	void createRequest(std::string const &requestHeader, std::vector<ConfigData> const &configs);
 	void createResponse();
 
 	void createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode);
@@ -68,7 +68,6 @@ public:
 	void appendToRequestBody(const std::vector<std::byte> &newBodyChunk);
 	void appendToRequestBody(char newBodyChunk[], const ssize_t &bytes);
 	void resizeRequestBody(const size_t &n);
-
 	std::vector<std::byte> getRequestBody() const;
 };
 

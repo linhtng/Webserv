@@ -1,14 +1,13 @@
 #include "Server.hpp"
-#include "../config_parser/ConfigParser.hpp"
-#include <cstring>
-#include <fstream>
 
-Server::Server(ConfigData &config)
-	: server_fd(-1)
+Server::Server(ConfigData &config) : serverFd(-1)
 {
 	configs.push_back(config);
 	host = config.getServerHost();
 	port = config.getServerPort();
+	address.sin_family = AF_INET;
+	address.sin_port = htons(port);
+	address.sin_addr.s_addr = inet_addr(host.c_str());
 	std::cout << YELLOW << "constructor of server is called" << RESET << std::endl;
 }
 
@@ -17,181 +16,156 @@ Server::~Server()
 	std::cout << YELLOW << "destructor of server is called" << RESET << std::endl;
 }
 
-// set up server socket
 void Server::setUpServerSocket()
 {
 	int opt;
 
 	opt = 1;
-	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // create socket file descriptor
+	if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // create socket file descriptor
 		throw SocketCreationException();
-	std::cout << "server_fd: " << server_fd << std::endl;
+	std::cout << "serverFd: " << serverFd << std::endl;
 	try
 	{
-		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
-					   sizeof(opt)) < 0)
+		if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
+									 sizeof(opt)) < 0)
 			throw SocketSetOptionException();
-		if (fcntl(server_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
+		if (fcntl(serverFd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
 			throw SocketSetNonBlockingException();
-		address.sin_family = AF_INET;
-		std::cout << "server port: " << port << std::endl;
-		address.sin_port = htons(port);
-		std::cout << "server host: " << host << std::endl;
-		address.sin_addr.s_addr = inet_addr(host.c_str());
-		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
+		if (bind(serverFd, (struct sockaddr *)&address, sizeof(address)) < 0) // bind the socket to the address and port number
 			throw SocketBindingException();
-		if (listen(server_fd, BACKLOG) < 0) // set server socket in passive mode
+		if (listen(serverFd, BACKLOG) < 0) // set server socket in passive mode
 			throw SocketListenException();
 	}
 	catch (std::exception &e)
 	{
-		close(server_fd);
+		close(serverFd);
 		throw;
 	}
 }
 
 int Server::acceptNewConnection()
 {
-	int client_fd;
+	int clientFd;
+	struct sockaddr_in clientAddress;
+	socklen_t clientAddrlen = sizeof(clientAddress);
 
-	struct sockaddr_in client_address;
-	socklen_t client_addrlen = sizeof(client_address);
-	client_fd = accept(server_fd,
-								(struct sockaddr *)&client_address,
-								&client_addrlen);
-	if (client_fd < 0)
+	clientFd = accept(serverFd, (struct sockaddr *)&clientAddress, &clientAddrlen);
+	if (clientFd < 0)
 	{
-		Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to accept socket", host.c_str(), port);
-		return (client_fd);
+		Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to accept client socket", host.c_str(), port);
+		return (clientFd);
 	}
-	clients[client_fd] = std::make_unique<Client>(client_address, client_addrlen);
+	clients[clientFd] = std::make_unique<Client>(clientAddress);
 	Logger::log(e_log_level::INFO, CLIENT, "New connection from Client %s:%d to Server %s:%d",
-							inet_ntoa(getClientIPv4Address(client_fd)),
-							ntohs(getClientPortNumber(client_fd)),
+							inet_ntoa(getClientIPv4Address(clientFd)),
+							ntohs(getClientPortNumber(clientFd)),
 							host.c_str(),
 							port);
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK, FD_CLOEXEC) < 0) // set socket to be nonblocking
+	{
+		createAndSendErrorResponse(HttpStatusCode::INTERNAL_SERVER_ERROR, clientFd);
+		close(clientFd);
 		throw SocketSetNonBlockingException();
-	return (client_fd);
+	}
+	return (clientFd);
 }
 
-Server::RequestStatus Server::receiveRequest(int const &client_fd)
+Server::RequestStatus Server::receiveRequest(int const &clientFd)
 {
-	RequestStatus request_status = BODY_EXPECTED;
+	RequestStatus requestStatus = clients[clientFd]->isNewRequest()
+																		? receiveRequestHeader(clientFd)
+																		: receiveRequestBody(clientFd);
 
-	if (clients[client_fd]->isNewRequest()) // if the request is not created yet, create the request with the request header
+	if (requestStatus == REQUEST_DISCONNECT_CLIENT || requestStatus == BODY_IN_CHUNK)
+		return (requestStatus);
+	else if (requestStatus == SERVER_ERROR || requestStatus == BAD_REQUEST || requestStatus == PAYLOAD_TOO_LARGE)
 	{
-		std::string request_header;
-		std::vector<std::byte> request_body_buf;
+		if (requestStatus == SERVER_ERROR)
+			clients[clientFd]->createErrorRequest(configs, HttpStatusCode::INTERNAL_SERVER_ERROR);
+		else if (requestStatus == BAD_REQUEST)
+			clients[clientFd]->createErrorRequest(configs, HttpStatusCode::BAD_REQUEST);
+		else if (requestStatus == PAYLOAD_TOO_LARGE)
+			clients[clientFd]->createErrorRequest(configs, HttpStatusCode::PAYLOAD_TOO_LARGE);
+		clients[clientFd]->setIsConnectionClose(true);
+	}
+	clients[clientFd]->createResponse();
+	return (READY_TO_WRITE);
+}
 
-		request_status = formRequestHeader(client_fd, request_header, request_body_buf);
-		if (request_status == REQUEST_DISCONNECT_CLIENT)
-			return request_status;
-		if (request_status == BAD_HEADER || request_status == SERVER_ERROR)
-		{
-			clients[client_fd]->setIsConnectionClose(true);
-			if (request_status == SERVER_ERROR)
-				clients[client_fd]->createErrorRequest(configs, HttpStatusCode::INTERNAL_SERVER_ERROR);
-			else
-			{
-				if (request_header.size() == MAX_HEADER_LENGTH)
-					clients[client_fd]->createErrorRequest(configs, HttpStatusCode::PAYLOAD_TOO_LARGE);
-				else
-					clients[client_fd]->createErrorRequest(configs, HttpStatusCode::BAD_REQUEST);
-			}
-			clients[client_fd]->createResponse(); // create response object
-			return (READY_TO_WRITE);
-		}
+// if the request is not created yet, create the request with the request header
+Server::RequestStatus Server::receiveRequestHeader(int const &clientFd)
+{
+	std::string requestHeader;
+	std::vector<std::byte> requestBodyBuf;
 
-		// std::cout << YELLOW << "--------------request_header---------------" << std::endl << request_header << RESET << std::endl;
+	RequestStatus requestStatus = formRequestHeader(clientFd, requestHeader, requestBodyBuf); // return HEADER_DELIMITER_FOUND or BAD_HEADER or REQUEST_DISCONNECT_CLIENT or SERVER_ERROR
+	if (requestStatus == REQUEST_DISCONNECT_CLIENT || requestStatus == SERVER_ERROR)
+		return (requestStatus);
+	if (requestStatus == BAD_HEADER)
+	{
+		if (requestHeader.size() == MAX_REQUEST_HEADER_LENGTH)
+			return (PAYLOAD_TOO_LARGE);
+		else
+			return (BAD_REQUEST);
+	}
 
-		clients[client_fd]->createRequest(request_header, configs); // create request object
-		Request request = clients[client_fd]->getRequest();
-		Logger::log(e_log_level::INFO, CLIENT, "Request from Client %s:%d - Method: %d, Target: %s",
-					inet_ntoa(getClientIPv4Address(client_fd)),
-					ntohs(getClientPortNumber(client_fd)),
-					request.getMethod(),
-					request.getTarget().c_str());
-		clients[client_fd]->appendToBodyBuf(request_body_buf);
+	// std::cout << YELLOW << "--------------requestHeader---------------" << std::endl << requestHeader << RESET << std::endl;
 
+	clients[clientFd]->createRequest(requestHeader, configs); // create request object
+	clients[clientFd]->appendToBodyBuf(requestBodyBuf);
+	Request request = clients[clientFd]->getRequest();
+	Logger::log(e_log_level::INFO, CLIENT, "Request from Client %s:%d - Method: %d, Target: %s",
+							inet_ntoa(getClientIPv4Address(clientFd)),
+							ntohs(getClientPortNumber(clientFd)),
+							request.getMethod(),
+							request.getTarget().c_str());
 
-
-		if (request.isBodyExpected() && request_body_buf.size() > 0)
+	if (request.isBodyExpected())
+	{
+		if (clients[clientFd]->getBodyBuf().size() == 0)
+			return (BODY_IN_CHUNK);
+		else // process requestBodyBuf //TODO: to combine
 		{
 			if (request.isChunked())
 			{
-				RequestStatus request_status = processChunkData(client_fd);
-				if (request_status == READY_TO_WRITE)
-					clients[client_fd]->createResponse();
-				return (request_status);
+				RequestStatus requestStatus = processChunkData(clientFd); // TODO: check
+				clients[clientFd]->clearBodyBuf();
+				return (requestStatus);
 			}
 			else
 			{
-				clients[client_fd]->appendToRequestBody(clients[client_fd]->getBodyBuf());
-				clients[client_fd]->clearBodyBuf();
-				size_t body_size = clients[client_fd]->getRequestBody().size();
-				size_t content_length = request.getContentLength();
-				if (body_size < content_length) // request body send in chunk
+				clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
+				clients[clientFd]->clearBodyBuf();
+				size_t bodySize = clients[clientFd]->getRequestBody().size();
+				size_t contentLength = request.getContentLength();
+				if (bodySize < contentLength) // request body send in chunk
 					return (BODY_IN_CHUNK);
-				else if (body_size == content_length) // read till the end
-				{
-					clients[client_fd]->createResponse();
+				else if (bodySize == contentLength) // read till the end
 					return (READY_TO_WRITE);
-				}
 				else
 					return (BAD_REQUEST);
 			}
 		}
-		else if (request.isBodyExpected())
-			return (BODY_IN_CHUNK);
-		else
-		{
-			clients[client_fd]->createResponse(); // create response object
-			return (READY_TO_WRITE);
-		}
 	}
-
-	Request request = clients[client_fd]->getRequest();
-
-	if (request.isBodyExpected() && request.getStatusCode() == HttpStatusCode::UNDEFINED_STATUS)
-	{
-		request_status = request.isChunked()
-							 ? formRequestBodyWithChunk(client_fd)
-							 : formRequestBodyWithContentLength(client_fd);
-		if (request_status == REQUEST_DISCONNECT_CLIENT || request_status == BODY_IN_CHUNK)
-			return (request_status);
-	}
-
-	if (request_status == BAD_REQUEST)
-	{
-		clients[client_fd]->setIsConnectionClose(true);
-		clients[client_fd]->createErrorRequest(configs, HttpStatusCode::BAD_REQUEST);
-	}
-	else if (request_status == SERVER_ERROR)
-	{
-		clients[client_fd]->setIsConnectionClose(true);
-		clients[client_fd]->createErrorRequest(configs, HttpStatusCode::INTERNAL_SERVER_ERROR);
-	}
-	clients[client_fd]->createResponse(); // create response object
 	return (READY_TO_WRITE);
 }
 
-Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::string &request_header, std::vector<std::byte> &request_body_buf)
+Server::RequestStatus Server::formRequestHeader(int const &clientFd, std::string &requestHeader, std::vector<std::byte> &requestBodyBuf)
 {
 	ssize_t bytes;
-	char buf[MAX_HEADER_LENGTH];
+	char buf[MAX_REQUEST_HEADER_LENGTH];
 
-	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	if ((bytes = recv(clientFd, buf, sizeof(buf), 0)) > 0)
 	{
-		request_header.append(buf, bytes);
-		// std::cout << YELLOW << "--------------request_header loop---------------" << std::endl << request_header << RESET << std::endl;
-		size_t delimiter_pos = request_header.find(CRLF CRLF);
-		if (delimiter_pos != std::string::npos)
+		requestHeader.append(buf, bytes);
+		// std::cout << YELLOW << "--------------requestHeader loop---------------" << std::endl
+		// 					<< requestHeader << RESET << std::endl;
+		size_t delimiterPos = requestHeader.find(CRLF CRLF);
+		if (delimiterPos != std::string::npos)
 		{
-			size_t body_length = request_header.size() - delimiter_pos - (sizeof(CRLF CRLF) - 1);
-			for (size_t i = 0; i < body_length; ++i)
-				request_body_buf.push_back(static_cast<std::byte>(request_header[delimiter_pos + (sizeof(CRLF CRLF) - 1) + i]));
-			request_header.resize(delimiter_pos);
+			for (size_t i = delimiterPos + sizeof(CRLF CRLF) - 1; i < requestHeader.size(); ++i)
+				requestBodyBuf.push_back(static_cast<std::byte>(requestHeader[i]));
+			requestHeader.resize(delimiterPos);
 			return (HEADER_DELIMITER_FOUND);
 		}
 		else
@@ -202,51 +176,61 @@ Server::RequestStatus Server::formRequestHeader(int const &client_fd, std::strin
 		if (bytes == 0)
 		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (REQUEST_DISCONNECT_CLIENT);
 		}
 		else
 		{
-			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						host.c_str(),
-						port,
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d", host.c_str(), port,
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (SERVER_ERROR);
 		}
 	}
 }
 
-Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client_fd)
+Server::RequestStatus Server::receiveRequestBody(int const &clientFd)
 {
+	Request request = clients[clientFd]->getRequest();
+
+	if (request.getStatusCode() == HttpStatusCode::UNDEFINED_STATUS)
+		return (request.isChunked()
+								? formRequestBodyWithChunk(clientFd)
+								: formRequestBodyWithContentLength(clientFd));
+	return (READY_TO_WRITE);
+}
+
+Server::RequestStatus Server::formRequestBodyWithContentLength(int const &clientFd)
+{
+	std::cout << "WithContentLength" << std::endl;
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
-	Request request = clients[client_fd]->getRequest();
+	Request request = clients[clientFd]->getRequest();
 
-	if (!clients[client_fd]->getBodyBuf().empty()) // process any remaining data in the request body buffer
+	if (!clients[clientFd]->getBodyBuf().empty()) // process any remaining data in the request body buffer
 	{
-		clients[client_fd]->appendToRequestBody(clients[client_fd]->getBodyBuf());
-		clients[client_fd]->clearBodyBuf();
-		size_t body_size = clients[client_fd]->getRequestBody().size();
-		size_t content_length = request.getContentLength();
-		if (body_size < content_length) // request body send in chunk
+		clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
+		clients[clientFd]->clearBodyBuf();
+		size_t bodySize = clients[clientFd]->getRequestBody().size();
+		size_t contentLength = request.getContentLength();
+		if (bodySize < contentLength) // request body send in chunk
 			return (BODY_IN_CHUNK);
-		else if (body_size == content_length) // read till the end
+		else if (bodySize == contentLength) // read till the end
 			return (READY_TO_WRITE);
 		else
 			return (BAD_REQUEST);
 	}
 
-	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	if ((bytes = recv(clientFd, buf, sizeof(buf), 0)) > 0)
 	{
-		clients[client_fd]->appendToRequestBody(buf, bytes);
-		size_t body_size = clients[client_fd]->getRequestBody().size();
-		size_t content_length = request.getContentLength();
-		if (body_size < content_length) // request body send in chunk
+		clients[clientFd]->appendToRequestBody(buf, bytes);
+		size_t bodySize = clients[clientFd]->getRequestBody().size();
+		size_t contentLength = request.getContentLength();
+		if (bodySize < contentLength) // request body send in chunk
 			return (BODY_IN_CHUNK);
-		else if (body_size == content_length) // read till the end
+		else if (bodySize == contentLength) // read till the end
 			return (READY_TO_WRITE);
 		else
 			return (BAD_REQUEST);
@@ -256,143 +240,143 @@ Server::RequestStatus Server::formRequestBodyWithContentLength(int const &client
 		if (bytes == 0)
 		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (REQUEST_DISCONNECT_CLIENT);
 		}
 		else
 		{
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						host.c_str(),
-						port,
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									host.c_str(),
+									port,
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (SERVER_ERROR);
 		}
 	}
 }
 
-Server::RequestStatus Server::formRequestBodyWithChunk(int const &client_fd)
+Server::RequestStatus Server::formRequestBodyWithChunk(int const &clientFd)
 {
+	std::cout << "in chunk" << std::endl;
 	ssize_t bytes;
 	char buf[BUFFER_SIZE];
 
-	if (!clients[client_fd]->getBodyBuf().empty()) // process any remaining data in the body buffer from request or last chunk
+	if (!clients[clientFd]->getBodyBuf().empty()) // process any remaining data in the body buffer from request or last chunk
 	{
-		RequestStatus request_status = processChunkData(client_fd);
-		if (request_status != BODY_IN_CHUNK)
-			return (request_status);
+		RequestStatus requestStatus = processChunkData(clientFd);
+		if (requestStatus != BODY_IN_CHUNK)
+			return (requestStatus);
 	}
 
-	if ((bytes = recv(client_fd, buf, sizeof(buf), 0)) > 0)
+	if ((bytes = recv(clientFd, buf, sizeof(buf), 0)) > 0)
 	{
-		clients[client_fd]->appendToBodyBuf(buf, bytes);
-		return (processChunkData(client_fd));
+		clients[clientFd]->appendToBodyBuf(buf, bytes);
+		return (processChunkData(clientFd));
 	}
 	else
 	{
 		if (bytes == 0)
 		{
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (REQUEST_DISCONNECT_CLIENT);
 		}
 		else
 		{
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to receive request from Client %s:%d",
-						host.c_str(),
-						port,
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									host.c_str(),
+									port,
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 			return (SERVER_ERROR);
 		}
 	}
 }
 
-Server::RequestStatus Server::processChunkData(int const &client_fd)
+Server::RequestStatus Server::processChunkData(int const &clientFd)
 {
-	if (clients[client_fd]->getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
+	if (clients[clientFd]->getChunkSize() == 0) // if not yet parse the chunk size or the chunk size is 0
 	{
-		RequestStatus request_status = extractChunkSize(client_fd);
-		if (request_status != PARSED_CHUNK_SIZE)
-			return (request_status);
+		RequestStatus requestStatus = extractChunkSize(clientFd);
+		if (requestStatus != PARSED_CHUNK_SIZE)
+			return (requestStatus);
 	}
 
-	clients[client_fd]->appendToRequestBody(clients[client_fd]->getBodyBuf());
-	clients[client_fd]->clearBodyBuf();
+	clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
+	clients[clientFd]->clearBodyBuf();
 
-	std::vector<std::byte> body = clients[client_fd]->getRequestBody();
+	std::vector<std::byte> body = clients[clientFd]->getRequestBody();
 
-	if (body.size() >= clients[client_fd]->getBytesToReceive() + (sizeof(CRLF) - 1)) // last buffer
+	if (body.size() >= clients[clientFd]->getBytesToReceive() + (sizeof(CRLF) - 1)) // last buffer
 	{
 		std::string final_chunk = "0" CRLF CRLF;
-		if (body.size() > final_chunk.length()
-			&& std::memcmp(body.data() + body.size() - final_chunk.length(), final_chunk.data(), final_chunk.length()) == 0) // if the chunk contains CRLF 0 CRLF CRLF at the end
+		if (body.size() > final_chunk.length() && std::memcmp(body.data() + body.size() - final_chunk.length(), final_chunk.data(), final_chunk.length()) == 0) // if the chunk contains CRLF 0 CRLF CRLF at the end
 		{
-			if (body.size() == final_chunk.size() 
-				&& std::memcmp(body.data(), final_chunk.data(), final_chunk.length()) == 0)
+			if (body.size() == final_chunk.size() && std::memcmp(body.data(), final_chunk.data(), final_chunk.length()) == 0)
 				return (READY_TO_WRITE);
-			RequestStatus request_status = READY_TO_WRITE;
-			do {
-				clients[client_fd]->appendToRequestBody(clients[client_fd]->getBodyBuf());
-				clients[client_fd]->clearBodyBuf();
-				body = clients[client_fd]->getRequestBody();
-				std::cout << YELLOW << clients[client_fd]->getBytesToReceive() << RESET << std::endl; 
-				if (static_cast<char>(body[clients[client_fd]->getBytesToReceive()]) != '\r' || static_cast<char>(body[clients[client_fd]->getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
+			RequestStatus requestStatus = READY_TO_WRITE;
+			do
+			{
+				clients[clientFd]->appendToRequestBody(clients[clientFd]->getBodyBuf());
+				clients[clientFd]->clearBodyBuf();
+				body = clients[clientFd]->getRequestBody();
+				std::cout << YELLOW << clients[clientFd]->getBytesToReceive() << RESET << std::endl;
+				if (static_cast<char>(body[clients[clientFd]->getBytesToReceive()]) != '\r' || static_cast<char>(body[clients[clientFd]->getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
 					return (BAD_REQUEST);
-				std::vector<std::byte> body_buf(body.begin() + clients[client_fd]->getBytesToReceive() + (sizeof(CRLF) - 1), body.end());
-				clients[client_fd]->appendToBodyBuf(body_buf);
-				clients[client_fd]->resizeRequestBody(clients[client_fd]->getBytesToReceive());
-				clients[client_fd]->setChunkSize(0);
-				request_status = extractChunkSize(client_fd);
-				std::cout << YELLOW << clients[client_fd]->getChunkSize() << RESET << std::endl;
-				std::cout << YELLOW << clients[client_fd]->getBytesToReceive() << RESET << std::endl; 
-			} while (request_status == PARSED_CHUNK_SIZE);
-			return (request_status);
+				std::vector<std::byte> bodyBuf(body.begin() + clients[clientFd]->getBytesToReceive() + (sizeof(CRLF) - 1), body.end());
+				clients[clientFd]->appendToBodyBuf(bodyBuf);
+				clients[clientFd]->resizeRequestBody(clients[clientFd]->getBytesToReceive());
+				clients[clientFd]->setChunkSize(0);
+				requestStatus = extractChunkSize(clientFd);
+				std::cout << YELLOW << clients[clientFd]->getChunkSize() << RESET << std::endl;
+				std::cout << YELLOW << clients[clientFd]->getBytesToReceive() << RESET << std::endl;
+			} while (requestStatus == PARSED_CHUNK_SIZE);
+			return (requestStatus);
 		}
-		if (static_cast<char>(body[clients[client_fd]->getBytesToReceive()]) != '\r' || static_cast<char>(body[clients[client_fd]->getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
+		if (static_cast<char>(body[clients[clientFd]->getBytesToReceive()]) != '\r' || static_cast<char>(body[clients[clientFd]->getBytesToReceive() + 1]) != '\n') // delimiter is not CRLF
 			return (BAD_REQUEST);
 
-		std::vector<std::byte> body_buf(body.begin() + clients[client_fd]->getBytesToReceive() + (sizeof(CRLF) - 1), body.end()); // extract the body buffer
-		clients[client_fd]->appendToBodyBuf(body_buf);
+		std::vector<std::byte> bodyBuf(body.begin() + clients[clientFd]->getBytesToReceive() + (sizeof(CRLF) - 1), body.end()); // extract the body buffer
+		clients[clientFd]->appendToBodyBuf(bodyBuf);
 
-		clients[client_fd]->resizeRequestBody(clients[client_fd]->getBytesToReceive()); // extract the body
-		clients[client_fd]->setChunkSize(0);
+		clients[clientFd]->resizeRequestBody(clients[clientFd]->getBytesToReceive()); // extract the body
+		clients[clientFd]->setChunkSize(0);
 		return (BODY_IN_CHUNK);
 	}
 
 	return (BODY_IN_CHUNK);
 }
 
-Server::RequestStatus Server::extractChunkSize(int const &client_fd)
+Server::RequestStatus Server::extractChunkSize(int const &clientFd)
 {
-	std::vector<std::byte> body_buf = clients[client_fd]->getBodyBuf();
+	std::vector<std::byte> bodyBuf = clients[clientFd]->getBodyBuf();
 
 	std::string final_chunk = "0" CRLF CRLF;
-	if (std::memcmp(body_buf.data(), final_chunk.data(), std::min(final_chunk.length(), body_buf.size())) == 0)
+	if (std::memcmp(bodyBuf.data(), final_chunk.data(), std::min(final_chunk.length(), bodyBuf.size())) == 0)
 	{
-		if (body_buf.size() == final_chunk.length()) // if the body buffer is 0 CRLF CRLF
+		if (bodyBuf.size() == final_chunk.length()) // if the body buffer is 0 CRLF CRLF
 			return (READY_TO_WRITE);
-		else if (body_buf.size() > final_chunk.length()) // if the body buffer is more than 0 CRLF CRLF
+		else if (bodyBuf.size() > final_chunk.length()) // if the body buffer is more than 0 CRLF CRLF
 			return (BAD_REQUEST);
 		else
 			return (BODY_IN_CHUNK);
 	}
 
 	std::vector<std::byte> delimiter = {std::byte('\r'), std::byte('\n')};
-	auto delimiter_pos = std::search(body_buf.begin(), body_buf.end(), delimiter.begin(), delimiter.end());
-	if (delimiter_pos != body_buf.end()) // if CRLF is found, extract the chunk size
+	auto delimiterPos = std::search(bodyBuf.begin(), bodyBuf.end(), delimiter.begin(), delimiter.end());
+	if (delimiterPos != bodyBuf.end()) // if CRLF is found, extract the chunk size
 	{
 		std::string chunk_size;
-		for (auto it = body_buf.begin(); it != delimiter_pos; ++it)
+		for (auto it = bodyBuf.begin(); it != delimiterPos; ++it)
 			chunk_size.push_back(static_cast<char>(*it));
 		if (chunk_size.length() > 0 && std::all_of(chunk_size.begin(), chunk_size.end(), ::isxdigit)) // if the chunk size only contains hexadecimal character
 		{
-			clients[client_fd]->setChunkSize(std::stoi(chunk_size, nullptr, 16));
+			clients[clientFd]->setChunkSize(std::stoi(chunk_size, nullptr, 16));
 
-			clients[client_fd]->setBytesToReceive(clients[client_fd]->getBytesToReceive() + clients[client_fd]->getChunkSize());
-			clients[client_fd]->eraseBodyBuf(0, std::distance(body_buf.begin(), delimiter_pos) + (sizeof(CRLF) - 1)); // remove the chunk size from body buffer
+			clients[clientFd]->setBytesToReceive(clients[clientFd]->getBytesToReceive() + clients[clientFd]->getChunkSize());
+			clients[clientFd]->eraseBodyBuf(0, std::distance(bodyBuf.begin(), delimiterPos) + (sizeof(CRLF) - 1)); // remove the chunk size from body buffer
 			return (PARSED_CHUNK_SIZE);
 		}
 		else // if the chunk size contains non-hexadecimal character
@@ -400,49 +384,49 @@ Server::RequestStatus Server::extractChunkSize(int const &client_fd)
 	}
 	else // if CRLF is not found
 	{
-		std::string body_buf_str;
-		for (auto &ch : body_buf)
-			body_buf_str.push_back(static_cast<char>(ch));
-		if (!std::all_of(body_buf_str.begin(), body_buf_str.end(), ::isxdigit)) // if the body buffer contains non-hexadecimal character
+		std::string bodyBufStr;
+		for (auto &ch : bodyBuf)
+			bodyBufStr.push_back(static_cast<char>(ch));
+		if (!std::all_of(bodyBufStr.begin(), bodyBufStr.end(), ::isxdigit)) // if the body buffer contains non-hexadecimal character
 			return (BAD_REQUEST);
 		else
 			return (BODY_IN_CHUNK);
 	}
 }
 
-Server::ResponseStatus Server::sendResponse(int const &client_fd)
+Server::ResponseStatus Server::sendResponse(int const &clientFd)
 {
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
 	std::ofstream ofs("test.txt");
-	std::vector<std::byte> body = clients[client_fd]->getRequestBody();
+	std::vector<std::byte> body = clients[clientFd]->getRequestBody();
 	const std::byte *dataPtr = body.data();
 	std::size_t dataSize = body.size();
 	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
 	ofs.close();
 	//--------------------------------------------------------------
 
-	Response response = clients[client_fd]->getResponse();
+	Response response = clients[clientFd]->getResponse();
 
 	std::vector<std::byte>
-		full_response = response.formatResponse();
+			fullResponse = response.formatResponse();
 
 	ssize_t bytes;
-	if ((bytes = send(client_fd, &(*(full_response.begin() + clients[client_fd]->getBytesSent())), std::min(full_response.size() - clients[client_fd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
+	if ((bytes = send(clientFd, &(*(fullResponse.begin() + clients[clientFd]->getBytesSent())), std::min(fullResponse.size() - clients[clientFd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
 	{
-		clients[client_fd]->setBytesSent(clients[client_fd]->getBytesSent() + bytes);
-		if (clients[client_fd]->getBytesSent() < full_response.size())
+		clients[clientFd]->setBytesSent(clients[clientFd]->getBytesSent() + bytes);
+		if (clients[clientFd]->getBytesSent() < fullResponse.size())
 			return (RESPONSE_IN_CHUNK);
 		else
 		{
 			Logger::log(e_log_level::INFO, CLIENT, "Response sent to Client %s:%d - Status: %d",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)),
-						response.getStatusCode());
-			if (clients[client_fd]->getRequest().getConnection() == ConnectionValue::CLOSE || clients[client_fd]->getIsConnectionClose() == true)
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)),
+									response.getStatusCode());
+			if (clients[clientFd]->getRequest().getConnection() == ConnectionValue::CLOSE || clients[clientFd]->getIsConnectionClose() == true)
 				return (RESPONSE_DISCONNECT_CLIENT);
-			clients[client_fd]->removeRequest();
-			clients[client_fd]->removeResponse();
+			clients[clientFd]->removeRequest();
+			clients[clientFd]->removeResponse();
 			return (KEEP_ALIVE); // keep the connection alive by default
 		}
 	}
@@ -450,28 +434,28 @@ Server::ResponseStatus Server::sendResponse(int const &client_fd)
 	{
 		if (bytes == 0)
 			Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnected",
-						inet_ntoa(getClientIPv4Address(client_fd)),
-						ntohs(getClientPortNumber(client_fd)));
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 		else
 			Logger::log(e_log_level::ERROR, SERVER, "Server %s:%d fails to send response to Client %s:%d",
-				host.c_str(),
-				port,
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
+									host.c_str(),
+									port,
+									inet_ntoa(getClientIPv4Address(clientFd)),
+									ntohs(getClientPortNumber(clientFd)));
 		return (RESPONSE_DISCONNECT_CLIENT);
 	}
 }
 
-void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &client_fd)
+void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int const &clientFd)
 {
-	clients[client_fd]->createErrorRequest(configs, statusCode);
-	clients[client_fd]->createResponse();
-	sendResponse(client_fd);
+	clients[clientFd]->createErrorRequest(configs, statusCode);
+	clients[clientFd]->createResponse();
+	sendResponse(clientFd);
 }
 
 int const &Server::getServerFd() const
 {
-	return (server_fd);
+	return (serverFd);
 }
 
 std::string const &Server::getHost()
@@ -484,14 +468,14 @@ int const &Server::getPort()
 	return (port);
 }
 
-unsigned short int const &Server::getClientPortNumber(int const &client_fd)
+unsigned short int const &Server::getClientPortNumber(int const &clientFd)
 {
-	return (clients[client_fd]->getPortNumber());
+	return (clients[clientFd]->getPortNumber());
 }
 
-in_addr const &Server::getClientIPv4Address(int const &client_fd)
+in_addr const &Server::getClientIPv4Address(int const &clientFd)
 {
-	return (clients[client_fd]->getIPv4Address());
+	return (clients[clientFd]->getIPv4Address());
 }
 
 void Server::appendConfig(ConfigData const &config)
@@ -499,12 +483,12 @@ void Server::appendConfig(ConfigData const &config)
 	configs.push_back(config);
 }
 
-void Server::removeClient(int const &client_fd)
+void Server::removeClient(int const &clientFd)
 {
 	Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d is removed",
-				inet_ntoa(getClientIPv4Address(client_fd)),
-				ntohs(getClientPortNumber(client_fd)));
-	clients.erase(client_fd);
+							inet_ntoa(getClientIPv4Address(clientFd)),
+							ntohs(getClientPortNumber(clientFd)));
+	clients.erase(clientFd);
 }
 
 const char *Server::SocketCreationException::what() const throw()
@@ -530,9 +514,4 @@ const char *Server::SocketSetNonBlockingException::what() const throw()
 const char *Server::SocketSetOptionException::what() const throw()
 {
 	return "Server::Fail to set socket options";
-}
-
-const char *Server::AcceptException::what() const throw()
-{
-	return "Server::accept() failed";
 }

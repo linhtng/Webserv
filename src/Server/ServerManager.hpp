@@ -22,12 +22,12 @@ class ServerManager
 private:
 	std::vector<ConfigData> serverConfigs;
 	std::unordered_map<int, std::unique_ptr<Server>> servers;
-	std::unordered_map<int, int> client_to_server_map;
+	std::unordered_map<int, int> clientToServerMap;
 	std::list<pollfd> pollfds;
-	std::unordered_map<int, std::chrono::steady_clock::time_point> client_last_active_time;
+	std::unordered_map<int, std::chrono::steady_clock::time_point> clientLastActiveTime;
 
 	void createServers();
-	const std::pair<const int, std::unique_ptr<Server>> *findServer(ConfigData const &config) const;
+	const std::pair<const int, std::unique_ptr<Server>> *findServer(const std::string &host, const int &port) const;
 	void startServerLoop();
 	void handlePoll();
 	void checkClientTimeout(int const &ready);
@@ -39,7 +39,6 @@ public:
 	void initServer(const std::vector<ConfigData> &parsedConfigs);
 	int runServer();
 	void cleanUpForServerShutdown(HttpStatusCode const &statusCode);
-	
 
 	class PollException : public std::exception
 	{
