@@ -1,4 +1,5 @@
 import itertools
+import sys
 
 def iter_primes():
      # an iterator of all numbers between 2 and +infinity
@@ -13,6 +14,9 @@ def iter_primes():
          # this code iteratively builds up a chain of
          # filters...slightly tricky, but ponder it a bit
          numbers = filter(prime.__rmod__, numbers)
+
+# Read from stdin
+limit = int(sys.stdin.readline())
 
 for p in iter_primes():
     if p > 100:

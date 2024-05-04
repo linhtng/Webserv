@@ -13,6 +13,10 @@ CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
         throw std::runtime_error("Error: CGI executor and/or bin not found\n");
     }
     setupCgiEnv(request, server);
+    if (FileSystemUtils::pathExistsAndAccessible(envMap["PATH_TRANSLATED"]) == false)
+    {
+        throw std::runtime_error("Error: CGI script not accessible: " + envMap["PATH_TRANSLATED"] + "\n");
+    }
     cgiOutput = "";
     messageBody = request.getBody();
     messageBodyStr.reserve(messageBody.size());

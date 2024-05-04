@@ -22,8 +22,9 @@ int main(int argc, char **argv)
         // parser.printCluster();
         ConfigData server = servers[0];
 
-        Request request(server, "GET printStdin.py HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 5\r\nContent-Type: text/html");
-        std::string body = "body.body.";
+        // Request request(servers, "GET printStdin.py HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 5\r\nContent-Type: text/html");
+        Request request(servers, "POST primeGenerate.py HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 5\r\nContent-Type: text/html");
+        std::string body = "100";
         std::vector<std::byte> bodyBytes;
         for (auto c : body)
         {
