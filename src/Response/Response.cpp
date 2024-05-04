@@ -440,6 +440,10 @@ void Response::processMultiformData()
 		return;
 	}
 	std::cout << GREEN << "Processing multiform data" << RESET << std::endl;
+	std::cout << GREEN << "REQUEST BODY" << RESET << std::endl;
+	std::vector<std::byte> requestBody = this->_request.getBody();
+	for (auto ch : requestBody)
+		std::cout << static_cast<char>(ch);
 	const std::vector<std::byte> &messageBody = this->_request.getBody();
 	const std::string delimiter = "--" + this->_boundary;
 	const std::string endDelimiter = delimiter + "--";
@@ -497,6 +501,12 @@ void Response::processMultiformData()
 		partStart = partEnd + delimiterBytes.size();
 	}
 	std::cout << GREEN << "Processed multiform data, parts detected: " << this->_parts.size() << RESET << std::endl;
+	std::cout << "body" << std::endl;
+	for (auto &part : this->_parts)
+	{
+		for (auto ch : part.body)
+			std::cout << static_cast<char>(ch);
+	}
 }
 
 // CONSTRUCTOR

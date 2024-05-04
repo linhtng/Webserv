@@ -50,7 +50,6 @@ void Request::appendToBody(const std::vector<std::byte> &newBodyChunk)
 {
 	this->_body.insert(this->_body.end(), newBodyChunk.begin(), newBodyChunk.end());
 	if (this->_body.size() > this->_config.getMaxClientBodySize())
-	// if (this->_body.size() >= this->_config.getMaxClientBodySize()) //to check
 	{
 		this->_body.clear();
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
@@ -62,7 +61,6 @@ void Request::appendToBody(char newBodyChunk[], const ssize_t &bytes)
 	for (ssize_t i = 0; i < bytes; ++i)
 		this->_body.push_back(static_cast<std::byte>(newBodyChunk[i]));
 	if (this->_body.size() > this->_config.getMaxClientBodySize())
-	// if (this->_body.size() >= this->_config.getMaxClientBodySize()) //to check
 	{
 		this->_body.clear();
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
