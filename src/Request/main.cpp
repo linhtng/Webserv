@@ -63,12 +63,14 @@ int main()
 	// printResponseBytes(response.formatResponse());
 
 	// Request with redirect
+	/*
 	Request requestRedirect(configs, "GET /kapouet/pouic HTTP/1.0\r\nHost: localhost:8080\r\nConnection: close\r\n");
 	requestRedirect.printRequestProperties();
 	Response responseRedirect(requestRedirect);
 	responseRedirect.printResponseProperties();
 	std::cout << std::endl;
 	printResponseBytes(responseRedirect.formatResponse());
+	*/
 
 	// request with multipart form
 	std::cout << std::endl;
@@ -88,6 +90,19 @@ int main()
 	Response responseMulipart(requestMultipart);
 	printResponseBytes(responseMulipart.formatResponse());
 	*/
+
+	// read smallFileUploadHeaders sample request from file
+	std::string smallFileUploadHeaders = readFileIntoString("sample_requests/smallFileUploadHeaders");
+	std::string smallFileUploadBody = readFileIntoString("sample_requests/smallFileUploadBody");
+	std::vector<std::byte> smallFileUploadBodyBytes;
+	for (char c : smallFileUploadBody)
+	{
+		smallFileUploadBodyBytes.push_back(static_cast<std::byte>(c));
+	}
+	Request requestMultipartSmall(configs, smallFileUploadHeaders);
+	requestMultipartSmall.appendToBody(smallFileUploadBodyBytes);
+	Response responseMultipartSmall(requestMultipartSmall);
+	printResponseBytes(responseMultipartSmall.formatResponse());
 
 	return 0;
 }
