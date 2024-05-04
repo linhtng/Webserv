@@ -86,6 +86,32 @@ void StringUtils::replaceAll(std::string &str, const std::string &from, const st
 	}
 }
 
+std::string StringUtils::queryStr(const std::string &str)
+{
+	std::string queryStr = "";
+	std::size_t pos = str.find("?");
+	if (pos != std::string::npos)
+	{
+		queryStr = str.substr(pos + 1);
+	}
+	return queryStr;
+}
+
+std::string StringUtils::extractPathPreQuery(const std::string &url)
+{
+	std::size_t pos = url.find('?');
+	if (pos != std::string::npos)
+	{
+		// Return the part of the string before the '?'
+		return url.substr(0, pos);
+	}
+	else
+	{
+		// Return the whole string if there is no '?'
+		return url;
+	}
+}
+
 std::unordered_map<std::string, std::string> StringUtils::parseQueryString(const std::string &queryString)
 {
 	std::unordered_map<std::string, std::string> queryMap;

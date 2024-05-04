@@ -35,11 +35,12 @@ CgiHandler::~CgiHandler()
 
 void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
 {
-    std::string target = request.getTarget();
+
+    std::string target = StringUtils::extractPathPreQuery(request.getTarget());
     envMap["REQUEST_METHOD"] = request.getMethodStr();
     envMap["CONTENT_TYPE"] = request.getContentType();
     envMap["CONTENT_LENGTH"] = std::to_string(request.getContentLength());
-    // envMap["QUERY_STRING"] = request.getQuery();
+    envMap["QUERY_STRING"] = StringUtils::queryStr(request.getTarget());
     // PATH_INFO = test.py
     envMap["PATH_INFO"] = target;
     // PATH_TRANSLATED = /cgi-bin/test.py
@@ -108,19 +109,17 @@ void CgiHandler::cgiTimeout(pid_t pid)
     int status;
     int waitResult;
 
-    for (int i = 0; i < CGI_TIMEOUT; ++i)
+    auto start = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed;
+    while (true)
     {
         waitResult = waitpid(pid, &status, WNOHANG);
-
-        if (waitResult == 0) // child process has not exited
-        {
-            // sleep for 1 second
-            sleep(1);
-        }
-        else // child process has exited
-        {
+        if (waitResult != 0) // child process has exited
             break;
-        }
+        auto now = std::chrono::high_resolution_clock::now();
+        elapsed = now - start;
+        if (elapsed.count() >= CGI_TIMEOUT) // timeout has been reached
+            break;
     }
     if (waitResult == 0) // child process has not exited after timeout
     {
