@@ -194,7 +194,7 @@ Server::RequestStatus Server::receiveRequestBody(int const &clientFd)
 {
 	Request request = clients[clientFd]->getRequest();
 	ssize_t bytes;
-	char buf[BUFFER_SIZE];
+	char buf[SERVER_BUFFER_SIZE];
 
 	if ((bytes = recv(clientFd, buf, sizeof(buf), 0)) > 0)
 	{
@@ -366,7 +366,7 @@ Server::ResponseStatus Server::sendResponse(int const &clientFd)
 	std::vector<std::byte> formatedResponse = response.formatResponse();
 
 	ssize_t bytes;
-	if ((bytes = send(clientFd, &(*(formatedResponse.begin() + clients[clientFd]->getBytesSent())), std::min(formatedResponse.size() - clients[clientFd]->getBytesSent(), static_cast<size_t>(BUFFER_SIZE)), 0)) > 0)
+	if ((bytes = send(clientFd, &(*(formatedResponse.begin() + clients[clientFd]->getBytesSent())), std::min(formatedResponse.size() - clients[clientFd]->getBytesSent(), static_cast<size_t>(SERVER_BUFFER_SIZE)), 0)) > 0)
 	{
 		clients[clientFd]->setBytesSent(clients[clientFd]->getBytesSent() + bytes);
 		if (clients[clientFd]->getBytesSent() < formatedResponse.size())

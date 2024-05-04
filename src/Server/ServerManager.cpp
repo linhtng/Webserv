@@ -139,7 +139,7 @@ void ServerManager::handlePoll()
 		std::cout << pollfd.fd << " ";
 	std::cout << std::endl;
 
-	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), TIMEOUT); // call poll using the vector's data
+	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), SERVER_TIMEOUT); // call poll using the vector's data
 
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfdsTmp.begin(), pollfdsTmp.end()); // move the contents back from the vector
@@ -162,7 +162,7 @@ void ServerManager::checkClientTimeout(int const &ready)
 		if (clientToServerMap.find(it->fd) != clientToServerMap.end())
 		{
 			std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - clientLastActiveTime[it->fd];
-			if (ready == 0 || elapsedSeconds.count() >= TIMEOUT / 1000) // if poll timeout or the client timeout
+			if (ready == 0 || elapsedSeconds.count() >= SERVER_TIMEOUT / 1000) // if poll timeout or the client timeout
 			{
 				int clientFd = it->fd;
 				int serverFd = clientToServerMap[clientFd];

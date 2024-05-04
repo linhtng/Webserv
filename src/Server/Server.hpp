@@ -1,10 +1,6 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#define BACKLOG 512
-#define BUFFER_SIZE 100000
-#define MAX_REQUEST_HEADER_LENGTH 8192
-
 #include <vector>
 #include <unordered_map>
 #include <string>
