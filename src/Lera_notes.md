@@ -36,36 +36,6 @@ Content-Type: text/plain
 12345
 ------WebKitFormBoundary7ybdh3HK4BBU6x7R--
 
-POST /upload HTTP/1.1
-Host: localhost:8081
-Connection: keep-alive
-Content-Length: 274
-Cache-Control: max-age=0
-sec-ch-ua: "Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"
-sec-ch-ua-mobile: ?0
-sec-ch-ua-platform: "macOS"
-Upgrade-Insecure-Requests: 1
-Origin: http://localhost:8081
-Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryohNq0PAELV5YFbkJ
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
-Sec-Fetch-Site: same-origin
-Sec-Fetch-Mode: navigate
-Sec-Fetch-User: ?1
-Sec-Fetch-Dest: document
-Referer: http://localhost:8081/upload
-Accept-Encoding: gzip, deflate, br
-Accept-Language: en-US,en;q=0.9
-
-------WebKitFormBoundaryohNq0PAELV5YFbkJ
-Content-Disposition: form-data; name="fileUpload"; filename="test.sh"
-Content-Type: text/x-sh
-
-#!/bin/bash
-for i in {1..100}; do
-    curl -s -o /dev/null http://localhost:8080/ &
-done
-------WebKitFormBoundaryohNq0PAELV5YFbkJ--
 
 
 
@@ -84,6 +54,12 @@ for i in {1..100}; do
     curl -s -o /dev/null http://localhost:8080/ &
 done
 ------WebKitFormBoundaryohNq0PAELV5YFbkJ--
+
+MULTIFORM:
+
+Each part must contain a Content-Disposition header field where the disposition is form-data. The Content-Disposition header field must also contain an additional parameter of name. For form data that represents the content of a file, a name for the file should be supplied as well, by using a filename parameter of the Content-Disposition header field.
+Each part may have an optional Content-Type header field which defaults to text/plain. If the contents of a file are to be sent, the file data should be labeled with an appropriate media type, if known, or application/octet-stream.
+
 
 - default error pages (pass messages as params)
 

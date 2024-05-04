@@ -94,7 +94,10 @@ std::string StringUtils::trimChar(const std::string &str, char ch)
 	if (start == std::string::npos)
 		return "";
 	size_t end = str.find_last_not_of(ch);
-	return str.substr(start, end - start + 1);
+	if (end == std::string::npos)
+		return "";
+	std::string res = str.substr(start, end - start + 1);
+	return res;
 }
 
 void StringUtils::replaceFirstOccurrence(std::string &str, const std::string &toReplace, const std::string &replaceWith)

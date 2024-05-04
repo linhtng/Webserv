@@ -274,6 +274,8 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		std::string paramName = StringUtils::trim(paramsSplit[0]);
 		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
 		params[paramName] = StringUtils::trimChar(StringUtils::trim(paramsSplit[1]), '"');
+		// print key value pair for debug
+		std::cout << RED << "Key: " << paramName << " Value: " << params[paramName] << RESET << std::endl;
 	}
 	// TODO: move this to the initial multipart processing part later
 	// if no filename, no upload
@@ -285,7 +287,8 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		return;
 	}
 	std::string fileName = filenameIt->second;
-	std::string savePath = StringUtils::joinPath(this->_location.getSaveDir(), fileName);
+	// TODO: fgure out the root/alias situation
+	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir(), fileName);
 	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;
 	// save the file
 	FileSystemUtils::saveFile(savePath, part.body);
@@ -501,9 +504,13 @@ void Response::processMultiformData()
 		partStart = partEnd + delimiterBytes.size();
 	}
 	std::cout << GREEN << "Processed multiform data, parts detected: " << this->_parts.size() << RESET << std::endl;
-	std::cout << "body" << std::endl;
+	std::cout << "Parsed parts:" << std::endl;
 	for (auto &part : this->_parts)
 	{
+		for (auto &[key, value] : part.headers)
+		{
+			std::cout << key << ": " << value << std::endl;
+		}
 		for (auto ch : part.body)
 			std::cout << static_cast<char>(ch);
 	}

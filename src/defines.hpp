@@ -16,7 +16,7 @@
 #define CRLF "\r\n"
 #define SP " "
 #define HTAB "\t"
-#define WHITESPACE "[\t ]"
+#define WHITESPACE "[\t \r\n]"
 #define VCHAR_REGEX "[[:print:]]"
 #define DIGIT_REGEX "[0-9]"
 #define ALPHA_REGEX "[A-Za-z]"
@@ -32,6 +32,7 @@
 #define READ_END 0
 #define WRITE_END 1
 #define CGI_OUTPUT_BUFFER_SIZE 1024
+#define CGI_TIMEOUT 2
 
 enum ConnectionValue
 {
