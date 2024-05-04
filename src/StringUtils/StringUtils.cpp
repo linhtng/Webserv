@@ -88,8 +88,6 @@ std::unordered_map<std::string, std::string> StringUtils::parseQueryString(const
 	return queryMap;
 }
 
-#include <iostream>
-
 std::string StringUtils::trimChar(const std::string &str, char ch)
 {
 	size_t start = str.find_first_not_of(ch);
