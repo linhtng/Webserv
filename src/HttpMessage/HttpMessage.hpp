@@ -57,6 +57,8 @@ public:
 
 	static const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages;
 	static const std::unordered_map<std::string, ContentType> _contentTypes;
+	static const std::unordered_map<std::string, HttpMethod> _strToHttpMethod;
+	static const std::unordered_map<HttpMethod, std::string> _httpMethodToStr;
 };
 
 #endif

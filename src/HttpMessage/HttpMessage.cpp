@@ -80,6 +80,20 @@ const std::unordered_map<std::string, ContentType> HttpMessage::_contentTypes =
 		{"multipart/form-data", ContentType::MULTIPART_FORM_DATA},
 		{"application/x-www-form-urlencoded", ContentType::APPLICATION_X_WWW_FORM_URLENCODED}};
 
+const std::unordered_map<std::string, HttpMethod> HttpMessage::_strToHttpMethod =
+	{
+		{"GET", HttpMethod::GET},
+		{"HEAD", HttpMethod::HEAD},
+		{"POST", HttpMethod::POST},
+		{"DELETE", HttpMethod::DELETE}};
+
+const std::unordered_map<HttpMethod, std::string> HttpMessage::_httpMethodToStr =
+	{
+		{HttpMethod::GET, "GET"},
+		{HttpMethod::HEAD, "HEAD"},
+		{HttpMethod::POST, "POST"},
+		{HttpMethod::DELETE, "DELETE"}};
+
 HttpMessage::HttpMessage(ConfigData const &config,
 						 HttpStatusCode statusCode,
 						 HttpMethod method,
