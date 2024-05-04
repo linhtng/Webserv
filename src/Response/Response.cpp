@@ -142,7 +142,7 @@ void Response::prepareRedirectResponse()
 	{
 		this->_statusCode = HttpStatusCode::MOVED_PERMANENTLY;
 	}
-	this->_locationHeader = this->_redirectionRoute;
+	this->_locationHeader = '/' + this->_redirectionRoute;
 }
 
 bool Response::isRedirect()
