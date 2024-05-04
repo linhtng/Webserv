@@ -59,20 +59,20 @@ void ServerManager::createServers()
 			std::unique_ptr<Server> server = std::make_unique<Server>(config);
 			server->setUpServerSocket();
 			Logger::log(e_log_level::INFO, SERVER, "Server created - Host: %s, Port: %d, Server Name: %s",
-									server->getHost().c_str(),
-									server->getPort(),
-									config.getServerName().c_str());
+						server->getHost().c_str(),
+						server->getPort(),
+						config.getServerName().c_str());
 			int serverFd = server->getServerFd();
-			servers[serverFd] = std::move(server);		// insert server into map
+			servers[serverFd] = std::move(server);	  // insert server into map
 			pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
 		}
 		else
 		{
 			serverPtr->second->appendConfig(config);
 			Logger::log(e_log_level::INFO, SERVER, "Configuration of Server Name %s added to Server %s:%d",
-									config.getServerName().c_str(),
-									config.getServerHost().c_str(),
-									config.getServerPort());
+						config.getServerName().c_str(),
+						config.getServerHost().c_str(),
+						config.getServerPort());
 		}
 	}
 }
@@ -119,8 +119,8 @@ void ServerManager::startServerLoop()
 				int clientFd = it->fd;
 				int serverFd = clientToServerMap[clientFd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnect",
-										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
-										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
+							inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+							ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
 				handleClientDisconnection(it);
 			}
 			else
@@ -167,8 +167,8 @@ void ServerManager::checkClientTimeout(int const &ready)
 				int clientFd = it->fd;
 				int serverFd = clientToServerMap[clientFd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
-										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
+							inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+							ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
 				servers[serverFd]->createAndSendErrorResponse(REQUEST_TIMEOUT, clientFd);
 				handleClientDisconnection(it);
 			}

@@ -1,5 +1,5 @@
 telnet localhost 10002
-curl http://localhost:10002
+curl http://localhost:10002/hi
 curl --data-binary "@number.txt" http://localhost:10002
 curl --data-binary "@number.txt" -H "Transfer-encoding: chunked" http://localhost:10002
 curl -F "file=@number.txt" -H "Transfer-encoding: chunked" http://localhost:10002
