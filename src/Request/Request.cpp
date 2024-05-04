@@ -151,13 +151,8 @@ void Request::validateMethod()
 
 HttpMethod Request::matchValidMethod()
 {
-	std::unordered_map<std::string, HttpMethod> methodMap = {
-		{"GET", HttpMethod::GET},
-		{"HEAD", HttpMethod::HEAD},
-		{"POST", HttpMethod::POST},
-		{"DELETE", HttpMethod::DELETE}};
-	auto it = methodMap.find(this->_requestLine.method);
-	if (it == methodMap.end())
+	auto it = HttpMessage::_strToHttpMethod.find(this->_requestLine.method);
+	if (it == HttpMessage::_strToHttpMethod.end())
 	{
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
 		throw BadRequestException();
