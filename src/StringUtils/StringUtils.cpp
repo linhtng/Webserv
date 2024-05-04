@@ -44,7 +44,6 @@ std::string StringUtils::trim(const std::string &str)
 		return "";
 	}
 
-	// Return the substring from the first non-whitespace character to the last non-whitespace character
 	return str.substr(first, (last - first + 1));
 }
 
