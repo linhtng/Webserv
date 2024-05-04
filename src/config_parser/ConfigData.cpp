@@ -282,7 +282,7 @@ void ConfigData::extractCgiDir()
 	{
 		cgiDirStr = DefaultValues::CGI_DIR;
 	}
-	if (!FileSystemUtils::pathExistsAndAccessible(cgiDirStr))
+	if (!FileSystemUtils::pathExistsAndAccessible(cgiDirStr) || !FileSystemUtils::isDir(cgiDirStr))
 		throw std::runtime_error("Invalid CGI directory: " + cgiDirStr);
 	cgiDir = cgiDirStr;
 }

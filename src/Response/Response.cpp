@@ -337,7 +337,7 @@ void Response::handleGet()
 		{
 			std::cout << RED << "Getting index file" << RESET << std::endl;
 			// check if this should be target or some location property
-			this->_body = BinaryData::getFileData(dirPath + this->_location.getDefaultFile());
+			this->_body = BinaryData::getFileData(StringUtils::joinPath(dirPath, this->_location.getDefaultFile()));
 			this->_statusCode = HttpStatusCode::OK;
 			// server index file
 		}
