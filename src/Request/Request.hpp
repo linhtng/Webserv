@@ -75,8 +75,8 @@ private:
 public:
 	// Request(const ConfigData &config, const std::string &requestLineAndHeaders);
 	// Request(const ConfigData &config, HttpStatusCode statusCode);
-	Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders); //with configs
-	Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode); //with configs
+	Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders); // with configs
+	Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode);				   // with configs
 
 	// SETTERS
 

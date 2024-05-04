@@ -1,6 +1,7 @@
 #ifndef FILE_SYSTEM_UTILS_HPP
 #define FILE_SYSTEM_UTILS_HPP
 
+#include "../StringUtils/StringUtils.hpp"
 #include "../defines.hpp"
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -15,7 +16,8 @@ namespace FileSystemUtils
 	bool pathExistsAndAccessible(const std::string &target);
 	bool isDir(const std::string &target);
 	bool isFile(const std::string &target);
-	void saveFile(std::string savePath, std::vector<std::byte> body);
+	void createDirectory(const std::string &path);
+	void saveFile(std::string savePath, std::string fileName, std::vector<std::byte> body);
 }
 
 #endif
