@@ -37,12 +37,14 @@ private:
 	RequestLine _requestLine;
 
 	// Properties unique to Request
+
 	bool _bodyExpected;
 	std::string _userAgent;
 	std::string _host;
 	int _port;
 	std::string _transferEncoding;
 	std::string _charset;
+	std::vector<ConfigData> _configs;
 
 	// OPTIONAL: handle Expect header
 
@@ -50,8 +52,8 @@ private:
 
 	// helpers
 
-	std::string removeComments(const std::string &input) const;
-	// initial data reading
+	// std::string removeComments(const std::string &input) const;
+	//  initial data reading
 	void extractRequestLine(const std::string &requestLine);
 	void extractHeaderLine(const std::string &headerLine);
 	// parsing
@@ -62,6 +64,7 @@ private:
 	std::string parseTarget();
 	void validateMethod();
 
+	void matchConfig();
 	void parseRequestLine();
 	void parseHost();
 	void parseContentLength();

@@ -10,7 +10,8 @@ HttpMessage::HttpMessage(ConfigData const &config,
 						 std::string boundary,
 						 bool criticalError,
 						 size_t contentLength,
-						 bool chunked)
+						 bool chunked,
+						 ContentType contentType)
 	: _config(config),
 	  _statusCode(statusCode),
 	  _method(method),
@@ -21,7 +22,8 @@ HttpMessage::HttpMessage(ConfigData const &config,
 	  _boundary(boundary),
 	  _criticalError(criticalError),
 	  _contentLength(contentLength),
-	  _chunked(chunked)
+	  _chunked(chunked),
+	  _contentType(contentType)
 {
 }
 

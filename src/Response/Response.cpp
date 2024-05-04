@@ -5,7 +5,6 @@
 void Response::printResponseProperties() const
 {
 	std::cout << "Response properties:" << std::endl;
-	std::cout << "Server name: " << this->getConfig().getServerName() << std::endl;
 	std::cout << "Method: " << this->getMethod() << std::endl;
 	std::cout << "Target: " << this->getTarget() << std::endl;
 	std::cout << "HTTP version: " << this->getHttpVersionMajor() << "." << this->getHttpVersionMinor() << std::endl;
@@ -81,7 +80,7 @@ std::string Response::formatHeader() const
 	std::string header;
 	header += this->formatStatusLine() + CRLF;
 	header += "Date: " + this->formatDate() + CRLF;
-	header += "Server: " + this->_config.getServerName() + CRLF;
+	header += "Server: " SERVER_SOFTWARE CRLF;
 	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
 	if (!this->_upgradeHeader.empty())
 	{

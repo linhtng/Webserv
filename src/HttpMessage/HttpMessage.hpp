@@ -11,7 +11,7 @@
 class HttpMessage
 {
 protected:
-	ConfigData const &_config;
+	ConfigData &_config;
 
 	HttpStatusCode _statusCode;
 	HttpMethod _method;
@@ -38,7 +38,8 @@ protected:
 				std::string boundary = "",
 				bool criticalError = false,
 				size_t contentLength = 0,
-				bool chunked = false);
+				bool chunked = false,
+				ContentType contentType = ContentType::UNDEFINED_CONTENT_TYPE);
 
 public:
 	virtual ~HttpMessage() = default;

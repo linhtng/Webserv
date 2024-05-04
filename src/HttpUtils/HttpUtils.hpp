@@ -44,6 +44,7 @@ namespace HttpUtils
 		{RANGE_NOT_SATISFIABLE, "Range Not Satisfiable"},
 		{EXPECTATION_FAILED, "Expectation Failed"},
 		{IM_A_TEAPOT, "I'm a teapot"},
+		{MISDIRECTED_REQUEST, "Misdirected Request"},
 		{UPGRADE_REQUIRED, "Upgrade Required"},
 		{PRECONDITION_REQUIRED, "Precondition Required"},
 		{TOO_MANY_REQUESTS, "Too Many Requests"},

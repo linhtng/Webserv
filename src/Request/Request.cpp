@@ -74,7 +74,7 @@ void Request::resizeBody(const size_t &n)
 
 // UTILITIES
 
-std::string Request::removeComments(const std::string &input) const
+/* std::string Request::removeComments(const std::string &input) const
 {
 	std::string res;
 	std::string currentSegment;
@@ -102,7 +102,7 @@ std::string Request::removeComments(const std::string &input) const
 		}
 	}
 	return res;
-}
+} */
 
 // PARSING
 
@@ -232,6 +232,25 @@ void Request::parseRequestLine()
 
 // HEADERS
 
+void Request::matchConfig()
+{
+	// filter configs so that only the one with the same host and port is left
+	if (this->_host.empty())
+	{
+		throw BadRequestException();
+	}
+	auto it = std::find_if(this->_configs.begin(), this->_configs.end(),
+						   [this](const ConfigData &config)
+						   { return config.getServerName() == this->_host && config.getServerPort() == this->_port; });
+	Logger::log(DEBUG, SERVER, "Matching config for host: %s, port: %d", this->_host.c_str(), this->_port);
+	if (it == this->_configs.end())
+	{
+		this->_statusCode = HttpStatusCode::MISDIRECTED_REQUEST;
+		throw BadRequestException();
+	}
+	this->_config = *it;
+}
+
 void Request::parseHost()
 {
 	if (this->_headerLines.find("host") == this->_headerLines.end())
@@ -246,7 +265,8 @@ void Request::parseHost()
 	}
 	this->_host = match[1];
 	this->_port = std::stoi(match[2]);
-	// TODO: handle exceptionss
+	matchConfig();
+	// TODO: handle exceptions
 }
 
 void Request::parseContentLength()
@@ -440,39 +460,32 @@ void Request::extractHeaderLine(const std::string &headerLine)
 
 void Request::processRequest(const std::string &requestLineAndHeaders)
 {
-	std::cout << RED << "processRequest()" << RESET << std::endl;
 	if (requestLineAndHeaders.empty())
 	{
-		std::cout << RED << "empty request" << RESET << std::endl;
 		throw BadRequestException();
 	}
 	std::vector<std::string> split = StringUtils::splitByDelimiter(requestLineAndHeaders, CRLF);
 	// handle request line
-	std::cout << RED << "request line split" << RESET << std::endl;
 	if (split.size() < 2)
 	{
 		std::cout << RED << "empty split" << RESET << std::endl;
 		throw BadRequestException();
 	}
 	extractRequestLine(split[0]);
-	std::cout << RED << "request line extracted" << RESET << std::endl;
 	parseRequestLine();
-	std::cout << RED << "request line parsed" << RESET << std::endl;
 	// handle headers
 	for (size_t i = 1; i < split.size(); ++i)
 	{
-		std::cout << RED << "	header: " << split[i] << RESET << std::endl;
 		extractHeaderLine(split[i]);
-		std::cout << RED << "header line " << i << " extracted" << RESET << std::endl;
 	}
 	parseHeaders();
-	std::cout << RED << "headers parsed" << RESET << std::endl;
 }
 
 Request::Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders)
 	: HttpMessage(configs.front()),
 	  _bodyExpected(false),
-	  _port(0)
+	  _port(0),
+	  _configs(configs)
 {
 	try
 	{
@@ -480,7 +493,7 @@ Request::Request(const std::vector<ConfigData> &configs, const std::string &requ
 	}
 	catch (const BadRequestException &e)
 	{
-		std::cout << "EXCEPTION: " << e.what() << std::endl;
+		Logger::log(ERROR, SERVER, "BadRequestException: %s", e.what());
 		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
@@ -488,14 +501,15 @@ Request::Request(const std::vector<ConfigData> &configs, const std::string &requ
 	}
 	catch (const std::exception &e)
 	{
-		std::cout << "EXCEPTION: " << e.what() << std::endl;
+		Logger::log(ERROR, SERVER, "BadRequestException: %s", e.what());
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 	}
 }
 
 Request::Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode)
-	: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0)
+	: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0), _configs(configs)
 {
+	// here we can just pick first config, because it doesn't matter for error messages
 }
 
 // Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
