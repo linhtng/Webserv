@@ -57,10 +57,10 @@ private:
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
 	void prepareRedirectResponse();
-	void processMultiformData();
-	void processMultiformDataPart(std::vector<std::byte> part);
+	void processMultipartData();
+	void processMultipartDataPart(std::vector<std::byte> part);
 	void postMultipartDataPart(const MultipartDataPart &part);
-	void processMultiformDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
+	void processMultipartDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
 	bool isRedirect(); // consts?
 	void handleAlias();
 	bool targetFound();
