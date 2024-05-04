@@ -3,16 +3,12 @@
 
 #define SERVER_SOFTWARE "webservant v0.1"
 #define DEFAULT_ERROR_MESSAGE "An error occurred"
-#define CRITICAL_ERROR_RESPONSE "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
 #define YELLOW "\033[1;33m"
 #define BLUE "\033[1;34m"
-#define CYAN "\033[1;36m"
-#define BLACK "\033[1;30m"
-#define WHITE "\033[1;37m"
-#define MAGENTA "\033[1;35m"
+#define CYAN "\033[36m"
 #define RESET "\e[0m"
 
 #define CR "\r"
