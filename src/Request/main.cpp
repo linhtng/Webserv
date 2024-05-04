@@ -31,7 +31,7 @@ void printResponseBytes(const std::vector<std::byte> &body)
 
 int main()
 {
-	std::vector<ConfigData> cluster;
+	std::vector<ConfigData> configs;
 
 	try
 	{
@@ -39,7 +39,7 @@ int main()
 		ConfigParser parser(fileName);
 		parser.extractServerConfigs();
 		// parser.printCluster(); // debug
-		cluster = parser.getServerConfigs();
+		configs = parser.getServerConfigs();
 	}
 	catch (std::exception &e)
 	{
@@ -47,7 +47,7 @@ int main()
 		return 1;
 	}
 
-	ConfigData config = cluster[0];
+	ConfigData config = configs[0];
 	config.printConfigData();
 	std::cout << std::endl;
 
@@ -63,7 +63,7 @@ int main()
 	// printResponseBytes(response.formatResponse());
 
 	// Request with redirect
-	Request requestRedirect(config, "GET /kapouet/pouic/toto/pouet HTTP/1.0\r\nHost: localhost:8080\r\nConnection: close\r\n");
+	Request requestRedirect(configs, "GET /kapouet/pouic/toto/pouet HTTP/1.0\r\nHost: localhost:8080\r\nConnection: close\r\n");
 	requestRedirect.printRequestProperties();
 	Response responseRedirect(requestRedirect);
 	responseRedirect.printResponseProperties();
@@ -72,9 +72,9 @@ int main()
 
 	// request with multipart form
 	std::cout << std::endl;
-	Request requestMultipart(config, "POST /hi HTTP/1.1\r\nHost: localhost:8081\r\nConnection: keep-alive\r\nContent-Length: 274\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryohNq0PAELV5YFbkJ");
+	Request requestMultipart(configs, "POST /hi HTTP/1.1\r\nHost: localhost:8081\r\nConnection: keep-alive\r\nContent-Length: 274\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundaryohNq0PAELV5YFbkJ");
 
-	std::string body = "------WebKitFormBoundaryohNq0PAELV5YFbkJ\r\nContent-Disposition: form-data; name=fileUpload; filename=test.sh\r\nContent-Type: text/x-sh\r\n\r\n#!/bin/bash\r\nfor i in {1..100}; do\r\n    curl -s -o /dev/null http://localhost:8080/ &\r\ndone\r\n------WebKitFormBoundaryohNq0PAELV5YFbkJ--";
+	std::string body = "------WebKitFormBoundaryohNq0PAELV5YFbkJ\r\nContent-Disposition: form-data; name=\"fileUpload\"; filename=\"test.sh\"\r\nContent-Type: text/x-sh\r\n\r\n#!/bin/bash\r\nfor i in {1..100}; do\r\n    curl -s -o /dev/null http://localhost:8080/ &\r\ndone\r\n------WebKitFormBoundaryohNq0PAELV5YFbkJ--";
 	std::vector<std::byte> bodyBytes;
 	for (char c : body)
 	{
