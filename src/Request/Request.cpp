@@ -342,6 +342,7 @@ void Request::parseContentType()
 	auto it = this->_headerLines.find("content-type");
 	if (it == this->_headerLines.end())
 	{
+		this->_contentType = UNDEFINED_CONTENT_TYPE;
 		return;
 	}
 	std::string contentTypeFullValue = it->second;
@@ -470,9 +471,9 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 }
 
 Request::Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders)
-	: HttpMessage(configs.front()),
-	  _bodyExpected(false),
-	  _port(0)
+		: HttpMessage(configs.front()),
+			_bodyExpected(false),
+			_port(0)
 {
 	try
 	{
@@ -494,7 +495,7 @@ Request::Request(const std::vector<ConfigData> &configs, const std::string &requ
 }
 
 Request::Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode)
-	: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0)
+		: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0)
 {
 }
 
