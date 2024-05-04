@@ -37,7 +37,7 @@ bool FileSystemUtils::isFile(const std::string &target)
 void FileSystemUtils::createDirectory(const std::string &path)
 {
 	// Attempt to create the directory
-	if (mkdir(path.c_str(), 0777) == -1)
+	if (mkdir(path.c_str(), 0755) == -1)
 	{
 		// Check if the error was because the directory already exists
 		if (errno != EEXIST)
