@@ -23,12 +23,28 @@ std::vector<std::string> StringUtils::splitByDelimiter(const std::string &input,
 
 std::string StringUtils::trim(const std::string &str)
 {
-	size_t first = str.find_first_not_of(WHITESPACE);
-	if (std::string::npos == first)
+	size_t first = 0;
+	size_t last = str.length() - 1;
+
+	// Find the first non-whitespace character
+	while (first < str.length() && std::isspace(static_cast<unsigned char>(str[first])))
 	{
-		return str;
+		++first;
 	}
-	size_t last = str.find_last_not_of(WHITESPACE);
+
+	// Find the last non-whitespace character
+	while (last > first && std::isspace(static_cast<unsigned char>(str[last])))
+	{
+		--last;
+	}
+
+	// If the string is all whitespace, return an empty string
+	if (first > last)
+	{
+		return "";
+	}
+
+	// Return the substring from the first non-whitespace character to the last non-whitespace character
 	return str.substr(first, (last - first + 1));
 }
 

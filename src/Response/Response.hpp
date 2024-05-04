@@ -59,6 +59,7 @@ private:
 	void processMultiformData();
 	void processMultiformDataPart(std::vector<std::byte> part);
 	void postMultipartDataPart(const MultipartDataPart &part);
+	void processMultiformDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
 
 	bool isRedirect(); // consts?
 	void handleAlias();
