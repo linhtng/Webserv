@@ -31,16 +31,17 @@ public:
     int getCgiExitStatus();
 
 private:
+    void setCgiExecutor(const Request &request, const ConfigData &server);
     void setupCgiEnv(const Request &request, const ConfigData &server);
     std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
     void closeCgiPipes();
     void closePipeEnd(int pipeFd);
     void readCgiOutput();
     void executeCgiScript();
-    void cgiReadMessageBody();
     void cgiTimeout(pid_t pid);
 
     std::map<std::string, std::string> envMap;
+    std::string scriptName;
     std::string cgiExecutorPathname;
     std::string cgiBinDir;
     int dataToCgiPipe[2] = {-1, -1};

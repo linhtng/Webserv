@@ -31,6 +31,7 @@
 #define REQUEST_LINE_REGEX "^" IMPLEMENTED_HTTP_METHODS_REGEX SP "(.+)" SP "HTTP/(\\d{1,3})\\.(\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
 #define HOST_REGEX "([^:]+):(\\d+)"
 /* #define MULTIFORM_BOUNDARY_REGEX "multipart/form-data;" RWS_REGEX "boundary=([^\\s;]+)" */
+
 #define GATEWAY_INTERFACE "CGI/1.1"
 #define SERVER_PROTOCOL "HTTP/1.1"
 #define READ_END 0
@@ -98,6 +99,11 @@ enum ContentType
 #define IMPLEMENTED_HTTP_METHODS        \
 	{                                   \
 		"GET", "HEAD", "POST", "DELETE" \
+	}
+
+#define VALID_CGI_EXTEN \
+	{                   \
+		".py", ".sh"    \
 	}
 
 enum HttpStatusCode
