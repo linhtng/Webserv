@@ -288,10 +288,10 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	}
 	std::string fileName = filenameIt->second;
 	// TODO: fgure out the root/alias situation
-	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir(), fileName);
+	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir());
 	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;
 	// save the file
-	FileSystemUtils::saveFile(savePath, part.body);
+	FileSystemUtils::saveFile(savePath, fileName, part.body);
 }
 
 void Response::handlePost()
@@ -392,25 +392,14 @@ void Response::handleAlias()
 	}
 }
 
-void Response::processMultiformDataPart(std::vector<std::byte> part)
+void Response::processMultiformDataPartHeaders(MultipartDataPart &dataPart, std::string headersString)
 {
-	MultipartDataPart dataPart;
-	std::string partString(reinterpret_cast<const char *>(part.data()), part.size());
-	std::stringstream partStream(partString);
+	std::stringstream partStream(headersString);
 	std::string line;
-	bool isHeader = true;
-
 	while (std::getline(partStream, line))
 	{
-		if (line.empty())
+		if (!StringUtils::trim(line).empty())
 		{
-			// Headers are done, the rest is the body
-			isHeader = false;
-			continue;
-		}
-		if (isHeader)
-		{
-			// Parse headers
 			size_t pos = line.find(':');
 			if (pos != std::string::npos)
 			{
@@ -420,20 +409,37 @@ void Response::processMultiformDataPart(std::vector<std::byte> part)
 				dataPart.headers[headerName] = headerValue;
 			}
 		}
-		else
-		{
-			// Convert the body part back to bytes
-			std::vector<std::byte> bodyPart;
-			bodyPart.reserve(line.size());
-			for (char ch : line)
-			{
-				bodyPart.push_back(static_cast<std::byte>(ch));
-			}
-			dataPart.body.insert(dataPart.body.end(), bodyPart.begin(), bodyPart.end());
-		}
 	}
+}
+
+void Response::processMultiformDataPart(std::vector<std::byte> part)
+{
+	std::cout << "\nprocessMultiformDataPart():" << std::endl;
+	for (auto ch : part)
+	{
+		std::cout << static_cast<char>(ch);
+	}
+	MultipartDataPart dataPart;
+
+	// fnd the end of headers and process them, they can be processed as a string
+	std::string partString(reinterpret_cast<const char *>(part.data()), part.size());
+	auto crlfPos = partString.find(CRLF CRLF);
+	// if CRLFCRLF not found, reject
+	if (crlfPos == std::string::npos)
+	{
+		// TODO: check if this error handling makes sense
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		return;
+	}
+	std::cout << BLUE << "crlfPos: " << crlfPos << RESET << std::endl;
+	// substring until the first CRLF CRLF
+	std::string headersString = partString.substr(0, crlfPos);
+	processMultiformDataPartHeaders(dataPart, headersString);
+
+	// the rest is the body, it needs to be processed as binary
+	dataPart.body = std::vector<std::byte>(part.begin() + crlfPos + 4, part.end());
+
 	this->_parts.push_back(dataPart);
-	// TODO: Store dataPart for later processing
 }
 
 void Response::processMultiformData()
@@ -511,6 +517,7 @@ void Response::processMultiformData()
 		{
 			std::cout << key << ": " << value << std::endl;
 		}
+		std::cout << "Body:" << std::endl;
 		for (auto ch : part.body)
 			std::cout << static_cast<char>(ch);
 	}

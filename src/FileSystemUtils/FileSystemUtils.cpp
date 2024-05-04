@@ -24,11 +24,8 @@ bool FileSystemUtils::isDir(const std::string &target)
 	return S_ISDIR(path_stat.st_mode);
 }
 
-#include <iostream>
-
 bool FileSystemUtils::isFile(const std::string &target)
 {
-	std::cout << "Checking if " << target << " is a file" << std::endl;
 	struct stat path_stat;
 	if (stat(target.c_str(), &path_stat) == -1)
 	{
@@ -37,13 +34,28 @@ bool FileSystemUtils::isFile(const std::string &target)
 	return S_ISREG(path_stat.st_mode);
 }
 
-void FileSystemUtils::saveFile(std::string savePath, std::vector<std::byte> body)
+void FileSystemUtils::createDirectory(const std::string &path)
 {
-	std::ofstream fileStream(savePath, std::ios::binary);
+	// Attempt to create the directory
+	if (mkdir(path.c_str(), 0777) == -1)
+	{
+		// Check if the error was because the directory already exists
+		if (errno != EEXIST)
+		{
+			throw std::runtime_error("Failed to create directory: " + path);
+		}
+		// If the directory already exists, do nothing
+	}
+}
+
+void FileSystemUtils::saveFile(std::string savePath, std::string fileName, std::vector<std::byte> body)
+{
+	createDirectory(savePath);
+	std::string fullPath = StringUtils::joinPath(savePath, fileName);
+	std::ofstream fileStream(fullPath, std::ios::binary);
 	if (!fileStream)
 	{
-		std::cerr << "Failed to open file: " << savePath << std::endl;
-		throw std::runtime_error("Failed to open file: " + savePath);
+		throw std::runtime_error("Failed to open file: " + fullPath);
 	}
 	fileStream.write(reinterpret_cast<const char *>(body.data()), body.size());
 	fileStream.close();
