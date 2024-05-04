@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include "../defines.hpp"
 #include "../StringUtils/StringUtils.hpp"
-#include "../HttpMessage/HttpMessage.hpp"
+#include "../HttpUtils/HttpUtils.hpp"
 
 class Location
 {

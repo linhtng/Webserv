@@ -10,6 +10,7 @@
 #include <limits>
 #include "../HttpMessage/HttpMessage.hpp"
 #include "../StringUtils/StringUtils.hpp"
+#include "../HttpUtils/HttpUtils.hpp"
 
 class Request : public HttpMessage
 {

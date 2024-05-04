@@ -8,6 +8,7 @@
 #include "../FileSystemUtils/FileSystemUtils.hpp"
 #include "../config_parser/Location.hpp"
 #include "../BinaryData/BinaryData.hpp"
+#include "../HttpUtils/HttpUtils.hpp"
 
 #include <string>
 #include <chrono>

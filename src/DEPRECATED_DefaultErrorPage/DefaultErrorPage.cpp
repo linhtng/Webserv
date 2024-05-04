@@ -14,7 +14,7 @@ std::vector<std::byte> DefaultErrorPage::getErrorPage(HttpStatusCode statusCode)
 	std::string templateContent = buffer.str();
 
 	std::string statusCodeStr = std::to_string(statusCode);
-	std::string statusMessage = HttpMessage::_statusCodeMessages.at(statusCode);
+	std::string statusMessage = HttpUtils::_statusCodeMessages.at(statusCode);
 
 	StringUtils::replaceAll(templateContent, "{{status_code}}", statusCodeStr);
 	StringUtils::replaceAll(templateContent, "{{status_message}}", statusMessage);

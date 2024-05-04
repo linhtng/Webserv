@@ -141,8 +141,8 @@ void Location::setAcceptedMethods()
 
 HttpMethod Location::matchValidMethod(std::string method)
 {
-	auto it = HttpMessage::_strToHttpMethod.find(method);
-	if (it == HttpMessage::_strToHttpMethod.end())
+	auto it = HttpUtils::_strToHttpMethod.find(method);
+	if (it == HttpUtils::_strToHttpMethod.end())
 	{
 		throw std::invalid_argument("Invalid method: " + method);
 	}

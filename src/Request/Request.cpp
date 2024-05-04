@@ -151,8 +151,8 @@ void Request::validateMethod()
 
 HttpMethod Request::matchValidMethod()
 {
-	auto it = HttpMessage::_strToHttpMethod.find(this->_requestLine.method);
-	if (it == HttpMessage::_strToHttpMethod.end())
+	auto it = HttpUtils::_strToHttpMethod.find(this->_requestLine.method);
+	if (it == HttpUtils::_strToHttpMethod.end())
 	{
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
 		throw BadRequestException();
@@ -352,7 +352,7 @@ void Request::parseContentType()
 	{
 		std::string type = StringUtils::trim(split[0]);
 		std::transform(type.begin(), type.end(), type.begin(), ::tolower);
-		this->_contentType = HttpMessage::_contentTypes.at(type);
+		this->_contentType = HttpUtils::_contentTypes.at(type);
 	}
 	catch (const std::out_of_range &e)
 	{
