@@ -11,6 +11,7 @@
 #include "../HttpMessage/HttpMessage.hpp"
 #include "../StringUtils/StringUtils.hpp"
 #include "../HttpUtils/HttpUtils.hpp"
+#include "../Logger/Logger.hpp"
 
 class Request : public HttpMessage
 {

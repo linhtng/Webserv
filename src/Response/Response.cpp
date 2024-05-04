@@ -99,15 +99,24 @@ std::string Response::formatHeader() const
 std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
-	std::cout << RED << "Formatting response" << RESET << std::endl;
-	std::string formattedHeader = this->formatHeader();
-	for (char ch : formattedHeader)
+	if (this->_criticalError)
 	{
-		response.push_back(static_cast<std::byte>(ch));
+		std::string errorMessage = CRITICAL_ERROR_RESPONSE;
+		for (char ch : errorMessage)
+		{
+			response.push_back(static_cast<std::byte>(ch));
+		}
 	}
-	std::vector<std::byte> body = this->_body;
-	std::cout << RED << "Formatted response" << RESET << std::endl;
-	response.insert(response.end(), body.begin(), body.end());
+	else
+	{
+		std::string formattedHeader = this->formatHeader();
+		for (char ch : formattedHeader)
+		{
+			response.push_back(static_cast<std::byte>(ch));
+		}
+		std::vector<std::byte> body = this->_body;
+		response.insert(response.end(), body.begin(), body.end());
+	}
 	return response;
 }
 
@@ -118,13 +127,9 @@ void Response::setDateToCurrent()
 	this->_date = std::chrono::system_clock::now();
 }
 
-void Response::prepareResponse()
-{
-	// Things that are done for every response
-}
-
 void Response::prepareErrorResponse()
 {
+	prepareStandardHeaders();
 	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
 	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
@@ -539,11 +544,8 @@ void Response::processMultiformData()
 	}
 }
 
-// CONSTRUCTOR
-
-Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection(), request.getHttpVersionMajor(), request.getHttpVersionMinor(), request.getBoundary()), _request(request)
+void Response::prepareResponse()
 {
-	//(void)_request;
 	try
 	{
 		processMultiformData();
@@ -556,108 +558,136 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
 	}
-	this->prepareStandardHeaders();
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
-		std::cout << RED << "Creating response based on error" << RESET << std::endl;
-		// we already know what the response will be, just need to format it
+		throw ServerException();
+	}
+	this->prepareStandardHeaders();
+	splitTarget();
+	// try to match location
+	try
+	{
+		this->_location = _config.getMatchingLocation(_route);
+		std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
+	}
+	catch (const std::exception &e)
+	{
+		std::cout << RED << "Didn't find location for: " << _route << "' found" << RESET << std::endl;
+		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		this->prepareErrorResponse();
+		return;
+	}
+	// handle redirection
+	if (isRedirect())
+	{
+		std::cout << RED << "Redirect" << RESET << std::endl;
+		this->prepareRedirectResponse();
+		return;
+	}
+	// handle aliases - should override root
+	handleAlias();
+	// make sure target exists
+	if (!targetFound())
+	{
+		std::cout << RED << "Target not found" << RESET << std::endl;
+		this->_statusCode = HttpStatusCode::NOT_FOUND;
+		this->prepareErrorResponse();
+		return;
+	}
+	if (isCGI())
+	{
+		executeCGI();
 	}
 	else
 	{
-		splitTarget();
-		// try to match location
-		try
+		switch (this->_method)
 		{
-			this->_location = _config.getMatchingLocation(_route);
-			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
-		}
-		catch (const std::exception &e)
-		{
-			std::cout << RED << "Didn't find location for: " << _route << "' found" << RESET << std::endl;
-			this->_statusCode = HttpStatusCode::NOT_FOUND;
+		case HttpMethod::POST:
+			handlePost();
+			break;
+		case HttpMethod::GET:
+			handleGet();
+			break;
+		case HttpMethod::HEAD:
+			handleHead();
+			break;
+		case HttpMethod::DELETE:
+			handleDelete();
+			break;
+		default:
+			// 405 Method Not Allowed
+			// this was already checked in the Request class though
+			this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
 			this->prepareErrorResponse();
-			return;
+			break;
 		}
-		// handle redirection
-		if (isRedirect())
-		{
-			std::cout << RED << "Redirect" << RESET << std::endl;
-			this->prepareRedirectResponse();
-			return;
-		}
-		// handle aliases - should override root
-		handleAlias();
-		// make sure target exists
-		if (!targetFound())
-		{
-			std::cout << RED << "Target not found" << RESET << std::endl;
-			this->_statusCode = HttpStatusCode::NOT_FOUND;
-			this->prepareErrorResponse();
-			return;
-		}
-		if (isCGI())
-		{
-			executeCGI();
-		}
-		else
-		{
-			switch (this->_method)
-			{
-			case HttpMethod::POST:
-				handlePost();
-				break;
-			case HttpMethod::GET:
-				handleGet();
-				break;
-			case HttpMethod::HEAD:
-				handleHead();
-				break;
-			case HttpMethod::DELETE:
-				handleDelete();
-				break;
-			default:
-				// 405 Method Not Allowed
-				// this was already checked in the Request class though
-				this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
-				this->prepareErrorResponse();
-				break;
-			}
-		}
-		if (this->_method != HttpMethod::HEAD)
-		{
-			this->_contentLength = this->_body.size();
-		}
-		// check target, if REDIRECT, return response with 301, 308 with Location header
-		// check target, return 404 if resourse NOT FOUND
-		// - CGI:
-		//		- check permissions, reject if not allowed
-		//		- execute the script
-		//		- serve the output back to the client
-		// check method, handle everey method separately
-		// - POST:
-		//		- is upload allowed? if not reject with 403
-		//		- parse body and save it as a file
-		//		- serve the file back to the client
-		// - GET:
-		//		- FILE:
-		//			- check permissions, reject if not allowed with 403
-		//			- serve the file back to the client
-		//		- DIRECTORY:
-		//			- check permissions, reject if not allowed with 403
-		//			- check if index exists, serve it if it does
-		//			- otherwise check if autoindex is on, serve the directory listing back to the client or reject with 403
-		// - HEAD:
-		//		- check permissions, reject if not allowed with 403
-		//		- serve the file back to the client, but without the body
-		// - DELETE:
-		//		- check permissions, reject if not allowed with 403
-		//		- check if directory, reject if it is
-		//		- delete the file
-		//		- return headers with no body
-		// Locations that are allowed - is it in config? ask Linh
+	}
+	if (this->_method != HttpMethod::HEAD)
+	{
+		this->_contentLength = this->_body.size();
 	}
 }
+
+// CONSTRUCTOR
+
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection(), request.getHttpVersionMajor(), request.getHttpVersionMinor(), request.getBoundary(), request.getCriticalError()), _request(request)
+{
+	try
+	{
+		prepareResponse();
+	}
+	catch (const ClientException &e)
+	{
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+		{
+			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		}
+	}
+	catch (const std::exception &e)
+	{
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+		{
+			this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+		}
+	}
+	try
+	{
+		prepareErrorResponse();
+	}
+	catch (const std::exception &e)
+	{
+		this->_criticalError = true;
+	}
+}
+
+// check target, if REDIRECT, return response with 301, 308 with Location header
+// check target, return 404 if resourse NOT FOUND
+// - CGI:
+//		- check permissions, reject if not allowed
+//		- execute the script
+//		- serve the output back to the client
+// check method, handle everey method separately
+// - POST:
+//		- is upload allowed? if not reject with 403
+//		- parse body and save it as a file
+//		- serve the file back to the client
+// - GET:
+//		- FILE:
+//			- check permissions, reject if not allowed with 403
+//			- serve the file back to the client
+//		- DIRECTORY:
+//			- check permissions, reject if not allowed with 403
+//			- check if index exists, serve it if it does
+//			- otherwise check if autoindex is on, serve the directory listing back to the client or reject with 403
+// - HEAD:
+//		- check permissions, reject if not allowed with 403
+//		- serve the file back to the client, but without the body
+// - DELETE:
+//		- check permissions, reject if not allowed with 403
+//		- check if directory, reject if it is
+//		- delete the file
+//		- return headers with no body
+// Locations that are allowed - is it in config? ask Linh
 
 // RESPONSES:
 
