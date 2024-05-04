@@ -10,3 +10,9 @@ curl --data-binary "@image.JPG" -H "Transfer-encoding: chunked" http://localhost
 - Content-Length = 0, isBodyExpected() true or false; => check requeest header function
 - Post method with no body? => check requeest header function
 - GetMethod -> return string
+
+POST /hi HTTP/1.1
+Host: localhost:10002
+Connection: keep-alive
+
+

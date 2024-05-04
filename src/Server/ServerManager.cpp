@@ -134,15 +134,15 @@ void ServerManager::handlePoll()
 {
 	std::vector<pollfd> pollfdsTmp(pollfds.begin(), pollfds.end()); // create a vector to hold the pollfds temporarily
 
+	std::cout << "fds: ";
+	for (auto &pollfd : pollfds)
+		std::cout << pollfd.fd << " ";
+	std::cout << std::endl;
+
 	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), TIMEOUT); // call poll using the vector's data
 
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfdsTmp.begin(), pollfdsTmp.end()); // move the contents back from the vector
-
-	// std::cout << "fds: ";
-	// for (auto &pollfd : pollfds)
-	// 	std::cout << pollfd.fd << " ";
-	// std::cout << std::endl;
 
 	if (ready < 0)
 	{
@@ -224,7 +224,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	clientToServerMap.erase(clientFd);
 	clientLastActiveTime.erase(clientFd);
 	it = pollfds.erase(it);
-	it--; // TODO : check
+	--it;
 }
 
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)

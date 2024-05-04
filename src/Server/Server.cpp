@@ -23,7 +23,6 @@ void Server::setUpServerSocket()
 	opt = 1;
 	if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // create socket file descriptor
 		throw SocketCreationException();
-	std::cout << "serverFd: " << serverFd << std::endl;
 	try
 	{
 		if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, // set file descriptor to be reuseable
@@ -72,7 +71,6 @@ int Server::acceptNewConnection()
 
 Server::RequestStatus Server::receiveRequest(int const &clientFd)
 {
-	std::cout << "recv request" << std::endl;
 	RequestStatus requestStatus = clients[clientFd]->isNewRequest()
 									  ? receiveRequestHeader(clientFd)
 									  : receiveRequestBody(clientFd);
@@ -356,12 +354,12 @@ Server::ResponseStatus Server::sendResponse(int const &clientFd)
 {
 	//--------------------------------------------------------------
 	// TODO - to save the file in Request/Response Class
-	std::ofstream ofs("test.txt");
-	std::vector<std::byte> body = clients[clientFd]->getRequestBody();
-	const std::byte *dataPtr = body.data();
-	std::size_t dataSize = body.size();
-	ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
-	ofs.close();
+	// std::ofstream ofs("test.txt");
+	// std::vector<std::byte> body = clients[clientFd]->getRequestBody();
+	// const std::byte *dataPtr = body.data();
+	// std::size_t dataSize = body.size();
+	// ofs.write(reinterpret_cast<const char *>(dataPtr), dataSize);
+	// ofs.close();
 	//--------------------------------------------------------------
 
 	Response response = clients[clientFd]->getResponse();
