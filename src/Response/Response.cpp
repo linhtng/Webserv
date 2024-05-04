@@ -98,24 +98,15 @@ std::string Response::formatHeader() const
 std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
-	if (this->_criticalError)
+	std::cout << RED << "Formatting response" << RESET << std::endl;
+	std::string formattedHeader = this->formatHeader();
+	for (char ch : formattedHeader)
 	{
-		std::string errorMessage = CRITICAL_ERROR_RESPONSE;
-		for (char ch : errorMessage)
-		{
-			response.push_back(static_cast<std::byte>(ch));
-		}
+		response.push_back(static_cast<std::byte>(ch));
 	}
-	else
-	{
-		std::string formattedHeader = this->formatHeader();
-		for (char ch : formattedHeader)
-		{
-			response.push_back(static_cast<std::byte>(ch));
-		}
-		std::vector<std::byte> body = this->_body;
-		response.insert(response.end(), body.begin(), body.end());
-	}
+	std::vector<std::byte> body = this->_body;
+	std::cout << RED << "Formatted response" << RESET << std::endl;
+	response.insert(response.end(), body.begin(), body.end());
 	return response;
 }
 
@@ -126,9 +117,13 @@ void Response::setDateToCurrent()
 	this->_date = std::chrono::system_clock::now();
 }
 
+void Response::prepareResponse()
+{
+	// Things that are done for every response
+}
+
 void Response::prepareErrorResponse()
 {
-	prepareStandardHeaders();
 	this->_body = BinaryData::getErrorPage(this->_statusCode);
 	this->_contentLength = this->_body.size();
 	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
@@ -196,7 +191,6 @@ bool Response::extractFileName(const std::string &fileName, std::string &name, s
 }
 
 // probably would be nice to move this to utils
-// sets _route, _fileName and _fileExtension based on _target
 void Response::splitTarget()
 {
 	// split string in two by last slash
@@ -260,12 +254,16 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	// first part is always form-data
 	if (split.size() < 1)
 	{
-		throw ClientException();
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		// prepareErrorResponse();
+		return;
 	}
 	std::string firstAlwaysFormData = StringUtils::trim(split[0]);
 	if (firstAlwaysFormData != "form-data")
 	{
-		throw ClientException();
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		// prepareErrorResponse();
+		return;
 	}
 	// extract params liek name and filename
 
@@ -277,7 +275,9 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		if (paramsSplit.size() != 2)
 		{
 			// if no =, reject
-			throw ClientException();
+			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+			// prepareErrorResponse();
+			return;
 		}
 		std::string paramName = StringUtils::trim(paramsSplit[0]);
 		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
@@ -290,15 +290,17 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	auto filenameIt = params.find("filename");
 	if (filenameIt == params.end())
 	{
-		throw ClientException();
+		// handle non-upload ones
+		// prepareErrorResponse();
+		return;
 	}
 	std::string fileName = filenameIt->second;
 	if (fileName.empty())
 	{
-		std::cout << GREEN << "Empty filename" << RESET << std::endl;
-		throw ClientException();
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		prepareErrorResponse();
+		return;
 	}
-	std::cout << GREEN << "After empty filename" << RESET << std::endl;
 	// TODO: fgure out the root/alias situation
 	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir());
 	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;
@@ -312,7 +314,8 @@ void Response::handlePost()
 	if (this->_location.getSaveDir().empty())
 	{
 		this->_statusCode = HttpStatusCode::FORBIDDEN;
-		throw ClientException();
+		prepareErrorResponse();
+		return;
 	}
 	// iterate throu parts and save them to files
 	for (size_t i = 0; i < this->_parts.size(); i++)
@@ -356,7 +359,7 @@ void Response::handleGet()
 		{
 			std::cout << RED << "Not Directory listing or Index file" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::FORBIDDEN;
-			throw ClientException();
+			// 403 Forbidden
 		}
 	}
 	else
@@ -372,7 +375,8 @@ void Response::handleGet()
 		{
 			std::cout << RED << "Not a file, some weird shit" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
-			throw ClientException();
+			prepareErrorResponse();
+			// 404 Not Found
 		}
 	}
 }
@@ -402,7 +406,7 @@ void Response::handleAlias()
 	}
 }
 
-void Response::processMultipartDataPartHeaders(MultipartDataPart &dataPart, std::string headersString)
+void Response::processMultiformDataPartHeaders(MultipartDataPart &dataPart, std::string headersString)
 {
 	std::stringstream partStream(headersString);
 	std::string line;
@@ -422,9 +426,9 @@ void Response::processMultipartDataPartHeaders(MultipartDataPart &dataPart, std:
 	}
 }
 
-void Response::processMultipartDataPart(std::vector<std::byte> part)
+void Response::processMultiformDataPart(std::vector<std::byte> part)
 {
-	std::cout << "\nprocessMultipartDataPart():" << std::endl;
+	std::cout << "\nprocessMultiformDataPart():" << std::endl;
 	for (auto ch : part)
 	{
 		std::cout << static_cast<char>(ch);
@@ -437,14 +441,14 @@ void Response::processMultipartDataPart(std::vector<std::byte> part)
 	// if CRLFCRLF not found, reject
 	if (crlfPos == std::string::npos)
 	{
-		std::cout << BLUE << "no crlfPos found" << RESET << std::endl;
 		// TODO: check if this error handling makes sense
-		throw ClientException();
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		return;
 	}
 	std::cout << BLUE << "crlfPos: " << crlfPos << RESET << std::endl;
 	// substring until the first CRLF CRLF
 	std::string headersString = partString.substr(0, crlfPos);
-	processMultipartDataPartHeaders(dataPart, headersString);
+	processMultiformDataPartHeaders(dataPart, headersString);
 
 	// the rest is the body, it needs to be processed as binary
 	dataPart.body = std::vector<std::byte>(part.begin() + crlfPos + 4, part.end());
@@ -452,13 +456,13 @@ void Response::processMultipartDataPart(std::vector<std::byte> part)
 	this->_parts.push_back(dataPart);
 }
 
-void Response::processMultipartData()
+void Response::processMultiformData()
 {
 	if (this->_request.getContentType() != ContentType::MULTIPART_FORM_DATA)
 	{
 		return;
 	}
-	std::cout << GREEN << "Processing multipart data" << RESET << std::endl;
+	std::cout << GREEN << "Processing multiform data" << RESET << std::endl;
 	std::cout << GREEN << "REQUEST BODY" << RESET << std::endl;
 	std::vector<std::byte> requestBody = this->_request.getBody();
 	for (auto ch : requestBody)
@@ -483,7 +487,8 @@ void Response::processMultipartData()
 	auto partStart = std::search(messageBody.begin(), messageBody.end(), delimiterBytes.begin(), delimiterBytes.end());
 	if (partStart == messageBody.end())
 	{
-		throw ClientException();
+		throw std::runtime_error("First boundary not found in multiform data");
+		return;
 	}
 
 	// Skip the delimiter
@@ -494,7 +499,8 @@ void Response::processMultipartData()
 	auto endDelimiterIt = std::search(partStart, messageBody.end(), endDelimiterBytes.begin(), endDelimiterBytes.end());
 	if (endDelimiterIt == messageBody.end())
 	{
-		throw ClientException();
+		throw std::runtime_error("Wrong multiform format");
+		return;
 	}
 
 	while (partStart != messageBody.end())
@@ -504,12 +510,12 @@ void Response::processMultipartData()
 		// TODO: finish the whole crlf condition thing
 		if (partEnd == messageBody.end() || partEnd - partStart < 4)
 		{
-			throw ClientException();
+			throw std::runtime_error("Wrong multiform format");
+			break;
 		}
 		// Extract the current part
 		std::vector<std::byte> part(partStart + 2, partEnd - 2);
-		std::cout << "processing part of bytes: " << part.size() << std::endl;
-		processMultipartDataPart(part);
+		processMultiformDataPart(part);
 		// if this was the last part, stop
 		if (partEnd == endDelimiterIt)
 		{
@@ -518,11 +524,7 @@ void Response::processMultipartData()
 		// If not the end, move to the start of the next part
 		partStart = partEnd + delimiterBytes.size();
 	}
-	std::cout << GREEN << "Processed multipart data, parts detected: " << this->_parts.size() << RESET << std::endl;
-	if (this->_parts.size() == 0)
-	{
-		throw ClientException();
-	}
+	std::cout << GREEN << "Processed multiform data, parts detected: " << this->_parts.size() << RESET << std::endl;
 	std::cout << "Parsed parts:" << std::endl;
 	for (auto &part : this->_parts)
 	{
@@ -536,157 +538,125 @@ void Response::processMultipartData()
 	}
 }
 
-void Response::prepareResponse()
+// CONSTRUCTOR
+
+Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection(), request.getHttpVersionMajor(), request.getHttpVersionMinor(), request.getBoundary()), _request(request)
 {
-	// if error is already known, just go straight to error forming
-	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
-	{
-		throw ServerException();
-	}
-	// Process multipart form
+	//(void)_request;
 	try
 	{
-		processMultipartData();
+		processMultiformData();
 	}
 	catch (const std::exception &e)
 	{
+		std::cerr << RED << "Error processing multiform data: " << e.what() << RESET << std::endl;
 		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
-		throw ClientException();
 	}
-	// prepare headers standard for every response
-	prepareStandardHeaders();
-	// split target into route, filename and extension
-	splitTarget();
-	// try to match location
-	try
+	this->prepareStandardHeaders();
+	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
-		this->_location = _config.getMatchingLocation(_route);
-	}
-	catch (const std::exception &e)
-	{
-		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		throw ClientException();
-	}
-	// handle redirection
-	if (isRedirect())
-	{
-		std::cout << RED << "Redirect" << RESET << std::endl;
-		this->prepareRedirectResponse();
-		return;
-	}
-	// handle aliases - should override root
-	handleAlias();
-	// make sure target exists
-	if (!targetFound())
-	{
-		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		throw ClientException();
-	}
-	// CGI handling
-	if (isCGI())
-	{
-		executeCGI();
-		return;
+		std::cout << RED << "Creating response based on error" << RESET << std::endl;
+		// we already know what the response will be, just need to format it
+		this->prepareErrorResponse();
 	}
 	else
 	{
-		switch (this->_method)
-		{
-		case HttpMethod::POST:
-			handlePost();
-			break;
-		case HttpMethod::GET:
-			handleGet();
-			break;
-		case HttpMethod::HEAD:
-			handleHead();
-			break;
-		case HttpMethod::DELETE:
-			handleDelete();
-			break;
-		default:
-			this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
-			throw ClientException();
-		}
-	}
-	// set content length if not HEAD
-	if (this->_method != HttpMethod::HEAD)
-	{
-		this->_contentLength = this->_body.size();
-	}
-}
-
-// CONSTRUCTOR
-
-Response::Response(const Request &request) : HttpMessage(request.getConfig(), request.getStatusCode(), request.getMethod(), request.getTarget(), request.getConnection(), request.getHttpVersionMajor(), request.getHttpVersionMinor(), request.getBoundary(), request.getCriticalError()), _request(request)
-{
-	try
-	{
-		prepareResponse();
-	}
-	catch (const ClientException &e)
-	{
+		splitTarget();
+		// try to match location
 		try
 		{
-			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
-			{
-				this->_statusCode = HttpStatusCode::BAD_REQUEST;
-			}
-			prepareErrorResponse();
+			this->_location = _config.getMatchingLocation(_route);
+			std::cout << RED << "Location '" << _route << "' found" << RESET << std::endl;
 		}
 		catch (const std::exception &e)
 		{
-			this->_criticalError = true;
+			std::cout << RED << "Didn't find location for: " << _route << "' found" << RESET << std::endl;
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			this->prepareErrorResponse();
+			return;
 		}
-	}
-	catch (const std::exception &e)
-	{
-		try
+		// handle redirection
+		if (isRedirect())
 		{
-			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+			std::cout << RED << "Redirect" << RESET << std::endl;
+			this->prepareRedirectResponse();
+			return;
+		}
+		// handle aliases - should override root
+		handleAlias();
+		// make sure target exists
+		if (!targetFound())
+		{
+			std::cout << RED << "Target not found" << RESET << std::endl;
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			this->prepareErrorResponse();
+			return;
+		}
+		if (isCGI())
+		{
+			executeCGI();
+		}
+		else
+		{
+			switch (this->_method)
 			{
-				this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+			case HttpMethod::POST:
+				handlePost();
+				break;
+			case HttpMethod::GET:
+				handleGet();
+				break;
+			case HttpMethod::HEAD:
+				handleHead();
+				break;
+			case HttpMethod::DELETE:
+				handleDelete();
+				break;
+			default:
+				// 405 Method Not Allowed
+				// this was already checked in the Request class though
+				this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
+				this->prepareErrorResponse();
+				break;
 			}
-			prepareErrorResponse();
 		}
-		catch (const std::exception &e)
+		if (this->_method != HttpMethod::HEAD)
 		{
-			this->_criticalError = true;
+			this->_contentLength = this->_body.size();
 		}
+		// check target, if REDIRECT, return response with 301, 308 with Location header
+		// check target, return 404 if resourse NOT FOUND
+		// - CGI:
+		//		- check permissions, reject if not allowed
+		//		- execute the script
+		//		- serve the output back to the client
+		// check method, handle everey method separately
+		// - POST:
+		//		- is upload allowed? if not reject with 403
+		//		- parse body and save it as a file
+		//		- serve the file back to the client
+		// - GET:
+		//		- FILE:
+		//			- check permissions, reject if not allowed with 403
+		//			- serve the file back to the client
+		//		- DIRECTORY:
+		//			- check permissions, reject if not allowed with 403
+		//			- check if index exists, serve it if it does
+		//			- otherwise check if autoindex is on, serve the directory listing back to the client or reject with 403
+		// - HEAD:
+		//		- check permissions, reject if not allowed with 403
+		//		- serve the file back to the client, but without the body
+		// - DELETE:
+		//		- check permissions, reject if not allowed with 403
+		//		- check if directory, reject if it is
+		//		- delete the file
+		//		- return headers with no body
+		// Locations that are allowed - is it in config? ask Linh
 	}
 }
-
-// check target, if REDIRECT, return response with 301, 308 with Location header
-// check target, return 404 if resourse NOT FOUND
-// - CGI:
-//		- check permissions, reject if not allowed
-//		- execute the script
-//		- serve the output back to the client
-// check method, handle everey method separately
-// - POST:
-//		- is upload allowed? if not reject with 403
-//		- parse body and save it as a file
-//		- serve the file back to the client
-// - GET:
-//		- FILE:
-//			- check permissions, reject if not allowed with 403
-//			- serve the file back to the client
-//		- DIRECTORY:
-//			- check permissions, reject if not allowed with 403
-//			- check if index exists, serve it if it does
-//			- otherwise check if autoindex is on, serve the directory listing back to the client or reject with 403
-// - HEAD:
-//		- check permissions, reject if not allowed with 403
-//		- serve the file back to the client, but without the body
-// - DELETE:
-//		- check permissions, reject if not allowed with 403
-//		- check if directory, reject if it is
-//		- delete the file
-//		- return headers with no body
-// Locations that are allowed - is it in config? ask Linh
 
 // RESPONSES:
 

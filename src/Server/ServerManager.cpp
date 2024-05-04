@@ -59,20 +59,20 @@ void ServerManager::createServers()
 			std::unique_ptr<Server> server = std::make_unique<Server>(config);
 			server->setUpServerSocket();
 			Logger::log(e_log_level::INFO, SERVER, "Server created - Host: %s, Port: %d, Server Name: %s",
-									server->getHost().c_str(),
-									server->getPort(),
-									config.getServerName().c_str());
+						server->getHost().c_str(),
+						server->getPort(),
+						config.getServerName().c_str());
 			int serverFd = server->getServerFd();
-			servers[serverFd] = std::move(server);		// insert server into map
+			servers[serverFd] = std::move(server);	  // insert server into map
 			pollfds.push_back({serverFd, POLLIN, 0}); // add the server socket to poll fd
 		}
 		else
 		{
 			serverPtr->second->appendConfig(config);
 			Logger::log(e_log_level::INFO, SERVER, "Configuration of Server Name %s added to Server %s:%d",
-									config.getServerName().c_str(),
-									config.getServerHost().c_str(),
-									config.getServerPort());
+						config.getServerName().c_str(),
+						config.getServerHost().c_str(),
+						config.getServerPort());
 		}
 	}
 }
@@ -119,8 +119,8 @@ void ServerManager::startServerLoop()
 				int clientFd = it->fd;
 				int serverFd = clientToServerMap[clientFd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d disconnect",
-										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
-										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
+							inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+							ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
 				handleClientDisconnection(it);
 			}
 			else
@@ -134,15 +134,15 @@ void ServerManager::handlePoll()
 {
 	std::vector<pollfd> pollfdsTmp(pollfds.begin(), pollfds.end()); // create a vector to hold the pollfds temporarily
 
-	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), TIMEOUT); // call poll using the vector's data
+	std::cout << "fds: ";
+	for (auto &pollfd : pollfds)
+		std::cout << pollfd.fd << " ";
+	std::cout << std::endl;
+
+	int ready = poll(pollfdsTmp.data(), pollfdsTmp.size(), SERVER_TIMEOUT); // call poll using the vector's data
 
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfdsTmp.begin(), pollfdsTmp.end()); // move the contents back from the vector
-
-	// std::cout << "fds: ";
-	// for (auto &pollfd : pollfds)
-	// 	std::cout << pollfd.fd << " ";
-	// std::cout << std::endl;
 
 	if (ready < 0)
 	{
@@ -162,13 +162,13 @@ void ServerManager::checkClientTimeout(int const &ready)
 		if (clientToServerMap.find(it->fd) != clientToServerMap.end())
 		{
 			std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - clientLastActiveTime[it->fd];
-			if (ready == 0 || elapsedSeconds.count() >= TIMEOUT / 1000) // if poll timeout or the client timeout
+			if (ready == 0 || elapsedSeconds.count() >= SERVER_TIMEOUT / 1000) // if poll timeout or the client timeout
 			{
 				int clientFd = it->fd;
 				int serverFd = clientToServerMap[clientFd];
 				Logger::log(e_log_level::INFO, CLIENT, "Client %s:%d timeout",
-										inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
-										ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
+							inet_ntoa(servers[serverFd]->getClientIPv4Address(clientFd)),
+							ntohs(servers[serverFd]->getClientPortNumber(clientFd)));
 				servers[serverFd]->createAndSendErrorResponse(REQUEST_TIMEOUT, clientFd);
 				handleClientDisconnection(it);
 			}
@@ -224,7 +224,7 @@ void ServerManager::handleClientDisconnection(std::list<pollfd>::iterator &it)
 	clientToServerMap.erase(clientFd);
 	clientLastActiveTime.erase(clientFd);
 	it = pollfds.erase(it);
-	it--; // TODO : check
+	--it;
 }
 
 void ServerManager::cleanUpForServerShutdown(HttpStatusCode const &statusCode)
