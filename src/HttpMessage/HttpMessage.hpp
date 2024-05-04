@@ -54,9 +54,6 @@ public:
 	HttpStatusCode getStatusCode() const;
 	std::string getBoundary() const;
 	bool isChunked() const;
-
-	static const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages;
-	static const std::unordered_map<std::string, ContentType> _contentTypes;
 };
 
 #endif

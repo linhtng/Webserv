@@ -35,7 +35,15 @@ std::string Response::formatDate() const
 
 std::string Response::formatStatusCodeMessage() const
 {
-	return (std::to_string(this->_statusCode) + " " + this->_statusCodeMessages.at(this->_statusCode));
+	std::string errorMessage = DEFAULT_ERROR_MESSAGE;
+	try
+	{
+		errorMessage = HttpUtils::_statusCodeMessages.at(this->_statusCode);
+	}
+	catch (const std::out_of_range &e)
+	{
+	}
+	return (std::to_string(this->_statusCode) + " " + errorMessage);
 }
 
 std::string Response::formatConnection() const
@@ -92,7 +100,8 @@ std::vector<std::byte> Response::formatResponse() const
 {
 	std::vector<std::byte> response;
 	std::cout << RED << "Formatting response" << RESET << std::endl;
-	for (char ch : this->formatHeader())
+	std::string formattedHeader = this->formatHeader();
+	for (char ch : formattedHeader)
 	{
 		response.push_back(static_cast<std::byte>(ch));
 	}
@@ -287,6 +296,12 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		return;
 	}
 	std::string fileName = filenameIt->second;
+	if (fileName.empty())
+	{
+		this->_statusCode = HttpStatusCode::BAD_REQUEST;
+		prepareErrorResponse();
+		return;
+	}
 	// TODO: fgure out the root/alias situation
 	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir());
 	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;

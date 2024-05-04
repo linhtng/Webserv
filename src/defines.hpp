@@ -2,6 +2,7 @@
 #define DEFINES_HPP
 
 #define SERVER_SOFTWARE "webservant v0.1"
+#define DEFAULT_ERROR_MESSAGE "An error occurred"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
