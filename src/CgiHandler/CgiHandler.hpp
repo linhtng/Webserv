@@ -7,6 +7,7 @@
 #include "../Request/Request.hpp"
 #include "../config_parser/ConfigParser.hpp"
 #include "../defines.hpp"
+#include "../StringUtils/StringUtils.hpp"
 
 struct CgiRequest
 {
