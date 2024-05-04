@@ -110,13 +110,17 @@ std::string Request::removeComments(const std::string &input) const
 
 void Request::extractRequestLine(const std::string &requestLine)
 {
+	std::cout << RED << "extractRequestLine()" << RESET << std::endl;
 	std::regex requestLineRegex(REQUEST_LINE_REGEX);
 	std::smatch match;
+	std::cout << "requestLine: " << requestLine << std::endl;
+	std::cout << "regex: " << REQUEST_LINE_REGEX << std::endl;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
+		std::cout << "minor: " << match[4] << std::endl;
 		if (match[4].matched)
 		{
 			this->_requestLine.HTTPVersionMinor = match[4];
@@ -131,9 +135,15 @@ void Request::extractRequestLine(const std::string &requestLine)
 void Request::validateMethod()
 {
 	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
-	auto itValid = std::find(validMethods.begin(), validMethods.end(), this->_requestLine.method);
+	std::string method = this->_requestLine.method;
+	std::cout << "method: " << method << std::endl;
+	// toupper
+	std::transform(method.begin(), method.end(), method.begin(), ::toupper);
+
+	auto itValid = std::find(validMethods.begin(), validMethods.end(), method);
 	if (itValid == validMethods.end())
 	{
+		std::cout << "method not valid" << std::endl;
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
 		throw BadRequestException();
 	}
@@ -214,10 +224,15 @@ int Request::parseMinorVersion()
 
 void Request::parseRequestLine()
 {
+	std::cout << RED << "parseRequestLine()" << RESET << std::endl;
 	this->_method = parseMethod();
+	std::cout << "method: " << this->_method << std::endl;
 	this->_target = parseTarget();
+	std::cout << "target: " << this->_target << std::endl;
 	this->_httpVersionMajor = parseMajorVersion();
+	std::cout << "major: " << this->_httpVersionMajor << std::endl;
 	this->_httpVersionMinor = parseMinorVersion();
+	std::cout << "minor: " << this->_httpVersionMinor << std::endl;
 }
 
 // HEADERS
@@ -430,21 +445,33 @@ void Request::extractHeaderLine(const std::string &headerLine)
 
 void Request::processRequest(const std::string &requestLineAndHeaders)
 {
+	std::cout << RED << "processRequest()" << RESET << std::endl;
 	if (requestLineAndHeaders.empty())
 	{
+		std::cout << RED << "empty request" << RESET << std::endl;
 		throw BadRequestException();
 	}
 	std::vector<std::string> split = StringUtils::splitByDelimiter(requestLineAndHeaders, CRLF);
 	// handle request line
+	std::cout << RED << "request line split" << RESET << std::endl;
+	if (split.size() < 2)
+	{
+		std::cout << RED << "empty split" << RESET << std::endl;
+		throw BadRequestException();
+	}
 	extractRequestLine(split[0]);
+	std::cout << RED << "request line extracted" << RESET << std::endl;
 	parseRequestLine();
+	std::cout << RED << "request line parsed" << RESET << std::endl;
 	// handle headers
 	for (size_t i = 1; i < split.size(); ++i)
 	{
-		std::cout << "	header: " << split[i] << std::endl;
+		std::cout << RED << "	header: " << split[i] << RESET << std::endl;
 		extractHeaderLine(split[i]);
+		std::cout << RED << "header line " << i << " extracted" << RESET << std::endl;
 	}
 	parseHeaders();
+	std::cout << RED << "headers parsed" << RESET << std::endl;
 }
 
 Request::Request(const std::vector<ConfigData> &configs, const std::string &requestLineAndHeaders)
