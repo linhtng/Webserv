@@ -92,14 +92,15 @@ int main()
 	*/
 
 	// read smallFileUploadHeaders sample request from file
-	std::string smallFileUploadHeaders = readFileIntoString("sample_requests/smallFileUploadHeaders");
-	std::string smallFileUploadBody = readFileIntoString("sample_requests/smallFileUploadBody");
+	std::string smallFileUploadHeaders = "POST /hi HTTP/1.1\r\nHost: localhost:10002\r\n Content-Length: 189\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7ybdh3HK4BBU6x7R";
+	std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"number.txt\"\r\nContent-Type: text/plain\r\n\r\n12345\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
 	std::vector<std::byte> smallFileUploadBodyBytes;
 	for (char c : smallFileUploadBody)
 	{
 		smallFileUploadBodyBytes.push_back(static_cast<std::byte>(c));
 	}
 	Request requestMultipartSmall(configs, smallFileUploadHeaders);
+	requestMultipartSmall.printRequestProperties();
 	requestMultipartSmall.appendToBody(smallFileUploadBodyBytes);
 	Response responseMultipartSmall(requestMultipartSmall);
 	printResponseBytes(responseMultipartSmall.formatResponse());

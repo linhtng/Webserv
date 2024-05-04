@@ -494,13 +494,13 @@ void Response::processMultiformData()
 		// Find the end of the current part
 		auto partEnd = std::search(partStart, messageBody.end(), delimiterBytes.begin(), delimiterBytes.end());
 		// TODO: finish the whole crlf condition thing
-		if (partEnd == messageBody.end() || partEnd - partStart < 0)
+		if (partEnd == messageBody.end() || partEnd - partStart < 4)
 		{
 			throw std::runtime_error("Wrong multiform format");
 			break;
 		}
 		// Extract the current part
-		std::vector<std::byte> part(partStart, partEnd);
+		std::vector<std::byte> part(partStart + 2, partEnd - 2);
 		processMultiformDataPart(part);
 		// if this was the last part, stop
 		if (partEnd == endDelimiterIt)
