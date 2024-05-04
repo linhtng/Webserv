@@ -1,8 +1,14 @@
 
 import sys
+import time
 
-# Read from stdin
-data = sys.stdin.read()
+# while True:
+#     # Read from stdin
+#     data = sys.stdin.readline()
+#     # Print stdin
+#     print(data)
+#     # Sleep for 1 second
+#     time.sleep(1)
 
-# Print stdin
+data = sys.stdin.readline()
 print(data)
