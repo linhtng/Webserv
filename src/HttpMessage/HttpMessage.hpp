@@ -20,6 +20,7 @@ protected:
 	int _httpVersionMajor;
 	int _httpVersionMinor;
 	std::string _boundary;
+	bool _criticalError;
 	size_t _contentLength;
 	bool _chunked;
 	std::vector<std::byte> _body;
@@ -35,6 +36,7 @@ protected:
 				int httpVersionMajor = 1,
 				int httpVersionMinor = 1,
 				std::string boundary = "",
+				bool criticalError = false,
 				size_t contentLength = 0,
 				bool chunked = false);
 
@@ -53,6 +55,7 @@ public:
 	ContentType getContentType() const;
 	HttpStatusCode getStatusCode() const;
 	std::string getBoundary() const;
+	bool getCriticalError() const;
 	bool isChunked() const;
 };
 

@@ -9,6 +9,7 @@
 #include "../config_parser/Location.hpp"
 #include "../BinaryData/BinaryData.hpp"
 #include "../HttpUtils/HttpUtils.hpp"
+#include "../Logger/Logger.hpp"
 
 #include <string>
 #include <chrono>
@@ -53,15 +54,13 @@ private:
 	std::string formatContentType() const;
 
 	void setDateToCurrent();
-	void prepareResponse();
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
 	void prepareRedirectResponse();
-	void processMultiformData();
-	void processMultiformDataPart(std::vector<std::byte> part);
+	void processMultipartData();
+	void processMultipartDataPart(std::vector<std::byte> part);
 	void postMultipartDataPart(const MultipartDataPart &part);
-	void processMultiformDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
-
+	void processMultipartDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
 	bool isRedirect(); // consts?
 	void handleAlias();
 	bool targetFound();
@@ -71,12 +70,21 @@ private:
 	void handleGet();
 	void handleHead();
 	void handleDelete();
+	void prepareResponse();
 
 public:
 	Response(const Request &request);
 
 	std::vector<std::byte> formatResponse() const;
 	void printResponseProperties() const;
+
+	class ClientException : public std::exception
+	{
+	};
+
+	class ServerException : public std::exception
+	{
+	};
 };
 
 #endif

@@ -374,7 +374,7 @@ void Request::parseContentType()
 	}
 	if (this->_contentType == ContentType::MULTIPART_FORM_DATA)
 	{
-		// boundary is mandatory for multiforms
+		// boundary is mandatory for multiparts
 		auto itBoundary = this->_contentTypeParams.find("boundary");
 		if (itBoundary == this->_contentTypeParams.end())
 		{
