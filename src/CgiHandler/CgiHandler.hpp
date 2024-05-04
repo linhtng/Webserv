@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include <signal.h>
 #include "../Request/Request.hpp"
 #include "../config_parser/ConfigParser.hpp"
 #include "../defines.hpp"
@@ -26,6 +27,7 @@ public:
     void createCgiProcess();
     void printEnv();
     std::string getCgiOutput();
+    int getCgiExitStatus();
 
 private:
     void setupCgiEnv(const Request &request, const ConfigData &server);
@@ -35,6 +37,7 @@ private:
     void readCgiOutput();
     void executeCgiScript();
     void cgiReadMessageBody();
+    void cgiTimeout(pid_t pid);
 
     std::map<std::string, std::string> envMap;
     std::string cgiExecutorPathname;
@@ -44,4 +47,5 @@ private:
     std::string cgiOutput;
     std::vector<std::byte> messageBody;
     std::string messageBodyStr;
+    int cgiExitStatus;
 };

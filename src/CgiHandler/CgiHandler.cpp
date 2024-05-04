@@ -93,8 +93,44 @@ void CgiHandler::createCgiProcess()
     {
         close(dataToCgiPipe[WRITE_END]);
         close(dataFromCgiPipe[WRITE_END]);
+        cgiTimeout(pid);
         readCgiOutput();
         closeCgiPipes();
+    }
+}
+
+void CgiHandler::cgiTimeout(pid_t pid)
+{
+    int status;
+    int waitResult;
+
+    for (int i = 0; i < CGI_TIMEOUT; ++i)
+    {
+        waitResult = waitpid(pid, &status, WNOHANG);
+
+        if (waitResult == 0) // child process has not exited
+        {
+            // sleep for 1 second
+            sleep(1);
+        }
+        else // child process has exited
+        {
+            break;
+        }
+    }
+    if (waitResult == 0) // child process has not exited after timeout
+    {
+        // Kill the child process
+        kill(pid, SIGKILL);
+        std::cerr << "Timeout: The child process has been killed." << std::endl;
+    }
+    if (WIFEXITED(status))
+    {
+        cgiExitStatus = WEXITSTATUS(status);
+    }
+    else if (WIFSIGNALED(status))
+    {
+        cgiExitStatus = WTERMSIG(status);
     }
 }
 
@@ -176,4 +212,9 @@ std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::strin
 std::string CgiHandler::getCgiOutput()
 {
     return cgiOutput;
+}
+
+int CgiHandler::getCgiExitStatus()
+{
+    return cgiExitStatus;
 }
