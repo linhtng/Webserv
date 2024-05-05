@@ -11,7 +11,7 @@
 class HttpMessage
 {
 protected:
-	ConfigData &_config;
+	ConfigData _config;
 
 	HttpStatusCode _statusCode;
 	HttpMethod _method;
@@ -28,7 +28,7 @@ protected:
 	ContentType _contentType;
 	std::unordered_map<std::string, std::string> _contentTypeParams;
 
-	HttpMessage(ConfigData const &config,
+	HttpMessage(ConfigData const config,
 				HttpStatusCode statusCode = HttpStatusCode::UNDEFINED_STATUS,
 				HttpMethod method = HttpMethod::UNDEFINED_METHOD,
 				std::string target = "",
