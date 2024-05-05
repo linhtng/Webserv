@@ -291,6 +291,7 @@ void ConfigData::extractMultipleArgValues(const std::string &directiveKey, std::
 {
 	std::istringstream stream(serverBlock);
 	std::string line;
+	int duplicate = 0;
 	while (std::getline(stream, line))
 	{
 		std::regex directiveLineRegex("^\\s*" + directiveKey);
@@ -300,11 +301,14 @@ void ConfigData::extractMultipleArgValues(const std::string &directiveKey, std::
 			std::smatch match;
 			if (std::regex_search(line, match, validLineRegex))
 			{
-				// std::cout << "Match 1: " << match[1] << std::endl;
-				// std::cout << "Match 2: " << match[2] << std::endl;
+				if (duplicate > 0)
+				{
+					throw std::runtime_error("Duplicate directive key: " + directiveKey);
+				}
 				values.push_back(match[1]);
 				if (!match[2].str().empty())
 					values.push_back(match[2]);
+				duplicate++;
 			}
 			else
 				throw std::runtime_error("Invalid directive in server block: " + line);
@@ -320,6 +324,7 @@ void ConfigData::extractcgiExtenExecutorMap()
 	{
 		throw std::runtime_error("Number of CGI extensions and executors do not match");
 	}
+	cgiExtenExecutorMap.clear();
 	for (size_t i = 0; i < cgiExtension.size(); i++)
 	{
 		cgiExtenExecutorMap[cgiExtension[i]] = cgiExecutor[i];
@@ -331,11 +336,10 @@ void ConfigData::extractcgiExtenExecutorMap()
 		{".sh", "bash"}};
 	for (const auto &pair : correctMap)
 	{
-		// std::cout << "cgiExtenExecutorMap[pair.first]: " << cgiExtenExecutorMap[pair.first] << std::endl;
-		// std::cout << "pair.second: " << pair.second << std::endl;
-		if (!cgiExtenExecutorMap[pair.first].empty() && cgiExtenExecutorMap[pair.first].find(pair.second) == std::string::npos)
+		auto it = cgiExtenExecutorMap.find(pair.first);
+		if (it != cgiExtenExecutorMap.end() && it->second.find(pair.second) == std::string::npos)
 		{
-			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + cgiExtenExecutorMap[pair.first]);
+			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + it->second);
 		}
 	}
 }

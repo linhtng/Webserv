@@ -270,9 +270,25 @@ void Response::splitTarget()
 	}
 }
 
+/* check if the target is a CGI script i.e. it contains one of the VALID_CGI_EXTEN
+ */
 bool Response::isCGI()
 {
-	return (this->_fileExtension == "py" || this->_fileExtension == "sh");
+	/* return (this->_fileExtension == "py" || this->_fileExtension == "sh"); */
+	std::vector<std::string> cgiExtensions;
+	for (auto &extenExecutor : this->_config.getCgiExtenExecutorMap())
+	{
+		cgiExtensions.push_back(extenExecutor.first);
+	}
+	if (cgiExtensions.empty())
+	{
+		return false;
+	}
+	if (std::find(cgiExtensions.begin(), cgiExtensions.end(), this->_fileExtension) != cgiExtensions.end())
+	{
+		return true;
+	}
+	return false;
 }
 
 void Response::executeCGI()
@@ -281,8 +297,14 @@ void Response::executeCGI()
 	// TODO: pass all the path variables to CGI script
 	CgiHandler cgiHandler(_request, _request.getConfig());
 	cgiHandler.createCgiProcess();
+	int cgiStatus = cgiHandler.getCgiExitStatus();
+	if (cgiStatus != CGI_EXIT_SUCCESS)
+	{
+		Logger::log(e_log_level::ERROR, CLIENT, "CGI script execution failed with status %d", cgiStatus);
+	}
 	this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
 	this->_contentType = ContentType::TEXT_PLAIN;
+	// TODO: check for cgiExitStatus, if it is not CGI_EXIT_SUCCESS, set status code to 500 or appropriate error code.
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
@@ -624,7 +646,12 @@ void Response::prepareResponse()
 	// CGI handling
 	if (isCGI())
 	{
+		Logger::log(e_log_level::INFO, CLIENT, "CGI script detected");
 		executeCGI();
+<<<<<<< HEAD
+=======
+		// return; // TODO: remove return
+>>>>>>> 94ffb860a0db102831fb90e4e8331cfb43041b6b
 	}
 	else
 	{
