@@ -29,6 +29,7 @@ ConfigData &ConfigData::operator=(const ConfigData &other)
 		cgiDir = other.cgiDir;
 		cgiExtension = other.cgiExtension;
 		cgiExecutor = other.cgiExecutor;
+		cgiExtenExecutorMap = other.cgiExtenExecutorMap;
 	}
 	return *this;
 }
@@ -44,8 +45,7 @@ void ConfigData::analyzeConfigData()
 	extractMaxClientBodySize();
 	extractLocationBlocks();
 	extractCgiDir();
-	extractCgiExtension();
-	extractCgiExecutor();
+	extractcgiExtenExecutorMap();
 }
 
 // Generic print function
@@ -80,13 +80,13 @@ void ConfigData::printConfigData()
 	print(errorPages);
 	std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
 	std::cout << "CGI directory: " << cgiDir << std::endl;
-	std::cout << "CGI extension: " << cgiExtension << std::endl;
-	std::cout << "CGI executor: " << cgiExecutor << std::endl;
+	std::cout << "cgiExtenExecutorMap: " << std::endl;
+	print(cgiExtenExecutorMap);
 	// std::cout << "Locations: ";
-	for (auto &location : locations)
-	{
-		location.second.printLocationData();
-	}
+	// for (auto &location : locations)
+	// {
+	// 	location.second.printLocationData();
+	// }
 }
 
 std::string ConfigData::getServerHost() const
@@ -287,14 +287,87 @@ void ConfigData::extractCgiDir()
 	cgiDir = cgiDirStr;
 }
 
+void ConfigData::extractMultipleArgValues(const std::string &directiveKey, std::vector<std::string> &values)
+{
+	std::istringstream stream(serverBlock);
+	std::string line;
+	while (std::getline(stream, line))
+	{
+		std::regex directiveLineRegex("^\\s*" + directiveKey);
+		if (std::regex_search(line, directiveLineRegex))
+		{
+			std::regex validLineRegex(directiveKey + "\\s+(\\S+)\\s*(\\S+)?;");
+			std::smatch match;
+			if (std::regex_search(line, match, validLineRegex))
+			{
+				// std::cout << "Match 1: " << match[1] << std::endl;
+				// std::cout << "Match 2: " << match[2] << std::endl;
+				values.push_back(match[1]);
+				if (!match[2].str().empty())
+					values.push_back(match[2]);
+			}
+			else
+				throw std::runtime_error("Invalid directive in server block: " + line);
+		}
+	}
+}
+
+void ConfigData::extractcgiExtenExecutorMap()
+{
+	extractCgiExtension();
+	extractCgiExecutor();
+	if (cgiExtension.size() != cgiExecutor.size())
+	{
+		throw std::runtime_error("Number of CGI extensions and executors do not match");
+	}
+	for (size_t i = 0; i < cgiExtension.size(); i++)
+	{
+		cgiExtenExecutorMap[cgiExtension[i]] = cgiExecutor[i];
+		// std::cout << "Extension: " << cgiExtension[i] << " Executor: " << cgiExecutor[i] << std::endl;
+	}
+	// Validate that extension matchs proper executor
+	std::unordered_map<std::string, std::string> correctMap = {
+		{".py", "python"},
+		{".sh", "bash"}};
+	for (const auto &pair : correctMap)
+	{
+		// std::cout << "cgiExtenExecutorMap[pair.first]: " << cgiExtenExecutorMap[pair.first] << std::endl;
+		// std::cout << "pair.second: " << pair.second << std::endl;
+		if (!cgiExtenExecutorMap[pair.first].empty() && cgiExtenExecutorMap[pair.first].find(pair.second) == std::string::npos)
+		{
+			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + cgiExtenExecutorMap[pair.first]);
+		}
+	}
+}
+
 void ConfigData::extractCgiExtension()
 {
-	cgiExtension = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXTENSION);
+	extractMultipleArgValues(DirectiveKeys::CGI_EXTENSION, cgiExtension);
+	for (auto &extension : cgiExtension)
+	{
+		validateCgiExtension(extension);
+	}
+}
+
+void ConfigData::validateCgiExtension(std::string &extension)
+{
+	std::vector<std::string> validExtensions = VALID_CGI_EXTEN;
+	auto itValid = std::find(validExtensions.begin(), validExtensions.end(), extension);
+	if (itValid == validExtensions.end())
+	{
+		throw std::runtime_error("Invalid CGI extension:" + extension);
+	}
 }
 
 void ConfigData::extractCgiExecutor()
 {
-	cgiExecutor = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXECUTOR);
+	// cgiExecutor = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXECUTOR);
+	extractMultipleArgValues(DirectiveKeys::CGI_EXECUTOR, cgiExecutor);
+	for (const auto &executor : cgiExecutor)
+	{
+		if (!FileSystemUtils::pathExistsAndAccessible(executor))
+			throw std::runtime_error("Invalid CGI executor: " + executor);
+	}
 }
 
 /* In nginx, setting size to 0 means no limit on client body size.
@@ -450,12 +523,17 @@ std::string ConfigData::getCgiDir() const
 	return cgiDir;
 }
 
-std::string ConfigData::getCgiExtension() const
+std::vector<std::string> ConfigData::getCgiExtension() const
 {
 	return cgiExtension;
 }
 
-std::string ConfigData::getCgiExecutor() const
+std::vector<std::string> ConfigData::getCgiExecutor() const
 {
 	return cgiExecutor;
+}
+
+std::unordered_map<std::string, std::string> ConfigData::getCgiExtenExecutorMap() const
+{
+	return cgiExtenExecutorMap;
 }

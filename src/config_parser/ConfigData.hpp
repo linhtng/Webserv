@@ -64,8 +64,9 @@ public:
 	size_t getMaxClientBodySize() const;
 	std::map<std::string, Location> getLocations() const;
 	std::string getCgiDir() const;
-	std::string getCgiExtension() const;
-	std::string getCgiExecutor() const;
+	std::vector<std::string> getCgiExtension() const;
+	std::vector<std::string> getCgiExecutor() const;
+	std::unordered_map<std::string, std::string> getCgiExtenExecutorMap() const;
 	Location getMatchingLocation(std::string locationRoute) const;
 
 private:
@@ -80,10 +81,12 @@ private:
 	std::vector<std::string> locationBlocks;
 	std::map<std::string, Location> locations;
 	std::string cgiDir;
-	std::string cgiExtension;
-	std::string cgiExecutor;
+	std::vector<std::string> cgiExtension;
+	std::vector<std::string> cgiExecutor;
+	std::unordered_map<std::string, std::string> cgiExtenExecutorMap;
 
 	std::string extractDirectiveValue(const std::string &confBlock, const std::string &directiveKey);
+	void extractMultipleArgValues(const std::string &directiveKey, std::vector<std::string> &values);
 	void extractServerPort();
 	bool validPortString(std::string &errorCodeStr);
 	void extractServerName();
@@ -95,5 +98,7 @@ private:
 	void extractCgiDir();
 	void extractCgiExtension();
 	void extractCgiExecutor();
+	void extractcgiExtenExecutorMap();
 	void splitLocationBlocks();
+	void validateCgiExtension(std::string &extension);
 };

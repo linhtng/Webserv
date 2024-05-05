@@ -279,6 +279,10 @@ void Response::executeCGI()
 {
 	Logger::log(DEBUG, SERVER, "Executing CGI script: %s", this->_fileName.c_str());
 	// TODO: pass all the path variables to CGI script
+	CgiHandler cgiHandler(_request, _request.getConfig());
+	cgiHandler.createCgiProcess();
+	this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
+	this->_contentType = ContentType::TEXT_PLAIN;
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)

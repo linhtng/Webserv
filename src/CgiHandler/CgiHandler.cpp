@@ -6,11 +6,11 @@ CgiHandler::CgiHandler()
 
 CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
 {
-    cgiExecutorPathname = server.getCgiExecutor();
+    setCgiExecutor(request, server);
     cgiBinDir = server.getCgiDir();
-    if (cgiExecutorPathname.empty() || cgiBinDir.empty())
+    if (cgiBinDir.empty())
     {
-        throw std::runtime_error("Error: CGI executor and/or bin not found\n");
+        throw std::runtime_error("Error: CGI bin not found. Make sure the directory exists.\n");
     }
     setupCgiEnv(request, server);
     if (FileSystemUtils::pathExistsAndAccessible(envMap["PATH_TRANSLATED"]) == false)
@@ -25,7 +25,7 @@ CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
         messageBodyStr.push_back(static_cast<char>(byte));
     }
     // std::cout << "messageBodyStr: " << messageBodyStr << std::endl;
-    // printEnv();
+    printEnv();
 }
 
 CgiHandler::~CgiHandler()
@@ -33,18 +33,34 @@ CgiHandler::~CgiHandler()
     closeCgiPipes();
 }
 
+void CgiHandler::setCgiExecutor(const Request &request, const ConfigData &server)
+{
+    scriptName = StringUtils::extractPathPreQuery(request.getTarget());
+    std::unordered_map<std::string, std::string> cgiExtenExecutorMap = server.getCgiExtenExecutorMap();
+    for (auto &extenExecutor : cgiExtenExecutorMap)
+    {
+        if (scriptName.find(extenExecutor.first) != std::string::npos)
+        {
+            cgiExecutorPathname = extenExecutor.second;
+            break;
+        }
+    }
+    if (cgiExecutorPathname.empty())
+    {
+        throw std::runtime_error("Error: CGI executor not found to execute " + scriptName + "\n");
+    }
+}
+
 void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
 {
-
-    std::string target = StringUtils::extractPathPreQuery(request.getTarget());
     envMap["REQUEST_METHOD"] = request.getMethodStr();
     envMap["CONTENT_TYPE"] = request.getContentType();
     envMap["CONTENT_LENGTH"] = std::to_string(request.getContentLength());
     envMap["QUERY_STRING"] = StringUtils::queryStr(request.getTarget());
     // PATH_INFO = test.py
-    envMap["PATH_INFO"] = target;
+    envMap["PATH_INFO"] = scriptName;
     // PATH_TRANSLATED = /cgi-bin/test.py
-    envMap["PATH_TRANSLATED"] = cgiBinDir + target;
+    envMap["PATH_TRANSLATED"] = cgiBinDir + scriptName;
     envMap["SERVER_PORT"] = server.getServerPortString();
     envMap["SERVER_NAME"] = server.getServerName();
     envMap["SERVER_PROTOCOL"] = SERVER_PROTOCOL;

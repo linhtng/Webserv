@@ -13,7 +13,8 @@ SRCS = main.cpp \
 		../StringUtils/StringUtils.cpp \
 		../BinaryData/BinaryData.cpp \
 		../FileSystemUtils/FileSystemUtils.cpp \
-		../Logger/Logger.cpp
+		../Logger/Logger.cpp \
+		../CgiHandler/CgiHandler.cpp
 		
 
 CC = c++
@@ -42,6 +43,11 @@ clean:
 	rm -f ../Response/*.o
 	rm -f ../HttpMessage/*.o
 	rm -f ../config_parser/*.o
+	rm -f	../StringUtils/*.o
+	rm -f	../BinaryData/*.o
+	rm -f	../FileSystemUtils/*.o
+	rm -f	../Logger/*.o
+	rm -f	../CgiHandler/*.o
 
 
 fclean: clean

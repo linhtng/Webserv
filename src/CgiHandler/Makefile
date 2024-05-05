@@ -19,20 +19,25 @@ CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++17
 
-OBJS = $(SRCS:.cpp=.o)
+OBJS = $(addprefix obj/, $(notdir $(SRCS:.cpp=.o)))
 
-all: $(NAME)
+vpath %.cpp $(sort $(dir $(SRCS)))
+
+all: obj $(NAME)
+
+obj:
+	mkdir -p obj
 
 $(NAME): $(OBJS)
 	$(CC) -o $@ $(OBJS) $(FLAGS)
 
-%.o: %.cpp
+obj/%.o: %.cpp
 	$(CC) -c $(FLAGS) -o $@ $<
 
 .PHONY: clean fclean re
 
 clean:
-	rm -f *.o
+	rm -f obj/*.o
 
 fclean: clean
 	rm -f $(NAME)
