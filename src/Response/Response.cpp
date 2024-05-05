@@ -326,7 +326,14 @@ void Response::executeCGI()
 
 	try
 	{
-		CgiHandler cgiHandler(_request, _request.getConfig() /* , _fileName, _fileExtension, _queryParams */);
+		// CgiHandler cgiHandler(_request, _request.getConfig() /* , _fileName, _fileExtension, _queryParams */);
+		// std::vector<std::string> cgiParams = {this->_fileName, this->_fileExtension, this->_queryParams};
+		std::unordered_map<std::string, std::string> cgiParams;
+		cgiParams["fileName"] = "." + this->_fileName;
+		cgiParams["fileExtension"] = this->_fileExtension;
+		cgiParams["queryParams"] = this->_queryParams;
+
+		CgiHandler cgiHandler(_request, cgiParams);
 		cgiHandler.createCgiProcess();
 		int cgiStatus = cgiHandler.getCgiExitStatus();
 		if (cgiStatus != CGI_EXIT_SUCCESS)
