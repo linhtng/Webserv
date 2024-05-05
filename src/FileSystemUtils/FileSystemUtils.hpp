@@ -18,6 +18,7 @@ namespace FileSystemUtils
 	bool isFile(const std::string &target);
 	void createDirectory(const std::string &path);
 	void saveFile(std::string savePath, std::string fileName, std::vector<std::byte> body);
+	void deleteFile(const std::string &path);
 }
 
 #endif

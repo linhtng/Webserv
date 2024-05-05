@@ -60,3 +60,11 @@ void FileSystemUtils::saveFile(std::string savePath, std::string fileName, std::
 	fileStream.write(reinterpret_cast<const char *>(body.data()), body.size());
 	fileStream.close();
 }
+
+void FileSystemUtils::deleteFile(const std::string &path)
+{
+	if (remove(path.c_str()) != 0)
+	{
+		throw std::runtime_error("Failed to delete file: " + path);
+	}
+}

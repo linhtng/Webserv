@@ -479,6 +479,31 @@ void Response::handleHead()
 void Response::handleDelete()
 {
 	Logger::log(DEBUG, SERVER, "DELETE request");
+	// if there's no upload dir or we're not in the upload dir, reject
+	std::string saveDir = this->_location.getSaveDir();
+	if (saveDir.empty() || saveDir != this->_pathAfterLocation)
+	{
+		this->_statusCode = HttpStatusCode::FORBIDDEN;
+		throw ClientException("Delete not allowed, no save_dir specified in location or target is not in save_dir");
+	}
+	if (this->_fileName.empty())
+	{
+		this->_statusCode = HttpStatusCode::FORBIDDEN;
+		throw ClientException("Delete is only allowed on files");
+	}
+	std::string path = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_fileName);
+	// if it's not a valid file, reject
+	if (!FileSystemUtils::isFile(path))
+	{
+		this->_statusCode = HttpStatusCode::NOT_FOUND;
+		throw ClientException("File not found");
+	}
+	else
+	{
+		FileSystemUtils::deleteFile(path);
+		this->_statusCode = HttpStatusCode::NO_CONTENT;
+		// TODO: check if there's any special headers or body that it needs to return?
+	}
 }
 
 void Response::handleRootAndAlias()
