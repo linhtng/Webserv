@@ -151,9 +151,19 @@ bool Response::getConfiguredErrorPage()
 void Response::prepareErrorResponse()
 {
 	prepareStandardHeaders();
-	if (!getConfiguredErrorPage())
+	Logger::log(DEBUG, SERVER, "getting error page for status code: %d", this->_statusCode);
+	try
 	{
-		this->_body = BinaryData::getErrorPage(this->_statusCode);
+		if (!getConfiguredErrorPage())
+		{
+			this->_body = BinaryData::getErrorPage(this->_statusCode);
+		}
+	}
+	catch (const std::exception &e)
+	{
+		Logger::log(ERROR, SERVER, "Error preparing error response: %s", e.what());
+		this->_criticalError = true;
+		return;
 	}
 	this->_contentLength = this->_body.size();
 	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
@@ -192,7 +202,7 @@ bool Response::isRedirect()
 
 bool Response::targetFound()
 {
-	std::string fullPathNotTrimmed = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::string fullPathNotTrimmed = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_fileName);
 	std::string fullPath = StringUtils::trimChar(fullPathNotTrimmed, '/');
 	std::cout << GREEN << "Checking if path exists: " << fullPath << RESET << std::endl;
 	if (!FileSystemUtils::pathExists(fullPath))
@@ -208,64 +218,67 @@ bool Response::targetFound()
 }
 
 // probably would be nice to move this to utils
-bool Response::extractFileName(const std::string &fileName, std::string &name, std::string &extension)
+bool Response::extractFileNameAndQuery(const std::string &fileNameWithQuery)
 {
-	std::vector<std::string> fileNameParts = StringUtils::splitByDelimiter(fileName, ".");
-	if (fileNameParts.size() < 2)
+	// split file extension+query from filename
+	size_t dotPos = fileNameWithQuery.find_last_of('.');
+	if (dotPos == std::string::npos)
 	{
+		// if there is no dot, it's not a file
 		return false;
 	}
-	extension = fileNameParts.back();
-	name = fileName;
+	std::string extensionWithQuery = fileNameWithQuery.substr(dotPos + 1);
+	// split query from extension if it exists
+	size_t queryPos = extensionWithQuery.find("?");
+	if (queryPos == std::string::npos)
+	{
+		this->_fileExtension = extensionWithQuery;
+	}
+	else
+	{
+		this->_queryParams = extensionWithQuery.substr(queryPos + 1);
+		this->_fileExtension = extensionWithQuery.substr(0, queryPos);
+	}
+	// compose full file name
+	this->_fileName = fileNameWithQuery.substr(0, dotPos + 1) + this->_fileExtension;
 	return true;
 }
 
 // probably would be nice to move this to utils
-// sets _route, _fileName and _fileExtension based on _target
 void Response::splitTarget()
 {
-	// split string in two by last slash
-	std::regex splittingPattern("^([a-zA-Z0-9/]*)/([^/]*)$");
-	std::smatch matches;
-	if (std::regex_match(this->_target, matches, splittingPattern))
+	std::string trimmedTarget = StringUtils::trimChar(this->_target, '/');
+	// first separate part that is same as location
+	this->_locationPath = StringUtils::trimChar(this->_location.getLocationRoute(), '/');
+	// for now same as location path, will be changed if alias or root is present
+	this->_actualLocationPath = this->_locationPath;
+	// then separate the rest
+	this->_pathAfterLocation = StringUtils::trimChar(StringUtils::removePrefix(trimmedTarget, this->_locationPath), '/');
+	if (this->_pathAfterLocation.empty())
 	{
-		std::string afterLastSlash = matches[matches.size() - 1];
-		// is there was nothing after last slash, everything is route
-		if (afterLastSlash.empty())
-		{
-			this->_route = _target;
-		}
-		else
-		{
-			// if there was something after last slash, check if it contains a dot and extract extension
-			if (extractFileName(afterLastSlash, this->_fileName, this->_fileExtension))
-			{
-				// then everything before the last slash is route
-				this->_route = matches[1];
-			}
-			else
-			{
-				// otherwise everything is route
-				this->_route = _target;
-			}
-		}
+		// if there's nothing after location, we're done
+		return;
 	}
-	// trim slashes
-	this->_route = StringUtils::trimChar(this->_route, '/');
-	this->_fileName = StringUtils::trimChar(this->_fileName, '/');
-
-	std::cout << RED << "splitTarget(): Route: " << this->_route << RESET << std::endl;
-	std::cout << RED << "splitTarget(): File name: " << this->_fileName << RESET << std::endl;
-	std::cout << RED << "splitTarget(): File extension: " << this->_fileExtension << RESET << std::endl;
+	// split the path after location
+	std::vector<std::string> pathAfterLocationSplit = StringUtils::splitByDelimiter(this->_pathAfterLocation, "/");
+	// last part - file name with query (or just last directory if no file name)
+	std::string potentialFilenameWithQuery = pathAfterLocationSplit.back();
+	if (extractFileNameAndQuery(potentialFilenameWithQuery))
+	{
+		// if file name was extracted, remove it from _pathAfterLocation
+		this->_pathAfterLocation = StringUtils::trimChar(StringUtils::removeSuffix(this->_pathAfterLocation, potentialFilenameWithQuery), '/');
+	}
 }
 
 bool Response::isCGI()
 {
-	return false;
+	return (this->_fileExtension == "py" || this->_fileExtension == "sh");
 }
 
 void Response::executeCGI()
 {
+	Logger::log(DEBUG, SERVER, "Executing CGI script: %s", this->_fileName.c_str());
+	// TODO: pass all the path variables to CGI script
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
@@ -283,14 +296,10 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	/* A multipart/form-data body requires a Content-Disposition header to provide information for each subpart of the form (e.g. for every form field and any files that are part of field data). The first directive is always form-data, and the header must also include a name parameter to identify the relevant field. Additional directives are case-insensitive and have arguments that use quoted-string syntax after the '=' sign. Multiple parameters are separated by a semicolon (';'). */
 	std::vector<std::string> split = StringUtils::splitByDelimiter(it->second, ";");
 	// first part is always form-data
-	if (split.size() < 1)
-	{
-		throw ClientException();
-	}
 	std::string firstAlwaysFormData = StringUtils::trim(split[0]);
 	if (firstAlwaysFormData != "form-data")
 	{
-		throw ClientException();
+		throw ClientException("Content-Disposition header does not contain form-data directive");
 	}
 	// extract params liek name and filename
 
@@ -302,7 +311,7 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		if (paramsSplit.size() != 2)
 		{
 			// if no =, reject
-			throw ClientException();
+			throw ClientException("Invaild Content-Disposition header params");
 		}
 		std::string paramName = StringUtils::trim(paramsSplit[0]);
 		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
@@ -315,18 +324,16 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	auto filenameIt = params.find("filename");
 	if (filenameIt == params.end())
 	{
-		throw ClientException();
+		throw ClientException("No filename in Content-Disposition header");
 	}
 	std::string fileName = filenameIt->second;
 	if (fileName.empty())
 	{
-		std::cout << GREEN << "Empty filename" << RESET << std::endl;
-		throw ClientException();
+		throw ClientException("Empty filename in Content-Disposition header");
 	}
-	std::cout << GREEN << "After empty filename" << RESET << std::endl;
 	// TODO: fgure out the root/alias situation
-	std::string savePath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_location.getLocationAlias(), this->_location.getSaveDir());
-	std::cout << RED << "Saving file to: " << savePath << RESET << std::endl;
+	std::string savePath = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_location.getSaveDir());
+	Logger::log(DEBUG, SERVER, "Saving file to: %s", savePath.c_str());
 	// save the file
 	FileSystemUtils::saveFile(savePath, fileName, part.body);
 }
@@ -337,7 +344,7 @@ void Response::handlePost()
 	if (this->_location.getSaveDir().empty())
 	{
 		this->_statusCode = HttpStatusCode::FORBIDDEN;
-		throw ClientException();
+		throw ClientException("Upload not allowed, no save_dir specified in location");
 	}
 	// iterate throu parts and save them to files
 	for (size_t i = 0; i < this->_parts.size(); i++)
@@ -352,52 +359,47 @@ void Response::handlePost()
 
 void Response::handleGet()
 {
-	std::cout << "location root: " << this->_location.getLocationRoot() << std::endl;
-	std::cout << "route: " << this->_route << std::endl;
-
-	std::string path = StringUtils::joinPath(this->_location.getLocationRoot(), this->_route, this->_fileName);
+	std::string path = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_fileName);
+	std::string userPath = StringUtils::joinPath(this->_locationPath, this->_pathAfterLocation);
 
 	std::cout << "Joined path: " << path << std::endl;
 
 	if (FileSystemUtils::isDir(path))
 	{
-		std::string dirPath = path;
+		std::string dirPath = StringUtils::trimChar(path, '/');
+		Logger::log(DEBUG, SERVER, "GET directory: %s", path.c_str());
 		if (this->_location.getDirectoryListing())
 		{
-			std::cout << RED << "Directory listing" << RESET << std::endl;
-			// serve directory listing
-			this->_body = BinaryData::getDirectoryListingPage(dirPath);
+			Logger::log(DEBUG, SERVER, "Serving directory listing: %s", dirPath.c_str());
+			this->_body = BinaryData::getDirectoryListingPage(this->_locationPath, this->_actualLocationPath, this->_pathAfterLocation);
 			this->_statusCode = HttpStatusCode::OK;
 		}
 		else if (!this->_location.getDefaultFile().empty())
 		{
-			std::cout << RED << "Getting index file" << RESET << std::endl;
 			// check if this should be target or some location property
+			Logger::log(DEBUG, SERVER, "Serving index file: %s", this->_location.getDefaultFile().c_str());
 			this->_body = BinaryData::getFileData(StringUtils::joinPath(dirPath, this->_location.getDefaultFile()));
 			this->_statusCode = HttpStatusCode::OK;
-			// server index file
 		}
 		else
 		{
-			std::cout << RED << "Not Directory listing or Index file" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::FORBIDDEN;
-			throw ClientException();
+			throw ClientException("No directory listing or index file specified in location, forbidden");
 		}
 	}
 	else
 	{
 		if (FileSystemUtils::isFile(path))
 		{
-			std::cout << RED << "Getting file" << RESET << std::endl;
+			Logger::log(DEBUG, SERVER, "Serving file: %s", path.c_str());
 			this->_body = BinaryData::getFileData(path);
 			this->_statusCode = HttpStatusCode::OK;
 			// serve file
 		}
 		else
 		{
-			std::cout << RED << "Not a file, some weird shit" << RESET << std::endl;
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
-			throw ClientException();
+			throw ClientException("Not a file or a directory");
 		}
 	}
 }
@@ -411,19 +413,20 @@ void Response::handleHead()
 
 void Response::handleDelete()
 {
+	Logger::log(DEBUG, SERVER, "DELETE request");
 }
 
-void Response::handleAlias()
+void Response::handleRootAndAlias()
 {
 	std::string alias = _location.getLocationAlias();
+	std::string root = _location.getLocationRoot();
 	if (!alias.empty())
 	{
-		std::cout << RED << "Alias: " << _location.getLocationAlias() << RESET << std::endl;
-		std::cout << RED << "route: " << this->_route << std::endl;
-		std::cout << RED << "location route: " << _location.getLocationRoute() << std::endl;
-		StringUtils::replaceFirstOccurrence(this->_route, _location.getLocationRoute(), _location.getLocationAlias());
-		_location.setLocationRoot("");
-		std::cout << "route after alias replacement: " << this->_route << std::endl;
+		this->_actualLocationPath = alias;
+	}
+	if (!root.empty())
+	{
+		this->_actualLocationPath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_actualLocationPath);
 	}
 }
 
@@ -459,14 +462,10 @@ void Response::processMultipartDataPart(std::vector<std::byte> part)
 	// fnd the end of headers and process them, they can be processed as a string
 	std::string partString(reinterpret_cast<const char *>(part.data()), part.size());
 	auto crlfPos = partString.find(CRLF CRLF);
-	// if CRLFCRLF not found, reject
 	if (crlfPos == std::string::npos)
 	{
-		std::cout << BLUE << "no crlfPos found" << RESET << std::endl;
-		// TODO: check if this error handling makes sense
-		throw ClientException();
+		throw ClientException("No CRLF CRLF found in multipart data part to separte headers");
 	}
-	std::cout << BLUE << "crlfPos: " << crlfPos << RESET << std::endl;
 	// substring until the first CRLF CRLF
 	std::string headersString = partString.substr(0, crlfPos);
 	processMultipartDataPartHeaders(dataPart, headersString);
@@ -508,7 +507,7 @@ void Response::processMultipartData()
 	auto partStart = std::search(messageBody.begin(), messageBody.end(), delimiterBytes.begin(), delimiterBytes.end());
 	if (partStart == messageBody.end())
 	{
-		throw ClientException();
+		throw ClientException("First boundary not found in multipart data");
 	}
 
 	// Skip the delimiter
@@ -519,7 +518,7 @@ void Response::processMultipartData()
 	auto endDelimiterIt = std::search(partStart, messageBody.end(), endDelimiterBytes.begin(), endDelimiterBytes.end());
 	if (endDelimiterIt == messageBody.end())
 	{
-		throw ClientException();
+		throw ClientException("End boundary not found in multipart data");
 	}
 
 	while (partStart != messageBody.end())
@@ -529,7 +528,7 @@ void Response::processMultipartData()
 		// TODO: finish the whole crlf condition thing
 		if (partEnd == messageBody.end() || partEnd - partStart < 4)
 		{
-			throw ClientException();
+			throw ClientException("Invalid multipart data format, no next delimiter found or too short part");
 		}
 		// Extract the current part
 		std::vector<std::byte> part(partStart + 2, partEnd - 2);
@@ -543,12 +542,12 @@ void Response::processMultipartData()
 		// If not the end, move to the start of the next part
 		partStart = partEnd + delimiterBytes.size();
 	}
-	std::cout << GREEN << "Processed multipart data, parts detected: " << this->_parts.size() << RESET << std::endl;
+	Logger::log(DEBUG, SERVER, "Processed multipart data, parts detected: %d", this->_parts.size());
 	if (this->_parts.size() == 0)
 	{
-		throw ClientException();
+		throw ClientException("No parts found in multipart data");
 	}
-	std::cout << "Parsed parts:" << std::endl;
+	/* std::cout << "Parsed parts:" << std::endl;
 	for (auto &part : this->_parts)
 	{
 		for (auto &[key, value] : part.headers)
@@ -558,7 +557,7 @@ void Response::processMultipartData()
 		std::cout << "Body:" << std::endl;
 		for (auto ch : part.body)
 			std::cout << static_cast<char>(ch);
-	}
+	} */
 }
 
 void Response::prepareResponse()
@@ -566,7 +565,7 @@ void Response::prepareResponse()
 	// if error is already known, just go straight to error forming
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
-		throw ServerException();
+		throw ServerException("Error status code already set, skipping response preparation");
 	}
 	// Process multipart form
 	try
@@ -579,42 +578,49 @@ void Response::prepareResponse()
 		{
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		}
-		throw ClientException();
+		throw ClientException("Error processing multipart data");
 	}
 	// prepare headers standard for every response
 	prepareStandardHeaders();
 	// split target into route, filename and extension
-	splitTarget();
+
 	// try to match location
 	try
 	{
-		this->_location = _config.getMatchingLocation(_route);
+		this->_location = _config.getMatchingLocation(this->_target);
 	}
 	catch (const std::exception &e)
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		throw ClientException();
+		throw ClientException("No matching location found for route");
 	}
-	// handle redirection
 	if (isRedirect())
 	{
 		std::cout << RED << "Redirect" << RESET << std::endl;
-		this->prepareRedirectResponse();
+		prepareRedirectResponse();
 		return;
 	}
+	splitTarget();
+	// handle redirection
+
 	// handle aliases - should override root
-	handleAlias();
+	handleRootAndAlias();
+	Logger::log(DEBUG, SERVER, "Location path: %s", this->_locationPath.c_str());
+	Logger::log(DEBUG, SERVER, "Actual location path: %s", this->_actualLocationPath.c_str());
+	Logger::log(DEBUG, SERVER, "Path after location: %s", this->_pathAfterLocation.c_str());
+	Logger::log(DEBUG, SERVER, "File name: %s", this->_fileName.c_str());
+	Logger::log(DEBUG, SERVER, "File extension: %s", this->_fileExtension.c_str());
+	Logger::log(DEBUG, SERVER, "Query params: %s", this->_queryParams.c_str());
 	// make sure target exists
 	if (!targetFound())
 	{
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		throw ClientException();
+		throw ClientException("Target not found");
 	}
 	// CGI handling
 	if (isCGI())
 	{
 		executeCGI();
-		return;
 	}
 	else
 	{
@@ -634,7 +640,7 @@ void Response::prepareResponse()
 			break;
 		default:
 			this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
-			throw ClientException();
+			throw ClientException("Method not allowed");
 		}
 	}
 	// set content length if not HEAD

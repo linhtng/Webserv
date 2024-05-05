@@ -13,7 +13,7 @@
 namespace BinaryData
 {
 	std::vector<std::byte> getErrorPage(HttpStatusCode statusCode);
-	std::vector<std::byte> getDirectoryListingPage(std::string path);
+	std::vector<std::byte> getDirectoryListingPage(std::string locationPath, std::string actualLocationPath, std::string pathAfterLocation);
 	std::vector<std::byte> getFileData(std::string path);
 };
 

@@ -57,10 +57,10 @@ void Location::analyzeLocationData()
 	{
 		throw std::runtime_error("Root or alias must be set in location block: " + locationBlock);
 	}
-	if (!root.empty() && !alias.empty())
+	/* if (!root.empty() && !alias.empty())
 	{
 		throw std::runtime_error("Don't have both root and alias set in location block: " + locationBlock);
-	}
+	} */
 	setDirectoryListing();
 	setDefaultFile();
 	setSaveDir();

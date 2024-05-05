@@ -418,12 +418,14 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 {
 	std::vector<Location> matchingLocations;
 
+	std::cout << "getMatchingLocation(): Location route: " << locationRoute << std::endl;
+	std::string trimmedLocationRoute = StringUtils::trimChar(locationRoute, '/');
 	for (const auto &locationPair : this->locations)
 	{
 		const std::string &pathPattern = StringUtils::trimChar(locationPair.first, '/');
 		std::cout << "Path pattern: " << pathPattern << std::endl;
-		std::cout << "locationRoute.find(pathPattern)" << locationRoute.find(pathPattern) << std::endl;
-		if (locationRoute.find(pathPattern) == 0)
+		std::cout << "locationRoute.find(pathPattern)" << trimmedLocationRoute.find(pathPattern) << std::endl;
+		if (trimmedLocationRoute.find(pathPattern) == 0)
 		{
 			matchingLocations.push_back(locationPair.second);
 		}
@@ -431,7 +433,7 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 	std::cout << "Matching locations size: " << matchingLocations.size() << std::endl;
 	if (matchingLocations.size() == 0)
 	{
-		throw std::runtime_error("No matching location found for route: " + locationRoute);
+		throw std::runtime_error("No matching location found for trimmed route: " + trimmedLocationRoute);
 	}
 	else
 	{

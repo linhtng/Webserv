@@ -40,12 +40,15 @@ private:
 	Request const &_request;
 	Location _location;
 	std::string _redirectionRoute;
-	std::string _route;
-	std::string _fileName;
-	std::string _fileExtension;
+	// these will be populated by splitTarget()
+	std::string _locationPath;		 // location route from config
+	std::string _actualLocationPath; // location route from config with root/alias logic applied
+	std::string _pathAfterLocation;	 // path after location route
+	std::string _fileName;			 // filename + extension
+	std::string _fileExtension;		 // extension
+	std::string _queryParams;		 // query string
 
-	void splitTarget();
-	bool extractFileName(const std::string &fileName, std::string &name, std::string &extension);
+	bool extractFileNameAndQuery(const std::string &fileName);
 	std::string formatDate() const;
 	std::string formatStatusLine() const;
 	std::string formatHeader() const;
@@ -53,6 +56,7 @@ private:
 	std::string formatConnection() const;
 	std::string formatContentType() const;
 
+	void splitTarget();
 	bool getConfiguredErrorPage();
 	void setDateToCurrent();
 	void prepareErrorResponse();
@@ -63,7 +67,7 @@ private:
 	void postMultipartDataPart(const MultipartDataPart &part);
 	void processMultipartDataPartHeaders(MultipartDataPart &dataPart, std::string headersString);
 	bool isRedirect(); // consts?
-	void handleAlias();
+	void handleRootAndAlias();
 	bool targetFound();
 	bool isCGI();
 	void executeCGI();
@@ -81,10 +85,28 @@ public:
 
 	class ClientException : public std::exception
 	{
+	private:
+		const char *message;
+
+	public:
+		ClientException(const char *msg) : message(msg) {}
+		const char *what() const throw() override
+		{
+			return message;
+		}
 	};
 
 	class ServerException : public std::exception
 	{
+	private:
+		const char *message;
+
+	public:
+		ServerException(const char *msg) : message(msg) {}
+		const char *what() const throw() override
+		{
+			return message;
+		}
 	};
 };
 

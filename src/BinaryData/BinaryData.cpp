@@ -23,7 +23,7 @@ std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 	{
 		std::cout << "unknown status code: " << statusCode << std::endl;
 	}
-	std::cout << "status message: " << statusMessage << std::endl;
+	std::cout << "getErrorPage(): status message: " << statusMessage << std::endl;
 	StringUtils::replaceAll(templateContent, "{{status_code}}", statusCodeStr);
 	StringUtils::replaceAll(templateContent, "{{status_message}}", statusMessage);
 
@@ -54,8 +54,9 @@ static std::vector<std::string> getDirectoryContents(const std::string &path)
 	return contents;
 }
 
-std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string path)
+std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string locationPath, std::string actualLocationPath, std::string pathAfterLocation)
 {
+	// get page template
 	std::string templatePath = "../pages/directoryListing.html";
 	std::ifstream templateFile(templatePath);
 	if (!templateFile.is_open())
@@ -66,14 +67,19 @@ std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string path)
 	buffer << templateFile.rdbuf();
 	std::string templateContent = buffer.str();
 
+	// Compose list of contents
+	std::string actualDirPath = StringUtils::joinPath(actualLocationPath, pathAfterLocation);
+
 	std::string listItems;
-	std::vector<std::string> contents = getDirectoryContents(path);
+	std::vector<std::string> contents = getDirectoryContents(actualDirPath);
+	std::cout << RED << "getDirectoryListingPage(): actualDirPath: '" << actualDirPath << "', pathAfterLocation: '" << pathAfterLocation << "'" << RESET << std::endl;
 	for (const std::string &content : contents)
 	{
-		listItems += "<li><a href=\"" + content + "\">" + content + "</a></li>\n";
+		std::string fullPath = "/" + StringUtils::joinPath(locationPath, pathAfterLocation, content);
+		listItems += "<li><a href=\"" + fullPath + "\">" + content + "</a></li>\n";
 	}
 
-	StringUtils::replaceAll(templateContent, "{{dir_name}}", path);
+	StringUtils::replaceAll(templateContent, "{{dir_name}}", StringUtils::joinPath(locationPath, pathAfterLocation) + "/");
 	StringUtils::replaceAll(templateContent, "{{list_items}}", listItems);
 
 	std::vector<std::byte> response;

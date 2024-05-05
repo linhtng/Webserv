@@ -23,6 +23,8 @@ namespace StringUtils
 	void replaceFirstOccurrence(std::string &str, const std::string &toReplace, const std::string &replaceWith);
 	std::string queryStr(const std::string &str);
 	std::string extractPathPreQuery(const std::string &url);
+	std::string removePrefix(const std::string &str, const std::string &prefix);
+	std::string removeSuffix(const std::string &str, const std::string &suffix);
 
 	template <typename T, typename... Args>
 	std::string joinPath(T &&head, Args &&...tail)

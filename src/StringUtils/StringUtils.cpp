@@ -150,3 +150,21 @@ void StringUtils::replaceFirstOccurrence(std::string &str, const std::string &to
 		str.replace(pos, toReplace.length(), replaceWith);
 	}
 }
+
+std::string StringUtils::removePrefix(const std::string &str, const std::string &prefix)
+{
+	if (str.find(prefix) == 0)
+	{
+		return str.substr(prefix.length());
+	}
+	return str;
+}
+
+std::string StringUtils::removeSuffix(const std::string &str, const std::string &suffix)
+{
+	if (str.rfind(suffix) == str.length() - suffix.length())
+	{
+		return str.substr(0, str.length() - suffix.length());
+	}
+	return str;
+}
