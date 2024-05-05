@@ -1,6 +1,6 @@
 #include "HttpMessage.hpp"
 
-HttpMessage::HttpMessage(ConfigData const &config,
+HttpMessage::HttpMessage(ConfigData const config,
 						 HttpStatusCode statusCode,
 						 HttpMethod method,
 						 std::string target,
