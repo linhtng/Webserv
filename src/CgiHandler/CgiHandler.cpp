@@ -4,17 +4,22 @@ CgiHandler::CgiHandler()
 {
 }
 
-CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
+CgiHandler::CgiHandler(const Request &request, std::unordered_map<std::string, std::string> &cgiParams)
 {
-    setCgiExecutor(request, server);
-    cgiBinDir = server.getCgiDir();
+    ConfigData config = request.getConfig();
+    scriptName = cgiParams["fileName"];
+    setCgiExecutor(config);
+    cgiBinDir = config.getCgiDir();
     if (cgiBinDir.empty())
     {
+        cgiExitStatus = HttpStatusCode::NOT_FOUND;
+        // Logger::log(ERROR, ERROR_MESSAGE, "Error: CGI executor not found to execute + %s\n", scriptName);
         throw std::runtime_error("Error: CGI bin not found. Make sure the directory exists.\n");
     }
-    setupCgiEnv(request, server);
+    setupCgiEnv(request, config, cgiParams);
     if (FileSystemUtils::pathExistsAndAccessible(envMap["PATH_TRANSLATED"]) == false)
     {
+        cgiExitStatus = HttpStatusCode::NOT_FOUND;
         throw std::runtime_error("Error: CGI script not accessible: " + envMap["PATH_TRANSLATED"] + "\n");
     }
     cgiOutput = "";
@@ -33,9 +38,8 @@ CgiHandler::~CgiHandler()
     closeCgiPipes();
 }
 
-void CgiHandler::setCgiExecutor(const Request &request, const ConfigData &server)
+void CgiHandler::setCgiExecutor(const ConfigData &server)
 {
-    scriptName = StringUtils::extractPathPreQuery(request.getTarget());
     std::unordered_map<std::string, std::string> cgiExtenExecutorMap = server.getCgiExtenExecutorMap();
     for (auto &extenExecutor : cgiExtenExecutorMap)
     {
@@ -47,16 +51,18 @@ void CgiHandler::setCgiExecutor(const Request &request, const ConfigData &server
     }
     if (cgiExecutorPathname.empty())
     {
+        cgiExitStatus = HttpStatusCode::NOT_FOUND;
         throw std::runtime_error("Error: CGI executor not found to execute " + scriptName + "\n");
+        // Logger::log(ERROR, ERROR_MESSAGE, "Error: CGI executor not found to execute + %s\n", scriptName);
     }
 }
 
-void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
+void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server, std::unordered_map<std::string, std::string> &cgiParams)
 {
     envMap["REQUEST_METHOD"] = request.getMethodStr();
     envMap["CONTENT_TYPE"] = request.getContentType();
     envMap["CONTENT_LENGTH"] = std::to_string(request.getContentLength());
-    envMap["QUERY_STRING"] = StringUtils::queryStr(request.getTarget());
+    envMap["QUERY_STRING"] = cgiParams["queryParams"];
     // PATH_INFO = test.py
     envMap["PATH_INFO"] = scriptName;
     // PATH_TRANSLATED = /cgi-bin/test.py
@@ -88,13 +94,17 @@ void CgiHandler::createCgiProcess()
     if (pipe(dataToCgiPipe) == -1 || pipe(dataFromCgiPipe) == -1)
     {
         closeCgiPipes();
-        throw std::runtime_error("Error: pipe() failed");
+        cgiExitStatus = HttpStatusCode::INTERNAL_SERVER_ERROR;
+        Logger::log(ERROR, ERROR_MESSAGE, "Error: pipe() failed\n");
+        return;
     }
     pid_t pid = fork();
     if (pid == -1)
     {
         closeCgiPipes();
-        throw std::runtime_error("Error: fork() failed");
+        cgiExitStatus = HttpStatusCode::INTERNAL_SERVER_ERROR;
+        Logger::log(ERROR, ERROR_MESSAGE, "Error: fork() failed\n");
+        return;
     }
     if (pid == 0) // child process
     {
@@ -141,15 +151,17 @@ void CgiHandler::cgiTimeout(pid_t pid)
     {
         // Kill the child process
         kill(pid, SIGKILL);
-        std::cerr << "Timeout: The child process has been killed." << std::endl;
+        Logger::log(ERROR, ERROR_MESSAGE, "Error: CGI script timed out\n");
     }
     if (WIFEXITED(status))
     {
-        cgiExitStatus = WEXITSTATUS(status);
+        // cgiExitStatus = WEXITSTATUS(status);
+        cgiExitStatus = HttpStatusCode::OK;
     }
     else if (WIFSIGNALED(status))
     {
-        cgiExitStatus = WTERMSIG(status);
+        // cgiExitStatus = WTERMSIG(status);
+        cgiExitStatus = HttpStatusCode::BAD_REQUEST;
     }
 }
 
@@ -163,7 +175,7 @@ void CgiHandler::readCgiOutput()
         ss.write(buffer, bytesRead);
     }
     cgiOutput = ss.str();
-    std::cout << "cgiOutput: " << cgiOutput << std::endl;
+    // std::cout << "cgiOutput: " << cgiOutput << std::endl;
 }
 
 void CgiHandler::closePipeEnd(int pipeFd)
@@ -213,6 +225,8 @@ void CgiHandler::executeCgiScript()
 
     chdir(cgiBinDir.c_str());
     execve(cgiArgv[0], cgiArgv, cgiEnvp);
+    Logger::log(ERROR, ERROR_MESSAGE, "Error: execve() failed\n");
+    cgiExitStatus = HttpStatusCode::INTERNAL_SERVER_ERROR;
 }
 
 std::vector<const char *> CgiHandler::createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr)

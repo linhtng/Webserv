@@ -8,6 +8,7 @@
 #include "../config_parser/ConfigParser.hpp"
 #include "../defines.hpp"
 #include "../StringUtils/StringUtils.hpp"
+#include "../Logger/Logger.hpp"
 
 struct CgiRequest
 {
@@ -22,17 +23,18 @@ class CgiHandler
 {
 public:
     CgiHandler();
-    CgiHandler(const Request &request, const ConfigData &server);
+    CgiHandler(const Request &request, std::unordered_map<std::string, std::string> &cgiParams);
     ~CgiHandler();
 
     void createCgiProcess();
     void printEnv();
     std::string getCgiOutput();
     int getCgiExitStatus();
+    int execveStatus;
 
 private:
-    void setCgiExecutor(const Request &request, const ConfigData &server);
-    void setupCgiEnv(const Request &request, const ConfigData &server);
+    void setCgiExecutor(const ConfigData &server);
+    void setupCgiEnv(const Request &request, const ConfigData &server, std::unordered_map<std::string, std::string> &cgiParams);
     std::vector<const char *> createCgiEnvCharStr(std::vector<std::string> &cgiEnvStr);
     void closeCgiPipes();
     void closePipeEnd(int pipeFd);
@@ -49,5 +51,5 @@ private:
     std::string cgiOutput;
     std::vector<std::byte> messageBody;
     std::string messageBodyStr;
-    int cgiExitStatus;
+    HttpStatusCode cgiExitStatus;
 };
