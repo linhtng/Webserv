@@ -53,6 +53,7 @@ private:
 	std::string formatConnection() const;
 	std::string formatContentType() const;
 
+	bool getConfiguredErrorPage();
 	void setDateToCurrent();
 	void prepareErrorResponse();
 	void prepareStandardHeaders();
