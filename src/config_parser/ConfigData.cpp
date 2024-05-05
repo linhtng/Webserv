@@ -22,7 +22,7 @@ ConfigData &ConfigData::operator=(const ConfigData &other)
 		serverPortString = other.serverPortString;
 		serverName = other.serverName;
 		serverHost = other.serverHost;
-		defaultErrorPages = other.defaultErrorPages;
+		errorPages = other.errorPages;
 		maxClientBodySize = other.maxClientBodySize;
 		locationBlocks = other.locationBlocks;
 		locations = other.locations;
@@ -40,7 +40,7 @@ void ConfigData::analyzeConfigData()
 	extractServerPort();
 	extractServerName();
 	extractServerHost();
-	extractDefaultErrorPages();
+	extractErrorPages();
 	extractMaxClientBodySize();
 	extractLocationBlocks();
 	extractCgiDir();
@@ -77,7 +77,7 @@ void ConfigData::printConfigData()
 	std::cout << "Server port: " << serverPort << std::endl;
 	std::cout << "Server host: " << serverHost << std::endl;
 	std::cout << "Error pages: ";
-	print(defaultErrorPages);
+	print(errorPages);
 	std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
 	std::cout << "CGI directory: " << cgiDir << std::endl;
 	std::cout << "CGI extension: " << cgiExtension << std::endl;
@@ -219,7 +219,7 @@ No error page URIs validation is done here.
 The line must be in format error_page <error_code> <error_page_uri>;
 If not in this format, i.e. 0 or more than one error page URI is provided in one line, throw invalid number of arguments error.
 */
-void ConfigData::extractDefaultErrorPages()
+void ConfigData::extractErrorPages()
 {
 	std::istringstream stream(serverBlock);
 	std::string line;
@@ -243,7 +243,7 @@ void ConfigData::extractDefaultErrorPages()
 				}
 				int errorCode = std::stoi(errorCodeStr);
 				std::string errorPage = match[2];
-				defaultErrorPages[errorCode] = errorPage;
+				errorPages[errorCode] = errorPage;
 			}
 			else
 				throw std::runtime_error("Invalid error page directive in server block: " + line);
@@ -399,9 +399,9 @@ std::string ConfigData::getServerName() const
 	return serverName;
 }
 
-std::unordered_map<int, std::string> ConfigData::getDefaultErrorPages() const
+std::unordered_map<int, std::string> ConfigData::getErrorPages() const
 {
-	return defaultErrorPages;
+	return errorPages;
 }
 
 size_t ConfigData::getMaxClientBodySize() const

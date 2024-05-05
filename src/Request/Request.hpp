@@ -101,6 +101,15 @@ public:
 
 	class BadRequestException : public std::exception
 	{
+	private:
+		const char *message;
+
+	public:
+		BadRequestException(const char *msg) : message(msg) {}
+		const char *what() const throw() override
+		{
+			return message;
+		}
 	};
 
 	// DEBUG

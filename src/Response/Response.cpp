@@ -126,10 +126,35 @@ void Response::setDateToCurrent()
 	this->_date = std::chrono::system_clock::now();
 }
 
+bool Response::getConfiguredErrorPage()
+{
+	std::unordered_map<int, std::string> errorPages = this->_config.getErrorPages();
+	try
+	{
+		std::string errorPagePath = errorPages.at(this->_statusCode);
+		std::cout << "Error page path: " << errorPagePath << std::endl;
+		this->_body = BinaryData::getFileData(StringUtils::trim(errorPagePath));
+		std::cout << "Error page size: " << this->_body.size() << std::endl;
+		return true;
+	}
+	catch (const std::out_of_range &e)
+	{
+		std::cout << "Error page not found" << std::endl;
+	}
+	catch (const std::exception &e)
+	{
+		std::cout << "Internal error:" << e.what() << std::endl;
+	}
+	return false;
+}
+
 void Response::prepareErrorResponse()
 {
 	prepareStandardHeaders();
-	this->_body = BinaryData::getErrorPage(this->_statusCode);
+	if (!getConfiguredErrorPage())
+	{
+		this->_body = BinaryData::getErrorPage(this->_statusCode);
+	}
 	this->_contentLength = this->_body.size();
 	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
 	{

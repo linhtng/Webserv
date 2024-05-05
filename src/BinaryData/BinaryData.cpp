@@ -14,7 +14,6 @@ std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 	std::string templateContent = buffer.str();
 
 	std::string statusCodeStr = std::to_string(statusCode);
-	std::cout << "searching for status code: " << statusCode << std::endl;
 	std::string statusMessage = DEFAULT_ERROR_MESSAGE;
 	try
 	{
@@ -40,7 +39,6 @@ std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 
 static std::vector<std::string> getDirectoryContents(const std::string &path)
 {
-	std::cout << CYAN "Getting directory contents for path: " << path << ", c_str(): " << path.c_str() << RESET << std::endl;
 	std::vector<std::string> contents;
 	DIR *dir = opendir(path.c_str());
 	if (dir == nullptr)
@@ -88,7 +86,7 @@ std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string path)
 
 std::vector<std::byte> BinaryData::getFileData(std::string path)
 {
-	std::cout << RED << "path: " << path << RESET << std::endl;
+	path = StringUtils::trimChar(path, '/');
 	std::ifstream fileStream(path, std::ios::binary);
 	if (!fileStream)
 	{
@@ -103,6 +101,5 @@ std::vector<std::byte> BinaryData::getFileData(std::string path)
 	{
 		response.push_back(static_cast<std::byte>(ch));
 	}
-	std::cout << RED << "got file data, bytes: " << response.size() << RESET << std::endl;
 	return response;
 }
