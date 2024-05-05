@@ -275,19 +275,24 @@ void Response::splitTarget()
 bool Response::isCGI()
 {
 	/* return (this->_fileExtension == "py" || this->_fileExtension == "sh"); */
+	Logger::log(DEBUG, SERVER, "Checking if CGI script");
 	std::vector<std::string> cgiExtensions;
 	for (auto &extenExecutor : this->_config.getCgiExtenExecutorMap())
 	{
+		Logger::log(DEBUG, SERVER, "CGI extension: %s", extenExecutor.first.c_str());
 		cgiExtensions.push_back(extenExecutor.first);
 	}
 	if (cgiExtensions.empty())
 	{
+		Logger::log(DEBUG, SERVER, "No CGI extensions found in the config, so this will be served as normal file");
 		return false;
 	}
-	if (std::find(cgiExtensions.begin(), cgiExtensions.end(), this->_fileExtension) != cgiExtensions.end())
+	if (std::find(cgiExtensions.begin(), cgiExtensions.end(), "." + this->_fileExtension) != cgiExtensions.end())
 	{
+		Logger::log(DEBUG, SERVER, "CGI script detected");
 		return true;
 	}
+	Logger::log(DEBUG, SERVER, "Not a CGI script");
 	return false;
 }
 
@@ -297,7 +302,7 @@ void Response::executeCGI()
 	// TODO: pass all the path variables to CGI script
 	try
 	{
-		CgiHandler cgiHandler(_request, _request.getConfig(), _fileName, _fileExtension, _queryParams);
+		CgiHandler cgiHandler(_request, _request.getConfig() /* , _fileName, _fileExtension, _queryParams */);
 		cgiHandler.createCgiProcess();
 		int cgiStatus = cgiHandler.getCgiExitStatus();
 		if (cgiStatus != CGI_EXIT_SUCCESS)
@@ -645,12 +650,7 @@ void Response::prepareResponse()
 	Logger::log(DEBUG, SERVER, "File name: %s", this->_fileName.c_str());
 	Logger::log(DEBUG, SERVER, "File extension: %s", this->_fileExtension.c_str());
 	Logger::log(DEBUG, SERVER, "Query params: %s", this->_queryParams.c_str());
-	// make sure target exists
-	if (!targetFound())
-	{
-		this->_statusCode = HttpStatusCode::NOT_FOUND;
-		throw ClientException("Target not found");
-	}
+
 	// CGI handling
 	if (isCGI())
 	{
@@ -659,6 +659,13 @@ void Response::prepareResponse()
 	}
 	else
 	{
+		// make sure target exists
+		if (!targetFound())
+		{
+			this->_statusCode = HttpStatusCode::NOT_FOUND;
+			throw ClientException("Target not found");
+		}
+
 		switch (this->_method)
 		{
 		case HttpMethod::POST:
