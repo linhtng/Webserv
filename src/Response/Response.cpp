@@ -299,7 +299,31 @@ bool Response::isCGI()
 void Response::executeCGI()
 {
 	Logger::log(DEBUG, SERVER, "Executing CGI script: %s", this->_fileName.c_str());
+	// reject if method is not GET or POST
+	if (this->_method != HttpMethod::GET && this->_method != HttpMethod::POST)
+	{
+		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
+		throw ClientException("CGI script can only be executed with GET or POST method");
+	}
+
 	// TODO: pass all the path variables to CGI script
+
+	/* try
+	{
+		CgiHandler cgiHandler(_request, _request.getConfig());
+		try
+		{
+		}
+		catch
+		{
+			cgiHandler.getCgiExitStatus();
+		}
+	}
+	catch (const std::exception &e)
+	{
+
+	} */
+
 	try
 	{
 		CgiHandler cgiHandler(_request, _request.getConfig() /* , _fileName, _fileExtension, _queryParams */);
@@ -309,6 +333,7 @@ void Response::executeCGI()
 		{
 			Logger::log(e_log_level::ERROR, CLIENT, "CGI script execution failed with status %d, client error", cgiStatus);
 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
+			throw ClientException("CGI script execution failed, client fault");
 		}
 		this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
 		this->_contentType = ContentType::TEXT_PLAIN;
@@ -317,6 +342,7 @@ void Response::executeCGI()
 	{
 		Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+		throw ServerException("Error executing CGI script, server fault");
 	}
 }
 
@@ -599,6 +625,16 @@ void Response::processMultipartData()
 	} */
 }
 
+bool Response::methodAllowed()
+{
+	std::unordered_set<HttpMethod> allowedMethods = this->_location.getAcceptedMethods();
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
+	{
+		return false;
+	}
+	return true;
+}
+
 void Response::prepareResponse()
 {
 	// if error is already known, just go straight to error forming
@@ -644,6 +680,7 @@ void Response::prepareResponse()
 
 	// handle aliases - should override root
 	handleRootAndAlias();
+
 	Logger::log(DEBUG, SERVER, "Location path: %s", this->_locationPath.c_str());
 	Logger::log(DEBUG, SERVER, "Actual location path: %s", this->_actualLocationPath.c_str());
 	Logger::log(DEBUG, SERVER, "Path after location: %s", this->_pathAfterLocation.c_str());
@@ -651,6 +688,11 @@ void Response::prepareResponse()
 	Logger::log(DEBUG, SERVER, "File extension: %s", this->_fileExtension.c_str());
 	Logger::log(DEBUG, SERVER, "Query params: %s", this->_queryParams.c_str());
 
+	if (!methodAllowed())
+	{
+		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
+		throw ClientException("Method not allowed");
+	}
 	// CGI handling
 	if (isCGI())
 	{

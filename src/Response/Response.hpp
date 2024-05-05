@@ -16,6 +16,7 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
+#include <unordered_set>
 // TODO: check imports below
 
 #include <iomanip> //TODO: check header for put_time
@@ -57,6 +58,7 @@ private:
 	std::string formatConnection() const;
 	std::string formatContentType() const;
 
+	bool methodAllowed();
 	void splitTarget();
 	bool getConfiguredErrorPage();
 	void setDateToCurrent();
