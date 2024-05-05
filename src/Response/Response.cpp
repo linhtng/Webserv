@@ -259,8 +259,23 @@ void Response::splitTarget()
 	std::cout << RED << "splitTarget(): File extension: " << this->_fileExtension << RESET << std::endl;
 }
 
+/* check if the target is a CGI script i.e. it contains one of the VALID_CGI_EXTEN
+ */
 bool Response::isCGI()
 {
+	std::vector<std::string> cgiExtensions;
+	for (auto &extenExecutor : this->_config.getCgiExtenExecutorMap())
+	{
+		cgiExtensions.push_back(extenExecutor.first);
+	}
+	if (cgiExtensions.empty())
+	{
+		return false;
+	}
+	if (std::find(cgiExtensions.begin(), cgiExtensions.end(), this->_fileExtension) != cgiExtensions.end())
+	{
+		return true;
+	}
 	return false;
 }
 
@@ -268,8 +283,14 @@ void Response::executeCGI()
 {
 	CgiHandler cgiHandler(_request, _request.getConfig());
 	cgiHandler.createCgiProcess();
+	int cgiStatus = cgiHandler.getCgiExitStatus();
+	if (cgiStatus != CGI_EXIT_SUCCESS)
+	{
+		Logger::log(e_log_level::ERROR, CLIENT, "CGI script execution failed with status %d", cgiStatus);
+	}
 	this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
 	this->_contentType = ContentType::TEXT_PLAIN;
+	// TODO: check for cgiExitStatus, if it is not CGI_EXIT_SUCCESS, set status code to 500 or appropriate error code.
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
@@ -617,8 +638,9 @@ void Response::prepareResponse()
 	// CGI handling
 	if (isCGI())
 	{
+		Logger::log(e_log_level::INFO, CLIENT, "CGI script detected");
 		executeCGI();
-		return; // TODO: remove return
+		// return; // TODO: remove return
 	}
 	else
 	{
