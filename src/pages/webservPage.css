@@ -12,7 +12,7 @@ body {
 
 header {
     position: relative;
-    background: url('server.jpg') no-repeat center center;
+    background: url('server_small.jpg') no-repeat center center;
     background-size: cover;
     height: 300px;
     display: flex;
