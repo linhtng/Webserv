@@ -496,15 +496,25 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 	std::vector<Location> matchingLocations;
 
 	std::cout << "getMatchingLocation(): Location route: " << locationRoute << std::endl;
-	std::string trimmedLocationRoute = StringUtils::trimChar(locationRoute, '/');
+	std::string trimmedLocationRoute = "/" + StringUtils::trimChar(locationRoute, '/');
+	std::cout << "Trimmed location route: " << trimmedLocationRoute << std::endl;
 	for (const auto &locationPair : this->locations)
 	{
-		const std::string &pathPattern = StringUtils::trimChar(locationPair.first, '/');
+		std::string pathPattern = "/" + StringUtils::trimChar(locationPair.first, '/');
 		std::cout << "Path pattern: " << pathPattern << std::endl;
-		std::cout << "locationRoute.find(pathPattern)" << trimmedLocationRoute.find(pathPattern) << std::endl;
 		if (trimmedLocationRoute.find(pathPattern) == 0)
 		{
-			matchingLocations.push_back(locationPair.second);
+			std::cout << "Found this location: " << locationPair.first << std::endl;
+			// check if after the prefix lodaation string either ends or has a slash
+			if (trimmedLocationRoute.size() == pathPattern.size() || trimmedLocationRoute[pathPattern.size()] == '/' || trimmedLocationRoute[pathPattern.size() - 1] == '/')
+			{
+				std::cout << "Matched location: " << locationPair.first << std::endl;
+				matchingLocations.push_back(locationPair.second);
+			}
+			else
+			{
+				std::cout << "Didn't match this location after all because it's not dir: " << locationPair.first << std::endl;
+			}
 		}
 	}
 	std::cout << "Matching locations size: " << matchingLocations.size() << std::endl;

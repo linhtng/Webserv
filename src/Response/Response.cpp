@@ -416,6 +416,8 @@ void Response::handlePost()
 	}
 	// set the Location header to contain path to the uploads directory
 	this->_locationHeader = '/' + this->_location.getSaveDir();
+	this->_body = BinaryData::strToVectorByte("File uploaded successfully");
+	this->_contentType = ContentType::TEXT_PLAIN;
 	this->_statusCode = HttpStatusCode::CREATED;
 }
 
