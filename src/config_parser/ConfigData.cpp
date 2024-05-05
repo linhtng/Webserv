@@ -325,6 +325,19 @@ void ConfigData::extractcgiExtenExecutorMap()
 		cgiExtenExecutorMap[cgiExtension[i]] = cgiExecutor[i];
 		// std::cout << "Extension: " << cgiExtension[i] << " Executor: " << cgiExecutor[i] << std::endl;
 	}
+	// Validate that extension matchs proper executor
+	std::unordered_map<std::string, std::string> correctMap = {
+		{".py", "python"},
+		{".sh", "bash"}};
+	for (const auto &pair : correctMap)
+	{
+		// std::cout << "cgiExtenExecutorMap[pair.first]: " << cgiExtenExecutorMap[pair.first] << std::endl;
+		// std::cout << "pair.second: " << pair.second << std::endl;
+		if (!cgiExtenExecutorMap[pair.first].empty() && cgiExtenExecutorMap[pair.first].find(pair.second) == std::string::npos)
+		{
+			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + cgiExtenExecutorMap[pair.first]);
+		}
+	}
 }
 
 void ConfigData::extractCgiExtension()
@@ -333,18 +346,6 @@ void ConfigData::extractCgiExtension()
 	for (auto &extension : cgiExtension)
 	{
 		validateCgiExtension(extension);
-	}
-	// Validate that extension matchs proper executor
-	std::unordered_map<std::string, std::string> correctMap = {
-		{".py", "python"},
-		{".sh", "bash"}};
-
-	for (const auto &pair : cgiExtenExecutorMap)
-	{
-		if (pair.second.find(correctMap[pair.first]) == std::string::npos)
-		{
-			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + pair.second);
-		}
 	}
 }
 

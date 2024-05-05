@@ -8,9 +8,9 @@ CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
 {
     setCgiExecutor(request, server);
     cgiBinDir = server.getCgiDir();
-    if (cgiExecutorPathname.empty() || cgiBinDir.empty())
+    if (cgiBinDir.empty())
     {
-        throw std::runtime_error("Error: CGI executor and/or bin not found\n");
+        throw std::runtime_error("Error: CGI bin not found. Make sure the directory exists.\n");
     }
     setupCgiEnv(request, server);
     if (FileSystemUtils::pathExistsAndAccessible(envMap["PATH_TRANSLATED"]) == false)
@@ -39,15 +39,16 @@ void CgiHandler::setCgiExecutor(const Request &request, const ConfigData &server
     std::unordered_map<std::string, std::string> cgiExtenExecutorMap = server.getCgiExtenExecutorMap();
     for (auto &extenExecutor : cgiExtenExecutorMap)
     {
-        std::cout << "extenExecutor.first: " << extenExecutor.first << std::endl;
-        std::cout << "extenExecutor.second: " << extenExecutor.second << std::endl;
         if (scriptName.find(extenExecutor.first) != std::string::npos)
         {
             cgiExecutorPathname = extenExecutor.second;
             break;
         }
     }
-    std::cout << "cgiExecutorPathname: " << cgiExecutorPathname << std::endl;
+    if (cgiExecutorPathname.empty())
+    {
+        throw std::runtime_error("Error: CGI executor not found to execute " + scriptName + "\n");
+    }
 }
 
 void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
