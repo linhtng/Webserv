@@ -10,6 +10,7 @@
 #include "../BinaryData/BinaryData.hpp"
 #include "../HttpUtils/HttpUtils.hpp"
 #include "../Logger/Logger.hpp"
+#include "../CgiHandler/CgiHandler.hpp"
 
 #include <string>
 #include <chrono>

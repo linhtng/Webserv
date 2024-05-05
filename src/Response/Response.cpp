@@ -266,6 +266,10 @@ bool Response::isCGI()
 
 void Response::executeCGI()
 {
+	CgiHandler cgiHandler(_request, _request.getConfig());
+	cgiHandler.createCgiProcess();
+	this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
+	this->_contentType = ContentType::TEXT_PLAIN;
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
@@ -614,7 +618,7 @@ void Response::prepareResponse()
 	if (isCGI())
 	{
 		executeCGI();
-		return;
+		return; // TODO: remove return
 	}
 	else
 	{

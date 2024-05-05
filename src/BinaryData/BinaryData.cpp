@@ -103,3 +103,11 @@ std::vector<std::byte> BinaryData::getFileData(std::string path)
 	}
 	return response;
 }
+
+std::vector<std::byte> BinaryData::strToVectorByte(std::string const &str)
+{
+	std::vector<std::byte> bytes;
+	for (char ch : str)
+		bytes.push_back(static_cast<std::byte>(ch));
+	return bytes;
+}
