@@ -7,6 +7,7 @@
 
 namespace HttpUtils
 {
+
 	const std::unordered_map<HttpStatusCode, std::string> _statusCodeMessages = {
 		{CONTINUE, "Continue"},
 		{SWITCHING_PROTOCOLS, "Switching Protocols"},
@@ -99,6 +100,7 @@ namespace HttpUtils
 			{HttpMethod::HEAD, "HEAD"},
 			{HttpMethod::POST, "POST"},
 			{HttpMethod::DELETE, "DELETE"}};
+
 }
 
 #endif

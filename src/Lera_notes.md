@@ -104,7 +104,7 @@ an immediate 100 (Continue) response to encourage the client to send the request
 
 Field values containing CR, LF, or NUL characters are invalid and dangerous, due to the varying ways that implementations might parse and interpret those characters; a recipient of CR, LF, or NUL within a field value MUST either reject the message or replace each of those characters with SP before further processing or forwarding of that message.
 
-multiform parsing
+multipart parsing
 content-type form, border
 enctype= multipart/form-data
 

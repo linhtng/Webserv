@@ -8,6 +8,7 @@ HttpMessage::HttpMessage(ConfigData const &config,
 						 int httpVersionMajor,
 						 int httpVersionMinor,
 						 std::string boundary,
+						 bool criticalError,
 						 size_t contentLength,
 						 bool chunked,
 						 ContentType contentType)
@@ -19,6 +20,7 @@ HttpMessage::HttpMessage(ConfigData const &config,
 	  _httpVersionMajor(httpVersionMajor),
 	  _httpVersionMinor(httpVersionMinor),
 	  _boundary(boundary),
+	  _criticalError(criticalError),
 	  _contentLength(contentLength),
 	  _chunked(chunked),
 	  _contentType(contentType)
@@ -88,4 +90,9 @@ ContentType HttpMessage::getContentType() const
 std::string HttpMessage::getBoundary() const
 {
 	return this->_boundary;
+}
+
+bool HttpMessage::getCriticalError() const
+{
+	return this->_criticalError;
 }

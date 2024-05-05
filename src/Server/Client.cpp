@@ -1,8 +1,8 @@
 #include "Client.hpp"
 
 Client::Client(sockaddr_in clientAddress)
-	: address(clientAddress), isConnectionClose(false), request(nullptr),
-	  chunkSize(0), bytesToReceive(0), response(nullptr), bytesSent(0)
+		: address(clientAddress), request(nullptr), response(nullptr), isConnectionClose(false), bytesSent(0), chunkSize(0),
+			bytesToReceive(0)
 {
 	std::cout << YELLOW << "constructor of client is called" << RESET << std::endl;
 }
@@ -12,10 +12,20 @@ Client::~Client()
 	std::cout << YELLOW << "destrcutor of client is called" << RESET << std::endl;
 }
 
+void Client::setBytesSent(size_t const &bytes)
+{
+	bytesSent = bytes;
+}
+size_t const &Client::getBytesSent() const
+{
+	return (bytesSent);
+}
+
 void Client::createRequest(std::string const &requestHeader, std::vector<ConfigData> const &configs)
 {
 	removeRequest();
-	request = std::make_unique<Request>(configs, requestHeader);
+	request = std::make_unique<Request>(configs, requestHeader); // Create a Request object with the provided header
+	bytesSent = 0;
 	chunkSize = 0;
 	bytesToReceive = 0;
 	bodyBuf.clear();
@@ -24,16 +34,13 @@ void Client::createRequest(std::string const &requestHeader, std::vector<ConfigD
 void Client::createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode)
 {
 	removeRequest();
-	request = std::make_unique<Request>(configs, statusCode);
-	chunkSize = 0;
-	bytesToReceive = 0;
-	bodyBuf.clear();
+	request = std::make_unique<Request>(configs, statusCode); // Create a Request object with the provided header
 }
 
 void Client::createResponse()
 {
 	removeResponse();
-	response = std::make_unique<Response>(*request);
+	response = std::make_unique<Response>(*request); // Create a Response object with the corresponding request
 	bytesSent = 0;
 }
 
@@ -47,6 +54,11 @@ void Client::removeResponse()
 	response.reset();
 }
 
+bool Client::isNewRequest() const
+{
+	return (request ? false : true);
+}
+
 const Request &Client::getRequest() const
 {
 	return (*request);
@@ -55,11 +67,6 @@ const Request &Client::getRequest() const
 const Response &Client::getResponse() const
 {
 	return (*response);
-}
-
-bool Client::isNewRequest() const
-{
-	return (request ? false : true);
 }
 
 bool const &Client::getIsConnectionClose() const
@@ -77,44 +84,9 @@ in_addr const &Client::getIPv4Address() const
 	return (address.sin_addr);
 }
 
-size_t const &Client::getBytesSent() const
-{
-	return (bytesSent);
-}
-
-size_t Client::getChunkSize() const
-{
-	return (chunkSize);
-}
-
-size_t Client::getBytesToReceive() const
-{
-	return (bytesToReceive);
-}
-
-std::vector<std::byte> Client::getBodyBuf() const
-{
-	return (bodyBuf);
-}
-
 void Client::setIsConnectionClose(bool const &status)
 {
 	isConnectionClose = status;
-}
-
-void Client::setBytesSent(size_t const &bytes)
-{
-	bytesSent = bytes;
-}
-
-void Client::setChunkSize(const size_t &bytes)
-{
-	chunkSize = bytes;
-}
-
-void Client::setBytesToReceive(size_t bytes)
-{
-	bytesToReceive = bytes;
 }
 
 void Client::appendToBodyBuf(const std::vector<std::byte> &buf)
@@ -138,19 +110,47 @@ void Client::clearBodyBuf()
 	bodyBuf.clear();
 }
 
+void Client::setChunkSize(const size_t &bytes)
+{
+	chunkSize = bytes;
+}
+
+void Client::setBytesToReceive(size_t bytes)
+{
+	bytesToReceive = bytes;
+}
+
+size_t Client::getChunkSize() const
+{
+	return (chunkSize);
+}
+
+std::vector<std::byte> Client::getBodyBuf() const
+{
+	return (bodyBuf);
+}
+
+size_t Client::getBytesToReceive() const
+{
+	return (bytesToReceive);
+}
+
 void Client::appendToRequestBody(const std::vector<std::byte> &newBodyChunk)
 {
-	request->appendToBody(newBodyChunk);
+	if (request)
+		request->appendToBody(newBodyChunk);
 }
 
 void Client::appendToRequestBody(char newBodyChunk[], const ssize_t &bytes)
 {
-	request->appendToBody(newBodyChunk, bytes);
+	if (request)
+		request->appendToBody(newBodyChunk, bytes);
 }
 
 void Client::resizeRequestBody(const size_t &n)
 {
-	request->resizeBody(n);
+	if (request)
+		request->resizeBody(n);
 }
 
 std::vector<std::byte> Client::getRequestBody() const

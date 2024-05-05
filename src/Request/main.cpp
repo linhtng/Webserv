@@ -93,7 +93,7 @@ int main()
 
 	std::string smallFileUploadHeaders = "POST /hi HTTP/1.1\r\nHost: webserv:10002\r\n Content-Length: 189\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7ybdh3HK4BBU6x7R";
 	// std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"number.txt\"\r\nContent-Type: text/plain\r\n\r\n12345\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
-	std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\"\r\nContent-Type: text/plain\r\n\r\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
+	std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"hi\"\r\nContent-Type: text/plain\r\n\r\n\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
 	std::vector<std::byte> smallFileUploadBodyBytes;
 	for (char c : smallFileUploadBody)
 	{
