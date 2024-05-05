@@ -166,12 +166,13 @@ void Response::prepareErrorResponse()
 		return;
 	}
 	this->_contentLength = this->_body.size();
+	this->_contentType = ContentType::TEXT_HTML;
+	// this->_connection = ConnectionValue::CLOSE;
 	if (this->_statusCode == HttpStatusCode::UPGRADE_REQUIRED)
 	{
 		this->_connection = ConnectionValue::UPGRADE;
 		this->_upgradeHeader = "HTTP/1.1";
 	}
-	// TODO: ? set Content-Type to http
 }
 
 void Response::prepareStandardHeaders()
@@ -306,50 +307,39 @@ void Response::executeCGI()
 		throw ClientException("CGI script can only be executed with GET or POST method");
 	}
 
-	// TODO: pass all the path variables to CGI script
-
-	/* try
-	{
-		CgiHandler cgiHandler(_request, _request.getConfig());
-		try
-		{
-		}
-		catch
-		{
-			cgiHandler.getCgiExitStatus();
-		}
-	}
-	catch (const std::exception &e)
-	{
-
-	} */
-
 	try
 	{
-		// CgiHandler cgiHandler(_request, _request.getConfig() /* , _fileName, _fileExtension, _queryParams */);
-		// std::vector<std::string> cgiParams = {this->_fileName, this->_fileExtension, this->_queryParams};
 		std::unordered_map<std::string, std::string> cgiParams;
-		cgiParams["fileName"] = "." + this->_fileName;
-		cgiParams["fileExtension"] = this->_fileExtension;
+		cgiParams["fileName"] = this->_fileName;
+		cgiParams["fileExtension"] = "." + this->_fileExtension;
 		cgiParams["queryParams"] = this->_queryParams;
 
 		CgiHandler cgiHandler(_request, cgiParams);
-		cgiHandler.createCgiProcess();
-		int cgiStatus = cgiHandler.getCgiExitStatus();
-		if (cgiStatus != CGI_EXIT_SUCCESS)
+		try
 		{
-			Logger::log(e_log_level::ERROR, CLIENT, "CGI script execution failed with status %d, client error", cgiStatus);
-			this->_statusCode = HttpStatusCode::BAD_REQUEST;
-			throw ClientException("CGI script execution failed, client fault");
+			cgiHandler.createCgiProcess();
+			this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
+			this->_contentType = ContentType::TEXT_PLAIN;
 		}
-		this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
-		this->_contentType = ContentType::TEXT_PLAIN;
+		catch (const std::exception &e)
+		{
+			Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
+			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+			{
+				this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+			}
+			else
+			{
+				this->_statusCode = cgiHandler.getCgiExitStatus();
+			}
+			throw ServerException("Error executing CGI script");
+		}
 	}
 	catch (const std::exception &e)
 	{
 		Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-		throw ServerException("Error executing CGI script, server fault");
+		throw ServerException("Error executing CGI script, constructor failed");
 	}
 }
 
@@ -480,6 +470,7 @@ void Response::handleHead()
 {
 	handleGet();
 	this->_contentLength = this->_body.size();
+	Logger::log(DEBUG, SERVER, "Set HEAD content length: %d", this->_contentLength);
 	this->_body.clear();
 }
 

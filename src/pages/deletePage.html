@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Send DELETE Request</title>
+</head>
+<body>
+
+<button onclick="sendDeleteRequest()">Delete /uploads2/number.txt</button>
+
+<script>
+function sendDeleteRequest() {
+    var url = 'http://localhost:10001/uploads2/number.txt';
+
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+			'Host': 'localhost:10001',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch(error => {
+        console.error('There has been a problem with your fetch operation:', error);
+    });
+}
+</script>
+
+</body>
+</html>

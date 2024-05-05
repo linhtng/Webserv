@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Send HEAD Request</title>
+</head>
+<body>
+
+<button onclick="sendHeadRequest()">Send HEAD Request</button>
+
+<script>
+function sendHeadRequest() {
+    var url = 'http://localhost:10001/';
+
+    fetch(url, {
+        method: 'HEAD',
+        headers: {
+            'Content-Type': 'application/json',
+			'Host': 'localhost:10001',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        console.log('HEAD request successful. Status:', response.status);
+        // You can access headers with response.headers.get('Header-Name')
+    })
+    .catch(error => {
+        console.error('There has been a problem with your fetch operation:', error);
+    });
+}
+</script>
+
+</body>
+</html>
