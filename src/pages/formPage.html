@@ -1,18 +1,29 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Form</title>
+    <link rel="stylesheet" type="text/css" href="formPage.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+25&display=swap" rel="stylesheet">
 </head>
-<html>
-	<body>
-		<h2>Forms</h2>
-		<form action="/testQuery.sh">
-		<label for="name">Name:</label><br>
-		<input type="text" id="name" name="name"><br>
-		<label for="age">Age:</label><br>
-		<input type="text" id="age" name="age"><br><br>
-		<input type="submit" value="Submit">
-		</form>
-	</body>
+<body>
+	<nav>
+			<ul>
+					<li><a href="webservPage.html">Home</a></li>
+					<li><a href="formPage.html">Form</a></li>
+					<li><a href="uploadPage.html">Upload</a></li>
+			</ul>
+		</nav>
+    <h1>Form</h1>
+    <form action="/testQuery.sh">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name"><br>
+        <label for="age">Age:</label><br>
+        <input type="text" id="age" name="age"><br><br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
 </html>
