@@ -42,6 +42,10 @@ clean:
 	rm -f ../Response/*.o
 	rm -f ../HttpMessage/*.o
 	rm -f ../config_parser/*.o
+	rm -f	../StringUtils/*.o
+	rm -f	../BinaryData/*.o
+	rm -f	../FileSystemUtils/*.o
+	rm -f	../Logger/*.o
 
 
 fclean: clean
