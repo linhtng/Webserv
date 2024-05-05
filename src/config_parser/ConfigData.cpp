@@ -27,9 +27,9 @@ ConfigData &ConfigData::operator=(const ConfigData &other)
 		locationBlocks = other.locationBlocks;
 		locations = other.locations;
 		cgiDir = other.cgiDir;
-		// cgiExtension = other.cgiExtension;
-		// cgiExecutor = other.cgiExecutor;
-		// cgiExtenExecutorMap = other.cgiExtenExecutorMap;
+		cgiExtension = other.cgiExtension;
+		cgiExecutor = other.cgiExecutor;
+		cgiExtenExecutorMap = other.cgiExtenExecutorMap;
 	}
 	return *this;
 }
@@ -45,7 +45,7 @@ void ConfigData::analyzeConfigData()
 	extractMaxClientBodySize();
 	extractLocationBlocks();
 	extractCgiDir();
-	// extractcgiExtenExecutorMap();
+	extractcgiExtenExecutorMap();
 }
 
 // Generic print function
@@ -81,12 +81,12 @@ void ConfigData::printConfigData()
 	std::cout << "Max client body size in bytes: " << maxClientBodySize << std::endl;
 	std::cout << "CGI directory: " << cgiDir << std::endl;
 	std::cout << "cgiExtenExecutorMap: " << std::endl;
-	// print(cgiExtenExecutorMap);
+	print(cgiExtenExecutorMap);
 	// std::cout << "Locations: ";
-	for (auto &location : locations)
-	{
-		location.second.printLocationData();
-	}
+	// for (auto &location : locations)
+	// {
+	// 	location.second.printLocationData();
+	// }
 }
 
 std::string ConfigData::getServerHost() const
@@ -303,7 +303,8 @@ void ConfigData::extractMultipleArgValues(const std::string &directiveKey, std::
 				// std::cout << "Match 1: " << match[1] << std::endl;
 				// std::cout << "Match 2: " << match[2] << std::endl;
 				values.push_back(match[1]);
-				values.push_back(match[2]);
+				if (!match[2].str().empty())
+					values.push_back(match[2]);
 			}
 			else
 				throw std::runtime_error("Invalid directive in server block: " + line);
@@ -322,16 +323,28 @@ void ConfigData::extractcgiExtenExecutorMap()
 	for (size_t i = 0; i < cgiExtension.size(); i++)
 	{
 		cgiExtenExecutorMap[cgiExtension[i]] = cgiExecutor[i];
+		// std::cout << "Extension: " << cgiExtension[i] << " Executor: " << cgiExecutor[i] << std::endl;
 	}
 }
 
 void ConfigData::extractCgiExtension()
 {
-	// cgiExtension = extractDirectiveValue(serverBlock, DirectiveKeys::CGI_EXTENSION);
 	extractMultipleArgValues(DirectiveKeys::CGI_EXTENSION, cgiExtension);
 	for (auto &extension : cgiExtension)
 	{
 		validateCgiExtension(extension);
+	}
+	// Validate that extension matchs proper executor
+	std::unordered_map<std::string, std::string> correctMap = {
+		{".py", "python"},
+		{".sh", "bash"}};
+
+	for (const auto &pair : cgiExtenExecutorMap)
+	{
+		if (pair.second.find(correctMap[pair.first]) == std::string::npos)
+		{
+			throw std::runtime_error("Invalid executor for extension " + pair.first + ": " + pair.second);
+		}
 	}
 }
 

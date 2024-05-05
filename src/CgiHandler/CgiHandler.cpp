@@ -25,7 +25,7 @@ CgiHandler::CgiHandler(const Request &request, const ConfigData &server)
         messageBodyStr.push_back(static_cast<char>(byte));
     }
     // std::cout << "messageBodyStr: " << messageBodyStr << std::endl;
-    // printEnv();
+    printEnv();
 }
 
 CgiHandler::~CgiHandler()
@@ -39,12 +39,15 @@ void CgiHandler::setCgiExecutor(const Request &request, const ConfigData &server
     std::unordered_map<std::string, std::string> cgiExtenExecutorMap = server.getCgiExtenExecutorMap();
     for (auto &extenExecutor : cgiExtenExecutorMap)
     {
+        std::cout << "extenExecutor.first: " << extenExecutor.first << std::endl;
+        std::cout << "extenExecutor.second: " << extenExecutor.second << std::endl;
         if (scriptName.find(extenExecutor.first) != std::string::npos)
         {
             cgiExecutorPathname = extenExecutor.second;
             break;
         }
     }
+    std::cout << "cgiExecutorPathname: " << cgiExecutorPathname << std::endl;
 }
 
 void CgiHandler::setupCgiEnv(const Request &request, const ConfigData &server)
