@@ -110,17 +110,13 @@ void Request::resizeBody(const size_t &n)
 
 void Request::extractRequestLine(const std::string &requestLine)
 {
-	std::cout << RED << "extractRequestLine()" << RESET << std::endl;
 	std::regex requestLineRegex(REQUEST_LINE_REGEX);
 	std::smatch match;
-	std::cout << "requestLine: " << requestLine << std::endl;
-	std::cout << "regex: " << REQUEST_LINE_REGEX << std::endl;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
 		this->_requestLine.method = match[1];
 		this->_requestLine.requestTarget = match[2];
 		this->_requestLine.HTTPVersionMajor = match[3];
-		std::cout << "minor: " << match[4] << std::endl;
 		if (match[4].matched)
 		{
 			this->_requestLine.HTTPVersionMinor = match[4];
@@ -128,7 +124,7 @@ void Request::extractRequestLine(const std::string &requestLine)
 	}
 	else
 	{
-		throw BadRequestException();
+		throw BadRequestException("Request line extraction error");
 	}
 }
 
@@ -145,7 +141,7 @@ void Request::validateMethod()
 	{
 		std::cout << "method not valid" << std::endl;
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
-		throw BadRequestException();
+		throw BadRequestException("Method not allowed");
 	}
 }
 
@@ -155,7 +151,7 @@ HttpMethod Request::matchValidMethod()
 	if (it == HttpUtils::_strToHttpMethod.end())
 	{
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
-		throw BadRequestException();
+		throw BadRequestException("Method not implemented");
 	}
 	return it->second;
 }
@@ -173,7 +169,7 @@ std::string Request::parseTarget()
 	if (!std::regex_match(target, targetRegex))
 	{
 		this->_statusCode = HttpStatusCode::BAD_REQUEST;
-		throw BadRequestException();
+		throw BadRequestException("Target parsing error");
 	}
 	return target;
 }
@@ -186,12 +182,12 @@ int Request::parseMajorVersion()
 	if (major > 1)
 	{
 		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
-		throw BadRequestException();
+		throw BadRequestException("Major version too high");
 	}
 	else if (major < 1)
 	{
 		this->_statusCode = HttpStatusCode::UPGRADE_REQUIRED;
-		throw BadRequestException();
+		throw BadRequestException("Major version too low");
 	}
 	return major;
 }
@@ -208,7 +204,7 @@ int Request::parseMinorVersion()
 	if (minor > 1)
 	{
 		this->_statusCode = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
-		throw BadRequestException();
+		throw BadRequestException("Minor version too high");
 	}
 	else if (minor < 1)
 	{
@@ -219,15 +215,10 @@ int Request::parseMinorVersion()
 
 void Request::parseRequestLine()
 {
-	std::cout << RED << "parseRequestLine()" << RESET << std::endl;
 	this->_method = parseMethod();
-	std::cout << "method: " << this->_method << std::endl;
 	this->_target = parseTarget();
-	std::cout << "target: " << this->_target << std::endl;
 	this->_httpVersionMajor = parseMajorVersion();
-	std::cout << "major: " << this->_httpVersionMajor << std::endl;
 	this->_httpVersionMinor = parseMinorVersion();
-	std::cout << "minor: " << this->_httpVersionMinor << std::endl;
 }
 
 // HEADERS
@@ -237,7 +228,7 @@ void Request::matchConfig()
 	// filter configs so that only the one with the same host and port is left
 	if (this->_host.empty())
 	{
-		throw BadRequestException();
+		throw BadRequestException("Host is empty");
 	}
 	auto it = std::find_if(this->_configs.begin(), this->_configs.end(),
 						   [this](const ConfigData &config)
@@ -246,7 +237,7 @@ void Request::matchConfig()
 	if (it == this->_configs.end())
 	{
 		this->_statusCode = HttpStatusCode::MISDIRECTED_REQUEST;
-		throw BadRequestException();
+		throw BadRequestException("No matching config found");
 	}
 	this->_config = *it;
 }
@@ -255,13 +246,13 @@ void Request::parseHost()
 {
 	if (this->_headerLines.find("host") == this->_headerLines.end())
 	{
-		throw BadRequestException();
+		throw BadRequestException("Host header not found");
 	}
 	std::regex hostRegex(HOST_REGEX);
 	std::smatch match;
 	if (!std::regex_match(this->_headerLines["host"], match, hostRegex))
 	{
-		throw BadRequestException();
+		throw BadRequestException("Host header parsing error");
 	}
 	this->_host = match[1];
 	this->_port = std::stoi(match[2]);
@@ -285,7 +276,7 @@ void Request::parseContentLength()
 	if (this->_contentLength > this->_config.getMaxClientBodySize())
 	{
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
-		throw BadRequestException();
+		throw BadRequestException("Content-Length too large");
 	}
 	if (this->_contentLength > 0)
 	{
@@ -311,7 +302,7 @@ void Request::parseTransferEncoding()
 	if (this->_headerLines.find("content-length") != this->_headerLines.end())
 	{
 		this->_bodyExpected = false;
-		throw BadRequestException();
+		throw BadRequestException("Transfer-Encoding and Content-Length headers present together");
 	}
 	std::string transferEncodingValue = it->second;
 	std::transform(transferEncodingValue.begin(), transferEncodingValue.end(), transferEncodingValue.begin(), ::tolower);
@@ -324,7 +315,7 @@ void Request::parseTransferEncoding()
 	{
 		// should I check for valid values and throw 400 if there's some invalid bs? or is this enough
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
-		throw BadRequestException();
+		throw BadRequestException("Unsupported transfer encoding");
 	}
 }
 
@@ -353,7 +344,7 @@ void Request::parseConnection()
 	}
 	else if (connectionValue != "keep-alive")
 	{
-		throw BadRequestException();
+		throw BadRequestException("Unsupported connection value");
 	}
 }
 
@@ -377,7 +368,7 @@ void Request::parseContentType()
 	catch (const std::out_of_range &e)
 	{
 		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
-		throw BadRequestException();
+		throw BadRequestException("Unsupported media type");
 	}
 	// is there are subtype params, parse them
 	for (size_t i = 1; i < split.size(); ++i)
@@ -386,7 +377,7 @@ void Request::parseContentType()
 		if (paramsSplit.size() != 2)
 		{
 			this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
-			throw BadRequestException();
+			throw BadRequestException("Invalid media type params");
 		}
 		std::string paramName = StringUtils::trim(paramsSplit[0]);
 		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
@@ -398,12 +389,12 @@ void Request::parseContentType()
 		auto itBoundary = this->_contentTypeParams.find("boundary");
 		if (itBoundary == this->_contentTypeParams.end())
 		{
-			throw BadRequestException();
+			throw BadRequestException("Boundary not found in multipart form data");
 		}
 		std::string boundary = itBoundary->second;
 		if (boundary.empty())
 		{
-			throw BadRequestException();
+			throw BadRequestException("Empty boundary in multipart form data");
 		}
 		this->_boundary = boundary;
 	}
@@ -419,7 +410,7 @@ void Request::parseContentType()
 	if (this->_charset != "utf-8")
 	{
 		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
-		throw BadRequestException();
+		throw BadRequestException("Unsupported charset");
 	}
 	std::cout << "contentType: " << this->_contentType << std::endl;
 	std::cout << "boundary: " << this->_boundary << std::endl;
@@ -452,7 +443,7 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	}
 	else
 	{
-		throw BadRequestException();
+		throw BadRequestException("Header line extraction error");
 	}
 }
 
@@ -462,14 +453,14 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 {
 	if (requestLineAndHeaders.empty())
 	{
-		throw BadRequestException();
+		throw BadRequestException("Empty request line and headers");
 	}
 	std::vector<std::string> split = StringUtils::splitByDelimiter(requestLineAndHeaders, CRLF);
 	// handle request line
 	if (split.size() < 2)
 	{
 		std::cout << RED << "empty split" << RESET << std::endl;
-		throw BadRequestException();
+		throw BadRequestException("Less than 2 lines in request line and headers");
 	}
 	extractRequestLine(split[0]);
 	parseRequestLine();

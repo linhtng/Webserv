@@ -60,7 +60,7 @@ public:
 	std::string getServerPortString() const;
 	std::string getServerName() const;
 	std::string getServerHost() const;
-	std::unordered_map<int, std::string> getDefaultErrorPages() const;
+	std::unordered_map<int, std::string> getErrorPages() const;
 	size_t getMaxClientBodySize() const;
 	std::map<std::string, Location> getLocations() const;
 	std::string getCgiDir() const;
@@ -74,7 +74,7 @@ private:
 	int serverPort;
 	std::string serverHost;
 	std::string serverName;
-	std::unordered_map<int, std::string> defaultErrorPages;
+	std::unordered_map<int, std::string> errorPages;
 	std::string clientBodySize;
 	size_t maxClientBodySize;
 	std::vector<std::string> locationBlocks;
@@ -88,7 +88,7 @@ private:
 	bool validPortString(std::string &errorCodeStr);
 	void extractServerName();
 	void extractServerHost();
-	void extractDefaultErrorPages();
+	void extractErrorPages();
 	bool validErrorCode(std::string &errorCode);
 	void extractMaxClientBodySize();
 	void extractLocationBlocks();
