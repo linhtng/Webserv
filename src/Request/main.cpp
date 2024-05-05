@@ -91,8 +91,7 @@ int main()
 	printResponseBytes(responseMulipart.formatResponse());
 	*/
 
-	// read smallFileUploadHeaders sample request from file
-	std::string smallFileUploadHeaders = "POST /hi HTTP/1.1\r\nHost: localhost:10002\r\n Content-Length: 189\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7ybdh3HK4BBU6x7R";
+	std::string smallFileUploadHeaders = "POST /hi HTTP/1.1\r\nHost: webserv:10002\r\n Content-Length: 189\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7ybdh3HK4BBU6x7R";
 	// std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"number.txt\"\r\nContent-Type: text/plain\r\n\r\n12345\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
 	std::string smallFileUploadBody = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"hi\"\r\nContent-Type: text/plain\r\n\r\n\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
 	std::vector<std::byte> smallFileUploadBodyBytes;
@@ -105,6 +104,25 @@ int main()
 	requestMultipartSmall.appendToBody(smallFileUploadBodyBytes);
 	Response responseMultipartSmall(requestMultipartSmall);
 	printResponseBytes(responseMultipartSmall.formatResponse());
+
+	/* std::string smallFileUploadHeaders2 = "POST /hi HTTP/1.1\r\nHost: webserv:10002\r\n Content-Length: 189\r\nContent-Type: multipart/form-data; boundary=----WebKitFormBoundary7ybdh3HK4BBU6x7R";
+	std::string smallFileUploadBody2 = "------WebKitFormBoundary7ybdh3HK4BBU6x7R\r\nContent-Disposition: form-data; name=\"file\"; filename=\"hi2\"\r\nContent-Type: text/plain\r\n\r\n\r\n------WebKitFormBoundary7ybdh3HK4BBU6x7R--";
+	std::vector<std::byte> smallFileUploadBodyBytes2;
+	for (char c : smallFileUploadBody2)
+	{
+		smallFileUploadBodyBytes2.push_back(static_cast<std::byte>(c));
+	}
+	Request requestMultipartSmall2(configs, smallFileUploadHeaders2);
+	requestMultipartSmall2.printRequestProperties();
+	requestMultipartSmall2.appendToBody(smallFileUploadBodyBytes2);
+	Response responseMultipartSmall2(requestMultipartSmall2);
+	printResponseBytes(responseMultipartSmall2.formatResponse()); */
+
+	std::cout << std::endl;
+	Request request(configs, "GET /hi HTTP/1.1\r\nHost: webserv:10002\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\nContent-Length: 0");
+	std::cout << YELLOW << "REQUEST content type: " << request.getContentType() << RESET << std::endl;
+	Response response(request);
+	printResponseBytes(response.formatResponse());
 
 	return 0;
 }

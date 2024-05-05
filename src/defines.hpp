@@ -95,11 +95,6 @@ enum ContentType
 			"PUT", "PATCH", "TRACE", "CONNECT"      \
 	}
 
-#define VALID_CONTENT_CODINGS                     \
-	{                                             \
-		"chunked", "compress", "deflate", "gzip", \
-	}
-
 #define IMPLEMENTED_HTTP_METHODS        \
 	{                                   \
 		"GET", "HEAD", "POST", "DELETE" \
@@ -147,7 +142,7 @@ enum HttpStatusCode
 	RANGE_NOT_SATISFIABLE = 416,		 // used with Range header. Generate Content-Range header in response. BUT! Because servers are free to ignore Range, many implementations will respond with the entire selected representation in a 200 (OK) response
 	EXPECTATION_FAILED = 417,			 // Expect header is not supported or the server cannot meet the expectation. A server that receives an Expect field value containing a member other than 100-continue MAY respond with a 417
 	IM_A_TEAPOT = 418,					 //
-	MISDIRECTED_REQUEST = 421,			 // probably not needed
+	MISDIRECTED_REQUEST = 421,			 // for wrong host/port
 	UNPROCESSABLE_CONTENT = 422,		 // syntactically correct but semantically incorrect, very rare, 400 is used instead
 	// 422 response is more typically associated with a POST that accepts data in a specific format in the body of the request.
 	UPGRADE_REQUIRED = 426, // HTTP protocol update required
