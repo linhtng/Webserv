@@ -30,7 +30,6 @@ private:
 
 public:
 	Client(struct sockaddr_in clientAddress);
-	~Client();
 
 	void createRequest(std::string const &requestHeader, std::vector<ConfigData> const &configs);
 	void createResponse();

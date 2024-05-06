@@ -4,12 +4,6 @@ Client::Client(sockaddr_in clientAddress)
 	: address(clientAddress), request(nullptr), response(nullptr), isConnectionClose(false), bytesSent(0), chunkSize(0),
 	  bytesToReceive(0)
 {
-	std::cout << YELLOW << "constructor of client is called" << RESET << std::endl;
-}
-
-Client::~Client()
-{
-	std::cout << YELLOW << "destrcutor of client is called" << RESET << std::endl;
 }
 
 void Client::setBytesSent(size_t const &bytes)
