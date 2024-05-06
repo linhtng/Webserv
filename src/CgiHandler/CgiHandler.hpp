@@ -9,6 +9,7 @@
 #include "../defines.hpp"
 #include "../StringUtils/StringUtils.hpp"
 #include "../Logger/Logger.hpp"
+#include <fcntl.h>
 
 struct CgiRequest
 {

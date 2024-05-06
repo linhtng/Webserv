@@ -15,6 +15,7 @@ CgiHandler::CgiHandler(const Request &request, std::unordered_map<std::string, s
     {
         messageBodyStr.push_back(static_cast<char>(byte));
     }
+    std::cout << "messageBodyStr: " << messageBodyStr << std::endl;
 }
 
 CgiHandler::~CgiHandler()
@@ -91,6 +92,7 @@ void CgiHandler::printEnv()
 
 /* Create a new process to execute the CGI script:
 - open cgi pipe
+- set the pipe ends which need to go through poll() in server main loop to be non-blocking
 - fork and execute in the child process
 - wait for the child process to finish
 - close the pipe
@@ -102,6 +104,13 @@ void CgiHandler::createCgiProcess()
         closeCgiPipes();
         cgiExitStatus = HttpStatusCode::INTERNAL_SERVER_ERROR;
         Logger::log(ERROR, ERROR_MESSAGE, "Error: pipe() failed\n");
+        return;
+    }
+    if (fcntl(dataToCgiPipe[WRITE_END], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == -1 || fcntl(dataFromCgiPipe[READ_END], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == -1)
+    {
+        closeCgiPipes();
+        cgiExitStatus = HttpStatusCode::INTERNAL_SERVER_ERROR;
+        Logger::log(ERROR, ERROR_MESSAGE, "Error: fcntl() failed\n");
         return;
     }
     pid_t pid = fork();
@@ -178,7 +187,8 @@ void CgiHandler::readCgiOutput()
     std::stringstream ss;
     while ((bytesRead = read(dataFromCgiPipe[READ_END], buffer, sizeof(buffer))) > 0)
     {
-        ss.write(buffer, bytesRead);
+        buffer[bytesRead] = '\0'; // null-terminate the buffer
+        ss << buffer;
     }
     cgiOutput = ss.str();
     // std::cout << "cgiOutput: " << cgiOutput << std::endl;
