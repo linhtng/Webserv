@@ -307,40 +307,41 @@ void Response::executeCGI()
 		throw ClientException("CGI script can only be executed with GET or POST method");
 	}
 
+	// try
+	// {
+	std::unordered_map<std::string, std::string> cgiParams;
+	cgiParams["fileName"] = this->_fileName;
+	cgiParams["fileExtension"] = "." + this->_fileExtension;
+	cgiParams["queryParams"] = this->_queryParams;
+
+	CgiHandler cgiHandler(_request, cgiParams);
 	try
 	{
-		std::unordered_map<std::string, std::string> cgiParams;
-		cgiParams["fileName"] = this->_fileName;
-		cgiParams["fileExtension"] = "." + this->_fileExtension;
-		cgiParams["queryParams"] = this->_queryParams;
-
-		CgiHandler cgiHandler(_request, cgiParams);
-		try
-		{
-			cgiHandler.createCgiProcess();
-			this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
-			this->_contentType = ContentType::TEXT_PLAIN;
-		}
-		catch (const std::exception &e)
-		{
-			Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
-			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
-			{
-				this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-			}
-			else
-			{
-				this->_statusCode = cgiHandler.getCgiExitStatus();
-			}
-			throw ServerException("Error executing CGI script");
-		}
+		cgiHandler.initializeCgi(_request, cgiParams);
+		cgiHandler.createCgiProcess();
+		this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
+		this->_contentType = ContentType::TEXT_PLAIN;
 	}
 	catch (const std::exception &e)
 	{
 		Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
-		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-		throw ServerException("Error executing CGI script, constructor failed");
+		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+		{
+			this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+		}
+		else
+		{
+			this->_statusCode = cgiHandler.getCgiExitStatus();
+		}
+		throw ServerException("Error executing CGI script");
 	}
+	// }
+	// catch (const std::exception &e)
+	// {
+	// 	Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
+	// 	this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
+	// 	throw ServerException("Error executing CGI script, constructor failed");
+	// }
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
