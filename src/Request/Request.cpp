@@ -1,5 +1,4 @@
 #include "Request.hpp"
-#include <iostream>
 
 void Request::printRequestProperties() const
 {

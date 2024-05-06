@@ -35,8 +35,6 @@ std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 	return response;
 }
 
-#include <iostream>
-
 static std::vector<std::string> getDirectoryContents(const std::string &path)
 {
 	std::vector<std::string> contents;

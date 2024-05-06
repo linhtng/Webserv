@@ -1,10 +1,10 @@
 TODO:
 - standardise this-> stuff
 - check that i didn't mess up with matches array (0th elem is always full string)
-- remove includes of iostream that were for debugging
++ remove includes of iostream that were for debugging
 - add consts where applicable
-- organise the whole routing slash thing
-- figure out boundary shit
++ organise the whole routing slash thing
++ figure out boundary shit
 - check that asking for upgrade sends proper header back
 - remove extra debug couts
 
