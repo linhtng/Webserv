@@ -325,13 +325,14 @@ void Response::executeCGI()
 	catch (const std::exception &e)
 	{
 		Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
-		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
+		HttpStatusCode cgiExitStatus = cgiHandler.getCgiExitStatus();
+		if (cgiExitStatus == HttpStatusCode::UNDEFINED_STATUS)
 		{
 			this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 		}
 		else
 		{
-			this->_statusCode = cgiHandler.getCgiExitStatus();
+			this->_statusCode = cgiExitStatus;
 		}
 		throw ServerException("Error executing CGI script");
 	}
