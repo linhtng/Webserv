@@ -89,6 +89,12 @@ Server::RequestStatus Server::receiveRequest(int const &clientFd)
 		clients[clientFd]->setIsConnectionClose(true);
 	}
 	clients[clientFd]->createResponse();
+	// LINH_CGI
+	// if (response->isCGI())
+	// {
+	// create cgi FD, save it to client, set it to poll, execute CGI with filename and shit from response
+	// 	response->setCGIResponse(chiHandler.getOutput());
+	// }
 	return (READY_TO_WRITE);
 }
 

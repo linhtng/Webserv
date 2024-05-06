@@ -4,6 +4,8 @@
 #define SERVER_SOFTWARE "webservant v0.1"
 #define DEFAULT_ERROR_MESSAGE "An error occurred"
 #define CRITICAL_ERROR_RESPONSE "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+// TODO: change path to match from directory of the binary
+#define DEFAULT_ERROR_TEMPLATE_PATH "../pages/errorPage.html"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
@@ -29,9 +31,8 @@
 
 #define IMPLEMENTED_HTTP_METHODS_REGEX "(GET|HEAD|POST|DELETE)"
 #define REQUEST_LINE_REGEX "^" \
-						   "(" ALPHA_REGEX "+)" SP "(.+)" SP "HTTP/(\\d{1,3})\\.(\\d{1,3})?$" // nginx takes up to 3 digits for the minor version
+						   "(" ALPHA_REGEX "+)" SP "(.+)" SP "HTTP/(\\d{1,3})\\.(\\d{1,3})?$"
 #define HOST_REGEX "([^:]+):(\\d+)"
-/* #define MULTIFORM_BOUNDARY_REGEX "multipart/form-data;" RWS_REGEX "boundary=([^\\s;]+)" */
 
 #define GATEWAY_INTERFACE "CGI/1.1"
 #define SERVER_PROTOCOL "HTTP/1.1"

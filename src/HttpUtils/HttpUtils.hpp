@@ -88,6 +88,37 @@ namespace HttpUtils
 		{"multipart/form-data", ContentType::MULTIPART_FORM_DATA},
 		{"application/x-www-form-urlencoded", ContentType::APPLICATION_X_WWW_FORM_URLENCODED}};
 
+	const std::unordered_map<ContentType, std::string> _contentTypeStrings = {
+		{ContentType::TEXT_PLAIN, "text/plain"},
+		{ContentType::TEXT_HTML, "text/html"},
+		{ContentType::TEXT_CSS, "text/css"},
+		{ContentType::TEXT_JAVASCRIPT, "text/javascript"},
+		{ContentType::APPLICATION_JSON, "application/json"},
+		{ContentType::APPLICATION_XML, "application/xml"},
+		{ContentType::APPLICATION_PDF, "application/pdf"},
+		{ContentType::APPLICATION_ZIP, "application/zip"},
+		{ContentType::APPLICATION_OCTET_STREAM, "application/octet-stream"},
+		{ContentType::IMAGE_JPEG, "image/jpeg"},
+		{ContentType::IMAGE_PNG, "image/png"},
+		{ContentType::IMAGE_GIF, "image/gif"},
+		{ContentType::IMAGE_SVG, "image/svg+xml"},
+		{ContentType::IMAGE_WEBP, "image/webp"},
+		{ContentType::IMAGE_ICO, "image/x-icon"},
+		{ContentType::IMAGE_BMP, "image/bmp"},
+		{ContentType::IMAGE_TIFF, "image/tiff"},
+		{ContentType::AUDIO_MPEG, "audio/mpeg"},
+		{ContentType::AUDIO_OGG, "audio/ogg"},
+		{ContentType::AUDIO_WAV, "audio/wav"},
+		{ContentType::AUDIO_WEBM, "audio/webm"},
+		{ContentType::VIDEO_MP4, "video/mp4"},
+		{ContentType::VIDEO_OGG, "video/ogg"},
+		{ContentType::VIDEO_WEBM, "video/webm"},
+		{ContentType::VIDEO_MPEG, "video/mpeg"},
+		{ContentType::VIDEO_QUICKTIME, "video/quicktime"},
+		{ContentType::VIDEO_AVI, "video/x-msvideo"},
+		{ContentType::MULTIPART_FORM_DATA, "multipart/form-data"},
+		{ContentType::APPLICATION_X_WWW_FORM_URLENCODED, "application/x-www-form-urlencoded"}};
+
 	const std::unordered_map<std::string, HttpMethod> _strToHttpMethod = {
 		{"GET", HttpMethod::GET},
 		{"HEAD", HttpMethod::HEAD},

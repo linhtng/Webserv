@@ -5,20 +5,29 @@
 void Response::printResponseProperties() const
 {
 	std::cout << "Response properties:" << std::endl;
-	std::cout << "Method: " << this->getMethod() << std::endl;
-	std::cout << "Target: " << this->getTarget() << std::endl;
-	std::cout << "HTTP version: " << this->getHttpVersionMajor() << "." << this->getHttpVersionMinor() << std::endl;
-	std::cout << "Content length: " << this->getContentLength() << std::endl;
-	std::cout << "Connection: " << this->getConnection() << std::endl;
-	std::cout << "Date: " << this->getDate().time_since_epoch().count() << std::endl;
-	std::cout << "Content type: " << this->getContentType() << std::endl;
-	std::cout << "Status code: " << this->getStatusCode() << std::endl;
-	std::cout << "Chunked: " << this->isChunked() << std::endl;
-	std::cout << "Body: ";
-	for (std::byte byte : this->getBody())
-	{
-		std::cout << static_cast<char>(byte);
-	}
+	std::cout << "Server header: " << this->_serverHeader << std::endl;
+	std::cout << "Location header: " << this->_locationHeader << std::endl;
+	std::cout << "Upgrade header: " << this->_upgradeHeader << std::endl;
+	std::cout << "Content length: " << this->_contentLength << std::endl;
+	std::cout << "Content type: " << this->_contentType << std::endl;
+	std::cout << "Connection: " << this->formatConnection() << std::endl;
+	std::cout << "Date: " << this->formatDate() << std::endl;
+	std::cout << "Status code: " << this->formatStatusCodeMessage() << std::endl;
+	std::cout << "Status line: " << this->formatStatusLine() << std::endl;
+	std::cout << "Header: " << this->formatHeader() << std::endl;
+	std::cout << "Body size: " << this->_body.size() << std::endl;
+	std::cout << "Critical error: " << this->_criticalError << std::endl;
+	std::cout << "Redirection route: " << this->_redirectionRoute << std::endl;
+	std::cout << "Location path: " << this->_locationPath << std::endl;
+	std::cout << "Actual location path: " << this->_actualLocationPath << std::endl;
+	std::cout << "Path after location: " << this->_pathAfterLocation << std::endl;
+	std::cout << "File name: " << this->_fileName << std::endl;
+	std::cout << "File extension: " << this->_fileExtension << std::endl;
+	std::cout << "Query params: " << this->_queryParams << std::endl;
+	std::cout << "Method: " << HttpUtils::_httpMethodToStr.at(this->_method) << std::endl;
+	std::cout << "HTTP version: " << this->_httpVersionMajor << "." << this->_httpVersionMinor << std::endl;
+	std::cout << "Boundary: " << this->_boundary << std::endl;
+	std::cout << "Parts size: " << this->_parts.size() << std::endl;
 }
 
 // STRING FORMING FUNCTIONS
@@ -63,8 +72,14 @@ std::string Response::formatConnection() const
 
 std::string Response::formatContentType() const
 {
-	// TODO: actually handle different types
-	return "text/html";
+	try
+	{
+		return HttpUtils::_contentTypeStrings.at(this->_contentType);
+	}
+	catch (const std::out_of_range &e)
+	{
+		return "text/html";
+	}
 }
 
 std::string Response::formatStatusLine() const
@@ -132,18 +147,16 @@ bool Response::getConfiguredErrorPage()
 	try
 	{
 		std::string errorPagePath = errorPages.at(this->_statusCode);
-		std::cout << "Error page path: " << errorPagePath << std::endl;
 		this->_body = BinaryData::getFileData(StringUtils::trim(errorPagePath));
-		std::cout << "Error page size: " << this->_body.size() << std::endl;
-		return true;
 	}
 	catch (const std::out_of_range &e)
 	{
+		Logger::log(INFO, SERVER, "Error page not found");
 		std::cout << "Error page not found" << std::endl;
 	}
 	catch (const std::exception &e)
 	{
-		std::cout << "Internal error:" << e.what() << std::endl;
+		Logger::log(ERROR, SERVER, "Internal error trying to get configured error page: %s", e.what());
 	}
 	return false;
 }
@@ -183,6 +196,7 @@ void Response::prepareStandardHeaders()
 
 void Response::prepareRedirectResponse()
 {
+	Logger::log(INFO, SERVER, "Redirecting to: %s", this->_redirectionRoute.c_str());
 	if (this->_method == HttpMethod::POST)
 	{
 		this->_statusCode = HttpStatusCode::PERMANENT_REDIRECT;
@@ -197,7 +211,6 @@ void Response::prepareRedirectResponse()
 bool Response::isRedirect()
 {
 	this->_redirectionRoute = this->_location.getRedirectionRoute();
-	std::cout << RED << "Redirection route: " << this->_redirectionRoute << RESET << std::endl;
 	return this->_redirectionRoute != "";
 }
 
@@ -205,20 +218,20 @@ bool Response::targetFound()
 {
 	std::string fullPathNotTrimmed = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_fileName);
 	std::string fullPath = StringUtils::trimChar(fullPathNotTrimmed, '/');
-	std::cout << GREEN << "Checking if path exists: " << fullPath << RESET << std::endl;
 	if (!FileSystemUtils::pathExists(fullPath))
 	{
+		Logger::log(DEBUG, SERVER, "Target %s not found", fullPath.c_str());
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		return false;
 	}
 	else
 	{
+		Logger::log(DEBUG, SERVER, "Target %s found", fullPath.c_str());
 		return true;
-		// check permissions
 	}
 }
 
-// probably would be nice to move this to utils
+//  probably would be nice to move this to utils
 bool Response::extractFileNameAndQuery(const std::string &fileNameWithQuery)
 {
 	// split file extension+query from filename
@@ -245,13 +258,12 @@ bool Response::extractFileNameAndQuery(const std::string &fileNameWithQuery)
 	return true;
 }
 
-// probably would be nice to move this to utils
 void Response::splitTarget()
 {
 	std::string trimmedTarget = StringUtils::trimChar(this->_target, '/');
 	// first separate part that is same as location
 	this->_locationPath = StringUtils::trimChar(this->_location.getLocationRoute(), '/');
-	// for now same as location path, will be changed if alias or root is present
+	// actualLocationPath for now same as location path, will be changed later if alias or root is present
 	this->_actualLocationPath = this->_locationPath;
 	// then separate the rest
 	this->_pathAfterLocation = StringUtils::trimChar(StringUtils::removePrefix(trimmedTarget, this->_locationPath), '/');
@@ -271,21 +283,16 @@ void Response::splitTarget()
 	}
 }
 
-/* check if the target is a CGI script i.e. it contains one of the VALID_CGI_EXTEN
- */
 bool Response::isCGI()
 {
-	/* return (this->_fileExtension == "py" || this->_fileExtension == "sh"); */
-	Logger::log(DEBUG, SERVER, "Checking if CGI script");
 	std::vector<std::string> cgiExtensions;
 	for (auto &extenExecutor : this->_config.getCgiExtenExecutorMap())
 	{
-		Logger::log(DEBUG, SERVER, "CGI extension: %s", extenExecutor.first.c_str());
 		cgiExtensions.push_back(extenExecutor.first);
 	}
 	if (cgiExtensions.empty())
 	{
-		Logger::log(DEBUG, SERVER, "No CGI extensions found in the config, so this will be served as normal file");
+		Logger::log(DEBUG, SERVER, "No CGI extensions found in the config");
 		return false;
 	}
 	if (std::find(cgiExtensions.begin(), cgiExtensions.end(), "." + this->_fileExtension) != cgiExtensions.end())
@@ -297,16 +304,21 @@ bool Response::isCGI()
 	return false;
 }
 
+// LINH_CGI
+// forms a response based on CGI output
+//  setCGIResponse (cgiOutput, cgiExitStatus) // or just take cgiHandler class instance
+
 void Response::executeCGI()
 {
 	Logger::log(DEBUG, SERVER, "Executing CGI script: %s", this->_fileName.c_str());
-	// reject if method is not GET or POST
+	// reject CGI if method is not GET or POST
 	if (this->_method != HttpMethod::GET && this->_method != HttpMethod::POST)
 	{
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
 		throw ClientException("CGI script can only be executed with GET or POST method");
 	}
 
+	// TODO: either remove comments or return to try-catch
 	// try
 	// {
 	std::unordered_map<std::string, std::string> cgiParams;
@@ -664,29 +676,24 @@ bool Response::methodAllowed()
 
 void Response::prepareResponse()
 {
-	// if error is already known, just go straight to error forming
+	// If error is already known, just go straight to error page forming
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
 		throw ServerException("Error status code already set, skipping response preparation");
 	}
-	// Process multipart form
+	// Process multipart form if it exists
 	try
 	{
 		processMultipartData();
 	}
 	catch (const std::exception &e)
 	{
-		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
-		{
-			this->_statusCode = HttpStatusCode::BAD_REQUEST;
-		}
 		throw ClientException("Error processing multipart data");
 	}
-	// prepare headers standard for every response
+	// Prepare headers that are standard for every response
 	prepareStandardHeaders();
-	// split target into route, filename and extension
 
-	// try to match location
+	// Try to match location
 	try
 	{
 		this->_location = _config.getMatchingLocation(this->_target);
@@ -696,16 +703,16 @@ void Response::prepareResponse()
 		this->_statusCode = HttpStatusCode::NOT_FOUND;
 		throw ClientException("No matching location found for route");
 	}
+	// Handle redirections
 	if (isRedirect())
 	{
 		std::cout << RED << "Redirect" << RESET << std::endl;
 		prepareRedirectResponse();
 		return;
 	}
-	splitTarget();
-	// handle redirection
 
-	// handle aliases - should override root
+	// Process target path
+	splitTarget();
 	handleRootAndAlias();
 
 	Logger::log(DEBUG, SERVER, "Location path: %s", this->_locationPath.c_str());
@@ -715,6 +722,7 @@ void Response::prepareResponse()
 	Logger::log(DEBUG, SERVER, "File extension: %s", this->_fileExtension.c_str());
 	Logger::log(DEBUG, SERVER, "Query params: %s", this->_queryParams.c_str());
 
+	// Refuse if method not allowed
 	if (!methodAllowed())
 	{
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
@@ -725,10 +733,12 @@ void Response::prepareResponse()
 	{
 		Logger::log(e_log_level::INFO, CLIENT, "CGI script detected");
 		executeCGI();
+		// LINH_CGI
+		// this->isCgi = true;
 	}
 	else
 	{
-		// make sure target exists
+		// Make sure target exists
 		if (!targetFound())
 		{
 			this->_statusCode = HttpStatusCode::NOT_FOUND;
@@ -754,7 +764,7 @@ void Response::prepareResponse()
 			throw ClientException("Method not allowed");
 		}
 	}
-	// set content length if not HEAD
+	// Set content length
 	if (this->_method != HttpMethod::HEAD)
 	{
 		this->_contentLength = this->_body.size();

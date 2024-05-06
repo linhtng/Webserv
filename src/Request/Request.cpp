@@ -138,7 +138,6 @@ std::string Request::parseTarget()
 	std::regex targetRegex(URL_REGEX);
 	if (!std::regex_match(target, targetRegex))
 	{
-		this->_statusCode = HttpStatusCode::BAD_REQUEST;
 		throw BadRequestException("Target parsing error");
 	}
 	return target;

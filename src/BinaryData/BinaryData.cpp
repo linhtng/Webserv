@@ -2,8 +2,7 @@
 
 std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 {
-	// TODO: change path to match directory of the binary
-	std::string templatePath = "../pages/errorPage.html";
+	std::string templatePath = DEFAULT_ERROR_TEMPLATE_PATH;
 	std::ifstream templateFile(templatePath);
 	if (!templateFile.is_open())
 	{
@@ -21,9 +20,8 @@ std::vector<std::byte> BinaryData::getErrorPage(HttpStatusCode statusCode)
 	}
 	catch (const std::out_of_range &e)
 	{
-		std::cout << "unknown status code: " << statusCode << std::endl;
+		Logger::log(INFO, SERVER, "Received unknown error status code: %s", statusCode);
 	}
-	std::cout << "getErrorPage(): status message: " << statusMessage << std::endl;
 	StringUtils::replaceAll(templateContent, "{{status_code}}", statusCodeStr);
 	StringUtils::replaceAll(templateContent, "{{status_message}}", statusMessage);
 
@@ -67,10 +65,8 @@ std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string locationP
 
 	// Compose list of contents
 	std::string actualDirPath = StringUtils::joinPath(actualLocationPath, pathAfterLocation);
-
 	std::string listItems;
 	std::vector<std::string> contents = getDirectoryContents(actualDirPath);
-	std::cout << RED << "getDirectoryListingPage(): actualDirPath: '" << actualDirPath << "', pathAfterLocation: '" << pathAfterLocation << "'" << RESET << std::endl;
 	for (const std::string &content : contents)
 	{
 		std::string fullPath = "/" + StringUtils::joinPath(locationPath, pathAfterLocation, content);

@@ -4,6 +4,7 @@
 #include "../defines.hpp"
 #include "../HttpMessage/HttpMessage.hpp"
 #include "../StringUtils/StringUtils.hpp"
+#include "../Logger/Logger.hpp"
 #include <vector>
 #include <fstream>
 #include <sstream>
