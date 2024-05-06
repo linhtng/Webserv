@@ -3,9 +3,46 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Error {{status_code}}: {{status_message}}</title>
+	<link rel="stylesheet" type="text/css" href="/defaultStyles.css">
+	<style>
+		body {
+			font-family: 'Courier New', Courier, monospace;
+			background-color: #fff;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+		}
+		h1 {
+			font-size: 2em;
+			margin-bottom: 0.5em;
+		}
+		pre {
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 1.5em;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		p {
+			font-size: 1.5em;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+	</style>
 </head>
 <body>
-	<h1>Error {{status_code}}</h1>
-	<p>{{status_message}}</p>
+
+	<div>
+		<h1>Error {{status_code}}</h1>
+		<pre>
+ /\_/\
+( o.o )
+ > ^ <</pre>
+ 		<p>{{status_message}}</p>
+	</div>
 </body>
 </html>
