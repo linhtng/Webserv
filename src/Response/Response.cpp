@@ -152,7 +152,6 @@ bool Response::getConfiguredErrorPage()
 	catch (const std::out_of_range &e)
 	{
 		Logger::log(INFO, SERVER, "Error page not found");
-		std::cout << "Error page not found" << std::endl;
 	}
 	catch (const std::exception &e)
 	{
@@ -393,7 +392,7 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 		std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
 		params[paramName] = StringUtils::trimChar(StringUtils::trim(paramsSplit[1]), '"');
 		// print key value pair for debug
-		std::cout << RED << "Key: " << paramName << " Value: " << params[paramName] << RESET << std::endl;
+		Logger::log(DEBUG, SERVER, "Key: %s Value: %s", paramName.c_str(), params[paramName].c_str());
 	}
 	// TODO: move this to the initial multipart processing part later
 	// if no filename, no upload
@@ -439,8 +438,6 @@ void Response::handleGet()
 {
 	std::string path = StringUtils::joinPath(this->_actualLocationPath, this->_pathAfterLocation, this->_fileName);
 	std::string userPath = StringUtils::joinPath(this->_locationPath, this->_pathAfterLocation);
-
-	std::cout << "Joined path: " << path << std::endl;
 
 	if (FileSystemUtils::isDir(path))
 	{
@@ -586,11 +583,7 @@ void Response::processMultipartData()
 	{
 		return;
 	}
-	std::cout << GREEN << "Processing multipart data" << RESET << std::endl;
-	std::cout << GREEN << "REQUEST BODY" << RESET << std::endl;
 	std::vector<std::byte> requestBody = this->_request.getBody();
-	for (auto ch : requestBody)
-		std::cout << static_cast<char>(ch);
 	const std::vector<std::byte> &messageBody = this->_request.getBody();
 	const std::string delimiter = "--" + this->_boundary;
 	const std::string endDelimiter = delimiter + "--";
@@ -636,7 +629,6 @@ void Response::processMultipartData()
 		}
 		// Extract the current part
 		std::vector<std::byte> part(partStart + 2, partEnd - 2);
-		std::cout << "processing part of bytes: " << part.size() << std::endl;
 		processMultipartDataPart(part);
 		// if this was the last part, stop
 		if (partEnd == endDelimiterIt)
@@ -706,8 +698,6 @@ void Response::prepareResponse()
 	// Handle redirections
 	if (isRedirect())
 	{
-		std::cout << RED << "Redirect" << RESET << std::endl;
-		prepareRedirectResponse();
 		return;
 	}
 
