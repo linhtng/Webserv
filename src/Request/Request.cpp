@@ -2,18 +2,24 @@
 
 void Request::printRequestProperties() const
 {
-	std::cout << "Request properties:" << std::endl;
-	std::cout << "Method: " << this->_method << std::endl;
-	std::cout << "Request target: " << this->_target << std::endl;
-	std::cout << "HTTP version major: " << this->_httpVersionMajor << std::endl;
-	std::cout << "HTTP version minor: " << this->_httpVersionMinor << std::endl;
-	std::cout << "Status code: " << this->_statusCode << std::endl;
-	std::cout << "Host: " << this->_host << std::endl;
-	std::cout << "Port: " << this->_port << std::endl;
-	std::cout << "Content-Length: " << this->_contentLength << std::endl;
-	std::cout << "Transfer-Encoding: " << this->_transferEncoding << std::endl;
-	std::cout << "User-Agent: " << this->_userAgent << std::endl;
-	std::cout << "Connection: " << this->_connection << std::endl;
+	std::cout << "method: " << this->_requestLine.method << std::endl;
+	std::cout << "requestTarget: " << this->_requestLine.requestTarget << std::endl;
+	std::cout << "HTTPVersionMajor: " << this->_requestLine.HTTPVersionMajor << std::endl;
+	std::cout << "HTTPVersionMinor: " << this->_requestLine.HTTPVersionMinor << std::endl;
+	std::cout << "host: " << this->_host << std::endl;
+	std::cout << "port: " << this->_port << std::endl;
+	std::cout << "server name: " << this->_config.getServerName() << std::endl;
+	std::cout << "contentLength: " << this->_contentLength << std::endl;
+	std::cout << "transferEncoding: " << this->_transferEncoding << std::endl;
+	std::cout << "userAgent: " << this->_userAgent << std::endl;
+	std::cout << "connection: " << this->_connection << std::endl;
+	std::cout << "contentType: " << this->_contentType << std::endl;
+	std::cout << "boundary: " << this->_boundary << std::endl;
+	std::cout << "charset: " << this->_charset << std::endl;
+	std::cout << "bodyExpected: " << this->_bodyExpected << std::endl;
+	std::cout << "chunked: " << this->_chunked << std::endl;
+	std::cout << "statusCode: " << this->_statusCode << std::endl;
+	std::cout << "config: " << this->_config.getServerName() << std::endl;
 }
 
 // GETTERS
@@ -71,38 +77,6 @@ void Request::resizeBody(const size_t &n)
 	this->_body.resize(n);
 }
 
-// UTILITIES
-
-/* std::string Request::removeComments(const std::string &input) const
-{
-	std::string res;
-	std::string currentSegment;
-	int commentLevel = 0;
-
-	for (char c : input)
-	{
-		if (c == '(')
-		{
-			commentLevel++;
-			res += currentSegment;
-			currentSegment.clear();
-		}
-		else if (c == ')')
-		{
-			if (commentLevel == 0)
-			{
-				throw BadRequestException();
-			}
-			commentLevel--;
-		}
-		else if (commentLevel == 0)
-		{
-			currentSegment += c;
-		}
-	}
-	return res;
-} */
-
 // PARSING
 
 // REQUEST LINE
@@ -110,7 +84,6 @@ void Request::resizeBody(const size_t &n)
 void Request::extractRequestLine(const std::string &requestLine)
 {
 	std::regex requestLineRegex(REQUEST_LINE_REGEX);
-	std::cout << REQUEST_LINE_REGEX << std::endl;
 	std::smatch match;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
@@ -132,14 +105,11 @@ void Request::validateMethod()
 {
 	std::vector<std::string> validMethods = VALID_HTTP_METHODS;
 	std::string method = this->_requestLine.method;
-	std::cout << "method: " << method << std::endl;
-	// toupper
 	std::transform(method.begin(), method.end(), method.begin(), ::toupper);
 
 	auto itValid = std::find(validMethods.begin(), validMethods.end(), method);
 	if (itValid == validMethods.end())
 	{
-		std::cout << "method not valid" << std::endl;
 		this->_statusCode = HttpStatusCode::METHOD_NOT_ALLOWED;
 		throw BadRequestException("Method not allowed");
 	}
@@ -177,7 +147,6 @@ std::string Request::parseTarget()
 int Request::parseMajorVersion()
 {
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
-	std::cout << "major: " << this->_requestLine.HTTPVersionMajor << std::endl;
 	int major = std::stoi(this->_requestLine.HTTPVersionMajor);
 	if (major > 1)
 	{
@@ -195,7 +164,6 @@ int Request::parseMajorVersion()
 int Request::parseMinorVersion()
 {
 	// no need to handle exceptions because we already know it's 1-3 digits thanks to regex
-	std::cout << "minor: " << this->_requestLine.HTTPVersionMinor << std::endl;
 	if (this->_requestLine.HTTPVersionMinor.empty())
 	{
 		this->_requestLine.HTTPVersionMinor = "1";
@@ -233,12 +201,12 @@ void Request::matchConfig()
 	auto it = std::find_if(this->_configs.begin(), this->_configs.end(),
 						   [this](const ConfigData &config)
 						   { return config.getServerName() == this->_host && config.getServerPort() == this->_port; });
-	Logger::log(DEBUG, SERVER, "Matching config for host: %s, port: %d", this->_host.c_str(), this->_port);
 	if (it == this->_configs.end())
 	{
 		this->_statusCode = HttpStatusCode::MISDIRECTED_REQUEST;
 		throw BadRequestException("No matching config found");
 	}
+	Logger::log(DEBUG, SERVER, "Matched config for host: %s, port: %d", this->_host.c_str(), this->_port);
 	this->_config = *it;
 }
 
@@ -255,9 +223,15 @@ void Request::parseHost()
 		throw BadRequestException("Host header parsing error");
 	}
 	this->_host = match[1];
-	this->_port = std::stoi(match[2]);
+	if (StringUtils::isDigitsOnly(match[2]))
+	{
+		this->_port = std::stoi(match[2]);
+	}
+	else
+	{
+		throw BadRequestException("Port is not only numbers");
+	}
 	matchConfig();
-	// TODO: handle exceptions
 }
 
 void Request::parseContentLength()
@@ -268,11 +242,7 @@ void Request::parseContentLength()
 		return;
 	}
 	std::string contentLengthValue = it->second;
-	/*
-	Since there is no predefined limit to the length of content, a recipient MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows or precision loss due to integer conversion
-	*/
 	this->_contentLength = StringUtils::strToSizeT(contentLengthValue);
-	// overflow would be 400 and 413 should be thrown if value is bigger than max body size from config
 	if (this->_contentLength > this->_config.getMaxClientBodySize())
 	{
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
@@ -286,13 +256,6 @@ void Request::parseContentLength()
 
 void Request::parseTransferEncoding()
 {
-
-	/*
-	chunking an already chunked message is not allowed
-	If any transfer coding other than chunked is applied to a request's content, the sender MUST apply chunked as the final transfer coding to ensure that the message is properly framed.
-	If any transfer coding other than chunked is applied to a response's content, the sender MUST either apply chunked as the final transfer coding or terminate the message by closing the connection.
-	 */
-
 	auto it = this->_headerLines.find("transfer-encoding");
 	if (it == this->_headerLines.end())
 	{
@@ -313,7 +276,6 @@ void Request::parseTransferEncoding()
 	}
 	else
 	{
-		// should I check for valid values and throw 400 if there's some invalid bs? or is this enough
 		this->_statusCode = HttpStatusCode::NOT_IMPLEMENTED;
 		throw BadRequestException("Unsupported transfer encoding");
 	}
@@ -412,9 +374,7 @@ void Request::parseContentType()
 		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
 		throw BadRequestException("Unsupported charset");
 	}
-	std::cout << "contentType: " << this->_contentType << std::endl;
-	std::cout << "boundary: " << this->_boundary << std::endl;
-	std::cout << "charset: " << this->_charset << std::endl;
+	Logger::log(DEBUG, SERVER, "Parsed contentType: %s,	boundary: %s,	charset: %s", this->_contentType, this->_boundary.c_str(), this->_charset.c_str());
 }
 
 // HEADERS GENERAL
@@ -438,7 +398,6 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	{
 		std::string fieldName = match[1];
 		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
-		// std::cout << "fieldName: " << fieldName << ", value: " << match[2] << std::endl;
 		this->_headerLines[fieldName] = match[2];
 	}
 	else
@@ -459,7 +418,6 @@ void Request::processRequest(const std::string &requestLineAndHeaders)
 	// handle request line
 	if (split.size() < 2)
 	{
-		std::cout << RED << "empty split" << RESET << std::endl;
 		throw BadRequestException("Less than 2 lines in request line and headers");
 	}
 	extractRequestLine(split[0]);
@@ -500,34 +458,5 @@ Request::Request(const std::vector<ConfigData> &configs, const std::string &requ
 Request::Request(const std::vector<ConfigData> &configs, HttpStatusCode statusCode)
 	: HttpMessage(configs.front(), statusCode), _bodyExpected(false), _port(0), _configs(configs)
 {
-	// here we can just pick first config, because it doesn't matter for error messages
+	// here we can just pick first config, because it doesn't matter for simple error messages
 }
-
-// Request::Request(const ConfigData &config, const std::string &requestLineAndHeaders)
-// 	: HttpMessage(config),
-// 	  _bodyExpected(false),
-// 	  _port(0)
-// {
-// 	try
-// 	{
-// 		processRequest(requestLineAndHeaders);
-// 	}
-// 	catch (const BadRequestException &e)
-// 	{
-// 		std::cout << "EXCEPTION: " << e.what() << std::endl;
-// 		if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
-// 		{
-// 			this->_statusCode = HttpStatusCode::BAD_REQUEST;
-// 		}
-// 	}
-// 	catch (const std::exception &e)
-// 	{
-// 		std::cout << "EXCEPTION: " << e.what() << std::endl;
-// 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-// 	}
-// }
-
-// Request::Request(const ConfigData &config, HttpStatusCode statusCode)
-// 	: HttpMessage(config, statusCode), _bodyExpected(false), _port(0)
-// {
-// }
