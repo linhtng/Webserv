@@ -771,6 +771,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	}
 	catch (const ClientException &e)
 	{
+		Logger::log(ERROR, CLIENT, "Client error: %s", e.what());
 		try
 		{
 			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)
@@ -786,6 +787,7 @@ Response::Response(const Request &request) : HttpMessage(request.getConfig(), re
 	}
 	catch (const std::exception &e)
 	{
+		Logger::log(ERROR, SERVER, "Server error: %s", e.what());
 		try
 		{
 			if (this->_statusCode == HttpStatusCode::UNDEFINED_STATUS)

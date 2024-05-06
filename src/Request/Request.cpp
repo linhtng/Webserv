@@ -110,6 +110,7 @@ void Request::resizeBody(const size_t &n)
 void Request::extractRequestLine(const std::string &requestLine)
 {
 	std::regex requestLineRegex(REQUEST_LINE_REGEX);
+	std::cout << REQUEST_LINE_REGEX << std::endl;
 	std::smatch match;
 	if (std::regex_match(requestLine, match, requestLineRegex))
 	{
