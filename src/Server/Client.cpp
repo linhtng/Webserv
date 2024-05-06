@@ -28,7 +28,7 @@ void Client::createRequest(std::string const &requestHeader, std::vector<ConfigD
 void Client::createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode)
 {
 	removeRequest();
-	Logger::log(ERROR, SERVER, "Creating error request with status code: %s ", statusCode);
+	Logger::log(ERROR, SERVER, "Creating error request with status code: %d ", statusCode);
 	request = std::make_unique<Request>(configs, statusCode); // Create a Request object with the provided header
 }
 
