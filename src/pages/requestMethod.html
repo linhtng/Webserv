@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Request Method</title>
+	<link rel="stylesheet" type="text/css" href="requestMethod.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+25&display=swap" rel="stylesheet">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+<nav>
+	<ul>
+			<li><a href="webservPage.html">Home</a></li>
+			<li><a href="formPage.html">Form</a></li>
+			<li><a href="uploadPage.html">Upload</a></li>
+			<li><a href="requestMethod.html">Request Methods</a></li>
+	</ul>
+</nav>
+
+<div class="container">
+  <h1>Let's try these request methods</h1>
+
+  <section>
+    <h2>HEAD</h2>
+    <button onclick="sendHeadRequest()">Send HEAD Request</button>
+		<div id="headMessage" class="message"></div>
+  </section>
+
+  <section>
+    <h2>DELETE</h2>
+    <button onclick="sendDeleteRequest()">Delete /upload/number.txt</button>
+		<div id="deleteMessage" class="message"></div>
+	</section>
+</div>
+
+<script src="requestMethod.js"></script>
+
+</body>
+</html>
