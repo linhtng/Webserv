@@ -1,18 +1,9 @@
 #include "Client.hpp"
 
 Client::Client(sockaddr_in clientAddress)
-	: address(clientAddress), request(nullptr), response(nullptr), isConnectionClose(false), bytesSent(0), chunkSize(0),
-	  bytesToReceive(0)
+		: address(clientAddress), request(nullptr), response(nullptr), isConnectionClose(false),
+			bytesSent(0), chunkSize(0), bytesToReceive(0)
 {
-}
-
-void Client::setBytesSent(size_t const &bytes)
-{
-	bytesSent = bytes;
-}
-size_t const &Client::getBytesSent() const
-{
-	return (bytesSent);
 }
 
 void Client::createRequest(std::string const &requestHeader, std::vector<ConfigData> const &configs)
@@ -79,9 +70,44 @@ in_addr const &Client::getIPv4Address() const
 	return (address.sin_addr);
 }
 
+size_t const &Client::getBytesSent() const
+{
+	return (bytesSent);
+}
+
+size_t Client::getChunkSize() const
+{
+	return (chunkSize);
+}
+
+std::vector<std::byte> Client::getBodyBuf() const
+{
+	return (bodyBuf);
+}
+
+size_t Client::getBytesToReceive() const
+{
+	return (bytesToReceive);
+}
+
 void Client::setIsConnectionClose(bool const &status)
 {
 	isConnectionClose = status;
+}
+
+void Client::setBytesSent(size_t const &bytes)
+{
+	bytesSent = bytes;
+}
+
+void Client::setChunkSize(const size_t &bytes)
+{
+	chunkSize = bytes;
+}
+
+void Client::setBytesToReceive(size_t bytes)
+{
+	bytesToReceive = bytes;
 }
 
 void Client::appendToBodyBuf(const std::vector<std::byte> &buf)
@@ -103,31 +129,6 @@ void Client::eraseBodyBuf(const size_t &start, const size_t &end)
 void Client::clearBodyBuf()
 {
 	bodyBuf.clear();
-}
-
-void Client::setChunkSize(const size_t &bytes)
-{
-	chunkSize = bytes;
-}
-
-void Client::setBytesToReceive(size_t bytes)
-{
-	bytesToReceive = bytes;
-}
-
-size_t Client::getChunkSize() const
-{
-	return (chunkSize);
-}
-
-std::vector<std::byte> Client::getBodyBuf() const
-{
-	return (bodyBuf);
-}
-
-size_t Client::getBytesToReceive() const
-{
-	return (bytesToReceive);
 }
 
 void Client::appendToRequestBody(const std::vector<std::byte> &newBodyChunk)

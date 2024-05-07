@@ -126,12 +126,11 @@ void ServerManager::handlePoll()
 	pollfds.clear();
 	pollfds.insert(pollfds.end(), pollfdsTmp.begin(), pollfdsTmp.end()); // move the contents back from the vector
 
+	if (shutdownFlag == 1)
+		return;
+
 	if (ready < 0)
-	{
-		if (errno == EINTR)
-			return;
 		throw PollException();
-	}
 	else // check timeout for each client socket
 		checkClientTimeout(ready);
 }

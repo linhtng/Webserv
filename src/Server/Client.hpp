@@ -32,9 +32,8 @@ public:
 	Client(struct sockaddr_in clientAddress);
 
 	void createRequest(std::string const &requestHeader, std::vector<ConfigData> const &configs);
-	void createResponse();
-
 	void createErrorRequest(std::vector<ConfigData> const &configs, HttpStatusCode statusCode);
+	void createResponse();
 
 	void removeRequest();
 	void removeResponse();
@@ -44,25 +43,22 @@ public:
 	const Request &getRequest() const;
 	const Response &getResponse() const;
 	bool const &getIsConnectionClose() const;
-
 	unsigned short int const &getPortNumber() const;
 	struct in_addr const &getIPv4Address() const;
+	size_t const &getBytesSent() const;
+	size_t getChunkSize() const;
+	std::vector<std::byte> getBodyBuf() const;
+	size_t getBytesToReceive() const;
 
 	void setIsConnectionClose(bool const &status);
-
 	void setBytesSent(size_t const &bytes);
-	size_t const &getBytesSent() const;
+	void setChunkSize(const size_t &bytes);
+	void setBytesToReceive(size_t bytes);
 
 	void appendToBodyBuf(const std::vector<std::byte> &buf);
 	void appendToBodyBuf(char buf[], const ssize_t &bytes);
 	void eraseBodyBuf(const size_t &start, const size_t &end);
 	void clearBodyBuf();
-	void setChunkSize(const size_t &bytes);
-	void setBytesToReceive(size_t bytes);
-
-	size_t getChunkSize() const;
-	std::vector<std::byte> getBodyBuf() const;
-	size_t getBytesToReceive() const;
 
 	void appendToRequestBody(const std::vector<std::byte> &newBodyChunk);
 	void appendToRequestBody(char newBodyChunk[], const ssize_t &bytes);

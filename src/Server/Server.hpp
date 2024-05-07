@@ -54,9 +54,10 @@ private:
 
 	RequestStatus receiveRequestHeader(int const &clientFd);
 	RequestStatus formRequestHeader(int const &clientFd, std::string &requestHeader, std::vector<std::byte> &requestBodyBuf);
+	RequestStatus processRequestHeaderBuf(int const &clientFd);
 	RequestStatus receiveRequestBody(int const &clientFd);
-	RequestStatus formRequestBodyWithContentLength(int const &clientFd);
-	RequestStatus formRequestBodyWithChunk(int const &clientFd);
+	RequestStatus formRequestBodyWithContentLength(int const &clientFd, char readBuf[], ssize_t const &bytes);
+	RequestStatus formRequestBodyWithChunk(int const &clientFd, char readBuf[], ssize_t const &bytes);
 	RequestStatus processChunkData(int const &clientFd);
 	RequestStatus extractChunkSize(int const &clientFd);
 	Server();
