@@ -205,7 +205,7 @@ void Request::matchConfig()
 		this->_statusCode = HttpStatusCode::MISDIRECTED_REQUEST;
 		throw BadRequestException("No matching config found");
 	}
-	// Logger::log(DEBUG, SERVER, "Matched config for host: %s, port: %d", this->_host.c_str(), this->_port);
+	Logger::log(DEBUG, SERVER, "Matched config for host: %s, port: %d", this->_host.c_str(), this->_port);
 	this->_config = *it;
 }
 
