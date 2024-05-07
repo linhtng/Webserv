@@ -373,7 +373,8 @@ void Request::parseContentType()
 		this->_statusCode = HttpStatusCode::UNSUPPORTED_MEDIA_TYPE;
 		throw BadRequestException("Unsupported charset");
 	}
-	Logger::log(DEBUG, SERVER, "Parsed contentType: %s,	boundary: %s,	charset: %s", this->_contentType, this->_boundary.c_str(), this->_charset.c_str());
+	std::string contentTypeString = HttpUtils::_contentTypeStrings.at(this->_contentType);
+	Logger::log(DEBUG, SERVER, "Parsed contentType: %s,	boundary: %s,	charset: %s", contentTypeString.c_str(), this->_boundary.c_str(), this->_charset.c_str());
 }
 
 // HEADERS GENERAL
