@@ -204,6 +204,7 @@ void Response::prepareRedirectResponse()
 	{
 		this->_statusCode = HttpStatusCode::MOVED_PERMANENTLY;
 	}
+	this->_contentType = ContentType::TEXT_PLAIN;
 	this->_locationHeader = '/' + this->_redirectionRoute;
 }
 
@@ -415,6 +416,14 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 
 void Response::handlePost()
 {
+	// if it's not multipart form, just return back the data sent by client
+	if (this->_request.getContentType() != ContentType::MULTIPART_FORM_DATA)
+	{
+		this->_body = this->_request.getBody();
+		this->_contentType = this->_request.getContentType();
+		this->_statusCode = HttpStatusCode::CREATED;
+		return;
+	}
 	// check if upload is allowed
 	if (this->_location.getSaveDirIsEmpty())
 	{
@@ -448,6 +457,7 @@ void Response::handleGet()
 			Logger::log(DEBUG, SERVER, "Serving directory listing: %s", dirPath.c_str());
 			this->_body = BinaryData::getDirectoryListingPage(this->_locationPath, this->_actualLocationPath, this->_pathAfterLocation);
 			this->_statusCode = HttpStatusCode::OK;
+			this->_contentType = ContentType::TEXT_HTML;
 		}
 		else if (!this->_location.getDefaultFile().empty())
 		{
@@ -455,6 +465,7 @@ void Response::handleGet()
 			Logger::log(DEBUG, SERVER, "Serving index file: %s", this->_location.getDefaultFile().c_str());
 			this->_body = BinaryData::getFileData(StringUtils::joinPath(dirPath, this->_location.getDefaultFile()));
 			this->_statusCode = HttpStatusCode::OK;
+			this->_contentType = ContentType::TEXT_HTML;
 		}
 		else
 		{
@@ -469,7 +480,6 @@ void Response::handleGet()
 			Logger::log(DEBUG, SERVER, "Serving file: %s", path.c_str());
 			this->_body = BinaryData::getFileData(path);
 			this->_statusCode = HttpStatusCode::OK;
-			// serve file
 		}
 		else
 		{
@@ -513,6 +523,8 @@ void Response::handleDelete()
 	{
 		FileSystemUtils::deleteFile(path);
 		this->_statusCode = HttpStatusCode::NO_CONTENT;
+		this->_body = BinaryData::strToVectorByte("File deleted successfully");
+		this->_contentType = ContentType::TEXT_PLAIN;
 		// TODO: check if there's any special headers or body that it needs to return?
 	}
 }

@@ -3,13 +3,12 @@ function sendHeadRequest() {
 	fetch(url, {
 			method: 'HEAD',
 			headers: {
-					'Content-Type': 'application/json',
 					'Host': 'localhost:10001',
 			},
 	})
 	.then(response => {
 			if (!response.ok) {
-					throw new Error('Network response was not ok');
+					throw new Error('HEAD request unsuccessful, status code: ' + response.status + ', ' + response.statusText);
 			}
 			showMessage('HEAD request successful, status code: ' + response.status, false, 'headMessage');
 	})
@@ -28,7 +27,7 @@ function sendDeleteRequest() {
 	})
 	.then(response => {
 			if (!response.ok) {
-					throw new Error('Network response was not ok');
+					throw new Error('File not deleted, status code: ' + response.status + ', ' + response.statusText);
 			}
 			showMessage('File deleted successfully, status code: ' + response.status, false, 'deleteMessage');
 	})
