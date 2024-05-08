@@ -30,6 +30,9 @@ Location &Location::operator=(const Location &other)
 	directoryListing = other.directoryListing;
 	defaultFile = other.defaultFile;
 	saveDir = other.saveDir;
+	saveDirIsEmpty = other.saveDirIsEmpty;
+	aliasIsEmpty = other.aliasIsEmpty;
+	rootIsEmpty = other.rootIsEmpty;
 	return *this;
 }
 

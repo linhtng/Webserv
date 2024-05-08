@@ -527,7 +527,7 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 		// Sort the matching locations by path length in descending order
 		std::sort(matchingLocations.begin(), matchingLocations.end(), [](Location &a, Location &b)
 				  { return a.getLocationRoute().size() > b.getLocationRoute().size(); });
-		std::cout << "Matching location: " << matchingLocations[0].getLocationRoute() << std::endl;
+		std::cout << "Matching location: '" << matchingLocations[0].getLocationRoute() << "'" << std::endl;
 		return matchingLocations[0];
 	}
 }

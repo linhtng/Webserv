@@ -1,8 +1,12 @@
 #include "FileSystemUtils.hpp"
 
-bool FileSystemUtils::pathExists(const std::string &target)
+bool FileSystemUtils::pathExists(std::string target)
 {
 	struct stat path_stat;
+	if (target.empty())
+	{
+		target = ".";
+	}
 	return stat(target.c_str(), &path_stat) == 0;
 }
 
