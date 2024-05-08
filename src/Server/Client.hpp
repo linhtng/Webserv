@@ -16,6 +16,7 @@ private:
 	struct sockaddr_in address;
 	std::unique_ptr<Request> request;
 	std::unique_ptr<Response> response;
+	CgiHandler cgiHandler;
 	bool isConnectionClose;
 
 	// Helper properties for sending
@@ -42,6 +43,7 @@ public:
 
 	const Request &getRequest() const;
 	const Response &getResponse() const;
+	const CgiHandler &getCgiHandler() const;
 	bool const &getIsConnectionClose() const;
 	unsigned short int const &getPortNumber() const;
 	struct in_addr const &getIPv4Address() const;

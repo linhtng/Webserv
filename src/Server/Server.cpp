@@ -88,6 +88,21 @@ Server::RequestStatus Server::receiveRequest(int const &clientFd)
 	// create cgi FD, save it to client, set it to poll, execute CGI with filename and shit from response
 	// 	response->setCGIResponse(chiHandler.getOutput());
 	// }
+	// if (clients[clientFd]->C)
+	Response response = clients[clientFd]->getResponse();
+	if (response.isCGI())
+	{
+		std::unordered_map<std::string, std::string> cgiParams;
+		cgiParams["fileName"] = response.getFileName();
+		cgiParams["fileExtension"] = response.getFileExtension();
+		cgiParams["queryParams"] = response.getQueryParams();
+
+		CgiHandler cgiHandler(clients[clientFd]->getRequest(), cgiParams);
+		cgiHandler.setupCgiPipes();
+		const int *cgiPipeIn = cgiHandler.getPipeFdIn();
+		const int *cgiPipeOut = cgiHandler.getPipeFdOut();
+		clientCgiPipeFds[clientFd] = std::make_pair(cgiPipeIn, cgiPipeOut);
+	}
 	return (READY_TO_WRITE);
 }
 
@@ -394,6 +409,11 @@ void Server::createAndSendErrorResponse(HttpStatusCode const &statusCode, int co
 	clients[clientFd]->createErrorRequest(configs, statusCode);
 	clients[clientFd]->createResponse();
 	sendResponse(clientFd);
+}
+
+std::unordered_map<int, std::pair<const int *, const int *>> &Server::getClientCgiPipeFds()
+{
+	return (clientCgiPipeFds);
 }
 
 int const &Server::getServerFd() const

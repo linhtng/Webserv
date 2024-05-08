@@ -51,6 +51,7 @@ private:
 	struct sockaddr_in address;
 	std::string host;
 	int port;
+	std::unordered_map<int, std::pair<const int *, const int *>> clientCgiPipeFds;
 
 	RequestStatus receiveRequestHeader(int const &clientFd);
 	RequestStatus formRequestHeader(int const &clientFd, std::string &requestHeader, std::vector<std::byte> &requestBodyBuf);
@@ -76,6 +77,7 @@ public:
 	int const &getPort();
 	unsigned short int const &getClientPortNumber(int const &clientFd);
 	in_addr const &getClientIPv4Address(int const &clientFd);
+	std::unordered_map<int, std::pair<const int *, const int *>> &getClientCgiPipeFds();
 
 	void appendConfig(ConfigData const &config);
 	void removeClient(int const &clientFd);

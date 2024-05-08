@@ -28,6 +28,9 @@ public:
     ~CgiHandler();
 
     void initializeCgi(const Request &request, std::unordered_map<std::string, std::string> &cgiParams);
+    void setupCgiPipes();
+    const int *getPipeFdIn();
+    const int *getPipeFdOut();
     void createCgiProcess();
     void printEnv();
     std::string getCgiOutput();

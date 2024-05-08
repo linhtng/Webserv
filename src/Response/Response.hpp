@@ -72,7 +72,7 @@ private:
 	bool isRedirect(); // consts?
 	void handleRootAndAlias();
 	bool targetFound();
-	bool isCGI();
+	// bool isCGI();
 	void executeCGI();
 	void handlePost();
 	void handleGet();
@@ -85,6 +85,10 @@ public:
 
 	std::vector<std::byte> formatResponse() const;
 	void printResponseProperties() const;
+	bool isCGI();
+	std::string getFileName() const;
+	std::string getFileExtension() const;
+	std::string getQueryParams() const;
 
 	class ClientException : public std::exception
 	{

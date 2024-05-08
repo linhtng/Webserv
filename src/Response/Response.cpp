@@ -303,6 +303,21 @@ bool Response::isCGI()
 	return false;
 }
 
+std::string Response::getFileName() const
+{
+	return this->_fileName;
+}
+
+std::string Response::getFileExtension() const
+{
+	return this->_fileExtension;
+}
+
+std::string Response::getQueryParams() const
+{
+	return this->_queryParams;
+}
+
 // LINH_CGI
 // forms a response based on CGI output
 //  setCGIResponse (cgiOutput, cgiExitStatus) // or just take cgiHandler class instance

@@ -90,14 +90,10 @@ void CgiHandler::printEnv()
     }
 }
 
-/* Create a new process to execute the CGI script:
-- open cgi pipe
+/* - open cgi pipe
 - set the pipe ends which need to go through poll() in server main loop to be non-blocking
-- fork and execute in the child process
-- wait for the child process to finish
-- close the pipe
 */
-void CgiHandler::createCgiProcess()
+void CgiHandler::setupCgiPipes()
 {
     if (pipe(dataToCgiPipe) == -1 || pipe(dataFromCgiPipe) == -1)
     {
@@ -113,6 +109,15 @@ void CgiHandler::createCgiProcess()
         Logger::log(ERROR, ERROR_MESSAGE, "Error: fcntl() failed\n");
         return;
     }
+}
+
+/* Create a new process to execute the CGI script:
+- fork and execute in the child process
+- wait for the child process to finish
+- close the pipe
+*/
+void CgiHandler::createCgiProcess()
+{
     pid_t pid = fork();
     if (pid == -1)
     {
@@ -266,4 +271,14 @@ std::string CgiHandler::getCgiOutput()
 HttpStatusCode CgiHandler::getCgiExitStatus()
 {
     return cgiExitStatus;
+}
+
+const int *CgiHandler::getPipeFdIn()
+{
+    return dataToCgiPipe;
+}
+
+const int *CgiHandler::getPipeFdOut()
+{
+    return dataFromCgiPipe;
 }
