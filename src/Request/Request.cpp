@@ -241,7 +241,14 @@ void Request::parseContentLength()
 		return;
 	}
 	std::string contentLengthValue = it->second;
-	this->_contentLength = StringUtils::strToSizeT(contentLengthValue);
+	try
+	{
+		this->_contentLength = StringUtils::strToSizeT(contentLengthValue);
+	}
+	catch (const std::exception &e)
+	{
+		throw BadRequestException("Content-Length parsing error");
+	}
 	if (this->_contentLength > this->_config.getMaxClientBodySize())
 	{
 		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
@@ -398,6 +405,10 @@ void Request::extractHeaderLine(const std::string &headerLine)
 	{
 		std::string fieldName = match[1];
 		std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), ::tolower);
+		if (this->_headerLines.find(fieldName) != this->_headerLines.end())
+		{
+			throw BadRequestException("Duplicate header field");
+		}
 		this->_headerLines[fieldName] = match[2];
 	}
 	else
