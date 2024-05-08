@@ -10,6 +10,9 @@ Location::Location(const std::string &input)
 	directoryListing = false;
 	defaultFile = "index.html";
 	redirectionRoute = "";
+	saveDirIsEmpty = true;
+	aliasIsEmpty = true;
+	rootIsEmpty = true;
 }
 
 Location &Location::operator=(const Location &other)
@@ -53,7 +56,7 @@ void Location::analyzeLocationData()
 	setRedirection();
 	setLocationAlias();
 	setLocationRoot();
-	if (root.empty() && alias.empty())
+	if (rootIsEmpty && aliasIsEmpty)
 	{
 		throw std::runtime_error("Root or alias must be set in location block: " + locationBlock);
 	}
@@ -169,6 +172,10 @@ void Location::setLocationRoot()
 	{
 		root = match[1].str();
 	}
+	if (!root.empty())
+	{
+		rootIsEmpty = false;
+	}
 	root = StringUtils::trimChar(root, '/');
 }
 
@@ -179,6 +186,10 @@ void Location::setLocationAlias()
 	if (std::regex_search(locationBlock, match, aliasRegex))
 	{
 		alias = match[1].str();
+	}
+	if (!alias.empty())
+	{
+		aliasIsEmpty = false;
 	}
 	alias = StringUtils::trimChar(alias, '/');
 }
@@ -246,6 +257,10 @@ void Location::setDefaultFile()
 void Location::setSaveDir()
 {
 	saveDir = extractDirectiveValue("save_dir");
+	if (!saveDir.empty())
+	{
+		saveDirIsEmpty = false;
+	}
 	saveDir = StringUtils::trimChar(saveDir, '/');
 }
 
@@ -309,4 +324,19 @@ void Location::setLocationRoot(const std::string &root)
 void Location::setLocationRoute(const std::string &route)
 {
 	locationRoute = route;
+}
+
+bool Location::getSaveDirIsEmpty()
+{
+	return saveDirIsEmpty;
+}
+
+bool Location::getAliasIsEmpty()
+{
+	return aliasIsEmpty;
+}
+
+bool Location::getRootIsEmpty()
+{
+	return rootIsEmpty;
 }

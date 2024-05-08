@@ -40,6 +40,9 @@ public:
 	std::string getSaveDir();
 	void setLocationRoot(const std::string &root);
 	void setLocationRoute(const std::string &route);
+	bool getSaveDirIsEmpty();
+	bool getAliasIsEmpty();
+	bool getRootIsEmpty();
 
 private:
 	std::string locationBlock;
@@ -51,6 +54,9 @@ private:
 	bool directoryListing;
 	std::string defaultFile;
 	std::string saveDir;
+	bool saveDirIsEmpty;
+	bool aliasIsEmpty;
+	bool rootIsEmpty;
 	// std::string cgiExtension;
 	// std::string cgiExecutor;
 	// ... other properties ...

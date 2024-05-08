@@ -416,7 +416,7 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 void Response::handlePost()
 {
 	// check if upload is allowed
-	if (this->_location.getSaveDir().empty())
+	if (this->_location.getSaveDirIsEmpty())
 	{
 		this->_statusCode = HttpStatusCode::FORBIDDEN;
 		throw ClientException("Upload not allowed, no save_dir specified in location");
@@ -492,7 +492,7 @@ void Response::handleDelete()
 	Logger::log(DEBUG, SERVER, "DELETE request");
 	// if there's no upload dir or we're not in the upload dir, reject
 	std::string saveDir = this->_location.getSaveDir();
-	if (saveDir.empty() || saveDir != this->_pathAfterLocation)
+	if (this->_location.getSaveDirIsEmpty() || saveDir != this->_pathAfterLocation)
 	{
 		this->_statusCode = HttpStatusCode::FORBIDDEN;
 		throw ClientException("Delete not allowed, no save_dir specified in location or target is not in save_dir");
@@ -521,11 +521,11 @@ void Response::handleRootAndAlias()
 {
 	std::string alias = _location.getLocationAlias();
 	std::string root = _location.getLocationRoot();
-	if (!alias.empty())
+	if (!_location.getAliasIsEmpty())
 	{
 		this->_actualLocationPath = alias;
 	}
-	if (!root.empty())
+	if (!_location.getRootIsEmpty())
 	{
 		this->_actualLocationPath = StringUtils::joinPath(this->_location.getLocationRoot(), this->_actualLocationPath);
 	}

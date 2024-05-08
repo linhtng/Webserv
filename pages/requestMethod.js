@@ -23,7 +23,6 @@ function sendDeleteRequest() {
 	fetch(url, {
 			method: 'DELETE',
 			headers: {
-					'Content-Type': 'application/json',
 					'Host': 'localhost:10001',
 			},
 	})
@@ -31,10 +30,7 @@ function sendDeleteRequest() {
 			if (!response.ok) {
 					throw new Error('Network response was not ok');
 			}
-			return response.json();
-	})
-	.then(data => {
-			showMessage('File deleted successfully: ' + JSON.stringify(data), false, 'deleteMessage');
+			showMessage('File deleted successfully, status code: ' + response.status, false, 'deleteMessage');
 	})
 	.catch(error => {
 			showMessage(error.message, true, 'deleteMessage');
