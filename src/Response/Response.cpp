@@ -96,7 +96,7 @@ std::string Response::formatHeader() const
 	header += this->formatStatusLine() + CRLF;
 	header += "Date: " + this->formatDate() + CRLF;
 	header += "Server: " SERVER_SOFTWARE CRLF;
-	header += "Content-Length: " + std::to_string(this->_body.size()) + CRLF;
+	header += "Content-Length: " + std::to_string(this->_contentLength) + CRLF;
 	if (!this->_upgradeHeader.empty())
 	{
 		header += "Upgrade: " + this->_upgradeHeader + CRLF;
@@ -771,6 +771,7 @@ void Response::prepareResponse()
 	// Set content length
 	if (this->_method != HttpMethod::HEAD)
 	{
+		Logger::log(DEBUG, SERVER, "Setting content length for non-HEAD methodss: %d", this->_body.size());
 		this->_contentLength = this->_body.size();
 	}
 }
