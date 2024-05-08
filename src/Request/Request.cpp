@@ -461,7 +461,7 @@ Request::Request(const std::vector<ConfigData> &configs, const std::string &requ
 	}
 	catch (const std::exception &e)
 	{
-		Logger::log(ERROR, SERVER, "BadRequestException: %s", e.what());
+		Logger::log(ERROR, SERVER, "Request Exception: %s", e.what());
 		this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
 	}
 }

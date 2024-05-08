@@ -13,6 +13,7 @@ Location::Location(const std::string &input)
 	saveDirIsEmpty = true;
 	aliasIsEmpty = true;
 	rootIsEmpty = true;
+	redirectionIsEmpty = true;
 }
 
 Location &Location::operator=(const Location &other)
@@ -33,6 +34,7 @@ Location &Location::operator=(const Location &other)
 	saveDirIsEmpty = other.saveDirIsEmpty;
 	aliasIsEmpty = other.aliasIsEmpty;
 	rootIsEmpty = other.rootIsEmpty;
+	redirectionIsEmpty = other.redirectionIsEmpty;
 	return *this;
 }
 
@@ -164,6 +166,10 @@ void Location::setRedirection()
 	//     redirectionRoute = match[1].str();
 	// }
 	redirectionRoute = extractDirectiveValue("return");
+	if (!redirectionRoute.empty())
+	{
+		redirectionIsEmpty = false;
+	}
 	redirectionRoute = StringUtils::trimChar(redirectionRoute, '/');
 }
 
@@ -342,4 +348,9 @@ bool Location::getAliasIsEmpty()
 bool Location::getRootIsEmpty()
 {
 	return rootIsEmpty;
+}
+
+bool Location::getRedirectionIsEmpty()
+{
+	return redirectionIsEmpty;
 }

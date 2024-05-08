@@ -6,6 +6,7 @@
 #define CRITICAL_ERROR_RESPONSE "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 // TODO: change path to match from directory of the binary
 #define DEFAULT_ERROR_TEMPLATE_PATH "./pages/errorPage.html"
+#define DEFAULT_DIRECTORY_LISTING_TEMPLATE_PATH "./pages/directoryListing.html"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"

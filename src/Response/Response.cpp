@@ -211,7 +211,7 @@ void Response::prepareRedirectResponse()
 bool Response::isRedirect()
 {
 	this->_redirectionRoute = this->_location.getRedirectionRoute();
-	return this->_redirectionRoute != "";
+	return !this->_location.getRedirectionIsEmpty();
 }
 
 bool Response::targetFound()
@@ -711,6 +711,7 @@ void Response::prepareResponse()
 	// Handle redirections
 	if (isRedirect())
 	{
+		prepareRedirectResponse();
 		return;
 	}
 

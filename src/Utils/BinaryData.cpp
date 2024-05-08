@@ -53,7 +53,7 @@ static std::vector<std::string> getDirectoryContents(const std::string &path)
 std::vector<std::byte> BinaryData::getDirectoryListingPage(std::string locationPath, std::string actualLocationPath, std::string pathAfterLocation)
 {
 	// get page template
-	std::string templatePath = "../pages/directoryListing.html";
+	std::string templatePath = DEFAULT_DIRECTORY_LISTING_TEMPLATE_PATH;
 	std::ifstream templateFile(templatePath);
 	if (!templateFile.is_open())
 	{

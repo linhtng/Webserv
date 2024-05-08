@@ -43,6 +43,7 @@ public:
 	bool getSaveDirIsEmpty();
 	bool getAliasIsEmpty();
 	bool getRootIsEmpty();
+	bool getRedirectionIsEmpty();
 
 private:
 	std::string locationBlock;
@@ -57,6 +58,7 @@ private:
 	bool saveDirIsEmpty;
 	bool aliasIsEmpty;
 	bool rootIsEmpty;
+	bool redirectionIsEmpty;
 	// std::string cgiExtension;
 	// std::string cgiExecutor;
 	// ... other properties ...
