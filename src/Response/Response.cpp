@@ -91,7 +91,6 @@ std::string Response::formatStatusLine() const
 
 std::string Response::formatHeader() const
 {
-	// printResponseProperties();
 	std::string header;
 	header += this->formatStatusLine() + CRLF;
 	header += "Date: " + this->formatDate() + CRLF;
@@ -318,9 +317,6 @@ void Response::executeCGI()
 		throw ClientException("CGI script can only be executed with GET or POST method");
 	}
 
-	// TODO: either remove comments or return to try-catch
-	// try
-	// {
 	std::unordered_map<std::string, std::string> cgiParams;
 	cgiParams["fileName"] = this->_fileName;
 	cgiParams["fileExtension"] = "." + this->_fileExtension;
@@ -349,13 +345,6 @@ void Response::executeCGI()
 		}
 		throw ServerException("Error executing CGI script");
 	}
-	// }
-	// catch (const std::exception &e)
-	// {
-	// 	Logger::log(e_log_level::ERROR, CLIENT, "Error executing CGI script: %s, server error", e.what());
-	// 	this->_statusCode = HttpStatusCode::INTERNAL_SERVER_ERROR;
-	// 	throw ServerException("Error executing CGI script, constructor failed");
-	// }
 }
 
 void Response::postMultipartDataPart(const MultipartDataPart &part)
@@ -378,9 +367,9 @@ void Response::postMultipartDataPart(const MultipartDataPart &part)
 	{
 		throw ClientException("Content-Disposition header does not contain form-data directive");
 	}
-	// extract params liek name and filename
+	// extract params like name and filename
 
-	// this is code duplication, TODO: fix
+	// this is code duplication, ideally move to utils
 	std::unordered_map<std::string, std::string> params;
 	for (size_t i = 1; i < split.size(); ++i)
 	{
@@ -435,7 +424,6 @@ void Response::handlePost()
 	for (size_t i = 0; i < this->_parts.size(); i++)
 	{
 		postMultipartDataPart(this->_parts[i]);
-		// TODO: error handling
 	}
 	// set the Location header to contain path to the uploads directory
 	this->_locationHeader = '/' + this->_location.getSaveDir();
@@ -681,6 +669,10 @@ bool Response::methodAllowed()
 
 void Response::prepareResponse()
 {
+	if (this->_request.getBody().size() > this->_config.getMaxClientBodySize())
+	{
+		this->_statusCode = HttpStatusCode::PAYLOAD_TOO_LARGE;
+	}
 	// If error is already known, just go straight to error page forming
 	if (this->_statusCode != HttpStatusCode::UNDEFINED_STATUS)
 	{
@@ -771,7 +763,6 @@ void Response::prepareResponse()
 	// Set content length
 	if (this->_method != HttpMethod::HEAD)
 	{
-		Logger::log(DEBUG, SERVER, "Setting content length for non-HEAD methodss: %d", this->_body.size());
 		this->_contentLength = this->_body.size();
 	}
 }
