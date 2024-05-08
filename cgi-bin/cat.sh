@@ -1,4 +1,11 @@
 #!/bin/bash
 
-# Read from stdin and write to stdout
-cat
+echo "meow.
+
+    /\_____/\\
+   /  o   o  \\
+  ( ==  ^  == )
+   )         (
+  (           )
+ ( (  )   (  ) )
+(__(__)___(__)__)"
