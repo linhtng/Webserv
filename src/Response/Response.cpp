@@ -333,6 +333,7 @@ void Response::executeCGI()
 		cgiHandler.createCgiProcess();
 		this->_body = BinaryData::strToVectorByte(cgiHandler.getCgiOutput());
 		this->_contentType = ContentType::TEXT_PLAIN;
+		this->_statusCode = cgiHandler.getCgiExitStatus();
 	}
 	catch (const std::exception &e)
 	{
