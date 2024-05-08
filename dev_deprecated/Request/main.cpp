@@ -1,7 +1,7 @@
 #include "Request.hpp"
 #include "../Response/Response.hpp"
 #include <iostream>
-#include "../config_parser/ConfigData.hpp"
+#include "../Config/ConfigData.hpp"
 #include "../config_parser/ConfigParser.hpp"
 
 std::string readFileIntoString(const std::string &filename)

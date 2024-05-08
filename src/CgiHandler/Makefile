@@ -8,7 +8,7 @@ SRCS = main.cpp \
 		../Request/Request.cpp \
 		../Response/Response.cpp \
 		../config_parser/ConfigParser.cpp \
-		../config_parser/ConfigData.cpp \
+		../Config/ConfigData.cpp \
 		../config_parser/Location.cpp \
 		../StringUtils/StringUtils.cpp \
 		../FileSystemUtils/FileSystemUtils.cpp \

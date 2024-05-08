@@ -1,25 +1,23 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
-#include "../defines.hpp"
-#include "../Request/Request.hpp"
-#include "../HttpMessage/HttpMessage.hpp"
-#include "../StringUtils/StringUtils.hpp"
-#include "../FileSystemUtils/FileSystemUtils.hpp"
-#include "../config_parser/Location.hpp"
-#include "../BinaryData/BinaryData.hpp"
-#include "../HttpUtils/HttpUtils.hpp"
-#include "../Logger/Logger.hpp"
-#include "../CgiHandler/CgiHandler.hpp"
-
 #include <string>
 #include <chrono>
 #include <vector>
 #include <algorithm>
 #include <unordered_set>
-// TODO: check imports below
+#include <iomanip> // TODO: check if necessary
 
-#include <iomanip> //TODO: check header for put_time
+#include "../Request/Request.hpp"
+#include "../HttpMessage/HttpMessage.hpp"
+#include "../Utils/StringUtils.hpp"
+#include "../Utils/FileSystemUtils.hpp"
+#include "../Utils/BinaryData.hpp"
+#include "../Utils/HttpUtils.hpp"
+#include "../Utils/Logger.hpp"
+#include "../Config/Location.hpp"
+#include "../CgiHandler/CgiHandler.hpp"
+#include "../defines.hpp"
 
 class Request;
 

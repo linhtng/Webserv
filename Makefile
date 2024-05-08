@@ -1,28 +1,28 @@
 NAME = webserv
 
-SRCS = main.cpp \
+SRC_FILENAMES = main.cpp \
 		CgiHandler/CgiHandler.cpp \
+		Config/ConfigParser.cpp \
+		Config/ConfigData.cpp \
+		Config/Location.cpp \
 		Server/Server.cpp \
 		Server/ServerManager.cpp \
 		Server/Client.cpp \
 		HttpMessage/HttpMessage.cpp \
 		Request/Request.cpp \
 		Response/Response.cpp \
-		config_parser/ConfigParser.cpp \
-		config_parser/ConfigData.cpp \
-		config_parser/Location.cpp \
-		StringUtils/StringUtils.cpp \
-		FileSystemUtils/FileSystemUtils.cpp \
-		BinaryData/BinaryData.cpp \
-		Logger/Logger.cpp \
+		Utils/StringUtils.cpp \
+		Utils/FileSystemUtils.cpp \
+		Utils/BinaryData.cpp \
+		Utils/Logger.cpp
 
 CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++17
 
-OBJS = $(addprefix obj/, $(notdir $(SRCS:.cpp=.o)))
+SRCS = $(addprefix src/, $(SRC_FILENAMES))
 
-vpath %.cpp $(sort $(dir $(SRCS)))
+OBJS = $(addprefix obj/, $(notdir $(SRCS:.cpp=.o)))
 
 all: obj $(NAME)
 
@@ -31,6 +31,8 @@ obj:
 
 $(NAME): $(OBJS)
 	$(CC) -o $@ $(OBJS) $(FLAGS)
+
+vpath %.cpp $(sort $(dir $(SRCS)))
 
 obj/%.o: %.cpp
 	$(CC) -c $(FLAGS) -o $@ $<

@@ -13,12 +13,13 @@
 #include <algorithm>
 #include <unistd.h>
 #include <memory>
+
 #include "Client.hpp"
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
-#include "../config_parser/ConfigParser.hpp"
+#include "../Config/ConfigParser.hpp"
+#include "../Utils/Logger.hpp"
 #include "../defines.hpp"
-#include "../Logger/Logger.hpp"
 
 class Server
 {

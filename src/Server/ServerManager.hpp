@@ -11,8 +11,9 @@
 #include <list>
 #include <unistd.h>
 #include <chrono>
+
 #include "Server.hpp"
-#include "../config_parser/ConfigParser.hpp"
+#include "../Config/ConfigParser.hpp"
 
 class ServerManager
 {

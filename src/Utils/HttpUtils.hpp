@@ -1,9 +1,10 @@
 #ifndef HTTP_UTILS_HPP
 #define HTTP_UTILS_HPP
 
-#include "../defines.hpp"
 #include <unordered_map>
 #include <string>
+
+#include "../defines.hpp"
 
 namespace HttpUtils
 {

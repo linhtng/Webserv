@@ -1,12 +1,13 @@
 #ifndef HTTP_MESSAGE_HPP
 #define HTTP_MESSAGE_HPP
 
-#include "../defines.hpp"
 #include <string>
 #include <vector>
 #include <chrono>
-#include "../config_parser/ConfigData.hpp"
 #include <unordered_map>
+
+#include "../Config/ConfigData.hpp"
+#include "../defines.hpp"
 
 class HttpMessage
 {

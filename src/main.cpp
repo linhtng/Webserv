@@ -1,6 +1,6 @@
 #include "Server/ServerManager.hpp"
-#include "config_parser/ConfigParser.hpp"
-#include "Logger/Logger.hpp"
+#include "Config/ConfigParser.hpp"
+#include "Utils/Logger.hpp"
 #include <iostream>
 
 int main(int argc, char **argv)

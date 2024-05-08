@@ -5,9 +5,10 @@
 #include <iostream>
 #include <string>
 #include <memory>
+
 #include "../Request/Request.hpp"
 #include "../Response/Response.hpp"
-#include "../config_parser/ConfigData.hpp"
+#include "../Config/ConfigData.hpp"
 
 class Client
 {

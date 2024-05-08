@@ -1,17 +1,17 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
-// TODO: check includes
-#include "../defines.hpp"
 #include <string>
 #include <unordered_map>
 #include <regex>
 #include <algorithm>
 #include <limits>
+
 #include "../HttpMessage/HttpMessage.hpp"
-#include "../StringUtils/StringUtils.hpp"
-#include "../HttpUtils/HttpUtils.hpp"
-#include "../Logger/Logger.hpp"
+#include "../Utils/StringUtils.hpp"
+#include "../Utils/HttpUtils.hpp"
+#include "../Utils/Logger.hpp"
+#include "../defines.hpp"
 
 class Request : public HttpMessage
 {

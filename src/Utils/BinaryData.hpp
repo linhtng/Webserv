@@ -1,15 +1,16 @@
 #ifndef BINARY_DATA_HPP
 #define BINARY_DATA_HPP
 
-#include "../defines.hpp"
-#include "../HttpMessage/HttpMessage.hpp"
-#include "../StringUtils/StringUtils.hpp"
-#include "../Logger/Logger.hpp"
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <dirent.h>
 #include <sys/types.h>
+
+#include "../HttpMessage/HttpMessage.hpp"
+#include "StringUtils.hpp"
+#include "Logger.hpp"
+#include "../defines.hpp"
 
 namespace BinaryData
 {

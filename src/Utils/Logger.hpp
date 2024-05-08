@@ -1,11 +1,12 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#include "../defines.hpp"
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
 #include <cstdarg>
+
+#include "../defines.hpp"
 
 // modify logger options here
 #define LOG_BUF_SIZE 512

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -12,9 +13,10 @@
 #include <regex>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "../Utils/StringUtils.hpp"
+#include "../Utils/HttpUtils.hpp"
 #include "../defines.hpp"
-#include "../StringUtils/StringUtils.hpp"
-#include "../HttpUtils/HttpUtils.hpp"
 
 class Location
 {
