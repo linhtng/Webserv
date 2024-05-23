@@ -1,5 +1,20 @@
 # Webserv
-This project is about writing your own HTTP server.
+
+<p align="center">
+  <img width="100%" height="100%" src="pages/WebservReadmePic.png">
+</p>
+
+## About
+This project is about writing your own HTTP web server from scratch.
+The web server can handle HTTP GET, HEAD, POST, and DELETE Requests, and can serve static files from a specified root directory or dynamic content using CGI. It is also able to handle multiple client connections concurrently with the help of poll().
+
+# Usage
+```bash
+make
+./webserv [Config File] ## ready-made config files can be found in configs/
+```
+
+## Workflow
 - Setting up the server for basic reading and writing operations
     - set up the server socket, bind it to a port, and start listening for incoming connections. When a connection is accepted, it should spawn a new thread to handle  the connection 
 - Parsing what we exchange with the clients (i.e. messages)
