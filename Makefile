@@ -19,6 +19,7 @@ SRC_FILENAMES = main.cpp \
 CC = c++
 
 FLAGS = -Wall -Wextra -Werror -std=c++17
+TEST_FLAGS = -Wall -Wextra -Werror -std=c++17 -I/Users/linh/.brew/include
 
 SRCS = $(addprefix src/, $(SRC_FILENAMES))
 
@@ -37,7 +38,33 @@ vpath %.cpp $(sort $(dir $(SRCS)))
 obj/%.o: %.cpp
 	$(CC) -c $(FLAGS) -o $@ $<
 
-.PHONY: clean fclean re
+# Test related variables
+TEST_DIR = tests/unit
+TEST_SRCS = $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJS = $(TEST_SRCS:.cpp=.o)
+TEST_NAME = run_tests
+
+# For testing we need to include the project source files excluding main.cpp
+PROJECT_TEST_SRCS = $(filter-out src/main.cpp, $(SRCS))
+PROJECT_TEST_OBJS = $(addprefix obj/, $(notdir $(PROJECT_TEST_SRCS:.cpp=.o)))
+
+# Google Test flags
+GTEST_FLAGS = -lgtest -lgtest_main -pthread
+
+test: $(TEST_NAME)
+	./$(TEST_NAME)
+
+$(TEST_NAME): $(TEST_OBJS) $(PROJECT_TEST_OBJS)
+	$(CC) -o $@ $^ $(FLAGS) -L/Users/linh/.brew/lib $(GTEST_FLAGS)
+
+$(TEST_DIR)/%.o: $(TEST_DIR)/%.cpp
+	$(CC) -c $(TEST_FLAGS) -o $@ $<
+
+# Clean test artifacts
+test_clean:
+	rm -f $(TEST_NAME) $(TEST_OBJS)
+
+.PHONY: clean fclean re test test_clean
 
 clean:
 	rm -f obj/*.o

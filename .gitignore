@@ -3,3 +3,4 @@ webserv
 .vscode/
 *.o
 /obj
+run_tests
