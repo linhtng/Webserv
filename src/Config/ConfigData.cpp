@@ -54,9 +54,10 @@ void print(const T &container)
 {
 	for (const auto &elem : container)
 	{
-		std::cout << "elem: "
+		std::cout << "elem first"
 				  << " ";
-		std::cout << elem.first << " " << elem.second << std::endl;
+		std::cout << elem.first << std::endl;
+		std::cout << "elem second: " << elem.second << std::endl;
 	}
 }
 
@@ -82,11 +83,11 @@ void ConfigData::printConfigData()
 	std::cout << "CGI directory: " << cgiDir << std::endl;
 	std::cout << "cgiExtenExecutorMap: " << std::endl;
 	print(cgiExtenExecutorMap);
-	// std::cout << "Locations: ";
-	// for (auto &location : locations)
-	// {
-	// 	location.second.printLocationData();
-	// }
+	std::cout << "Locations: ";
+	for (auto &location : locations)
+	{
+		location.second.printLocationData();
+	}
 }
 
 std::string ConfigData::getServerHost() const
