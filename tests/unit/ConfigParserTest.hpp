@@ -5,38 +5,8 @@
 
 // Add the header content at the top or in your test fixture setup
 #include <gtest/gtest.h>
-#include <string>
+// #include <string>
 #include <exception>
-
-// Custom macro for checking exception message
-#define EXPECT_THROW_WITH_MESSAGE(statement, expected_exception, expected_message)  \
-    try                                                                             \
-    {                                                                               \
-        statement;                                                                  \
-        FAIL() << "Expected " #expected_exception " to be thrown";                  \
-    }                                                                               \
-    catch (const expected_exception &e)                                             \
-    {                                                                               \
-        SUCCEED(std::string(e.what()).find(expected_message) != std::string::npos); \
-        std::cout << "Caught exception: " << e.what() << std::endl;                 \
-    }                                                                               \
-    catch (...)                                                                     \
-    {                                                                               \
-        FAIL() << "Expected " #expected_exception " to be thrown";                  \
-    }
-// #define EXPECT_THROW_WITH_MESSAGE(statement, exception_type, expected_message) \
-//     EXPECT_THROW({ \
-//         try { \
-//             statement; \
-//         } catch (const exception_type& e) { \
-//             std::cout << "\n===============================================" << std::endl; \
-//             std::cout << "EXCEPTION: " << e.what() << std::endl; \
-//             std::cout << "===============================================\n" << std::endl; \
-//             EXPECT_TRUE(std::string(e.what()).find(expected_message) != std::string::npos) \
-//                 << "Expected substring: " << expected_message << "\n" \
-//                 << "Actual message: " << e.what(); \
-//             throw; \
-//         } }, exception_type)
 
 class ConfigParserTest : public ::testing::Test
 {
@@ -51,25 +21,15 @@ protected:
     ConfigParser *validParser = nullptr;
     std::vector<ConfigData> configs;
 
-    void SetUp() override
-    {
-        // Create a file with invalid syntax for the specific test
-        std::ofstream file(invalidSyntaxPath);
-        file << "server {\n    listen  ;\n}\n";
-        file.close();
+    void SetUp() override;
+    void TearDown() override;
 
-        // Set up the valid parser that multiple tests will use
-        validParser = new ConfigParser(validConfigPath);
-        validParser->extractServerConfigs();
-        configs = validParser->getServerConfigs();
-    }
+    // Helper method for testing exceptions
+    void ExpectThrowsWithMessage(const std::string &testName,
+                                 const std::string &configContent);
 
-    void TearDown() override
-    {
-        delete validParser;
-        // Clean up test files
-        std::remove(invalidSyntaxPath.c_str());
-    }
+    void ExpectThrowsFromFile(
+        const std::string &description, std::string &filePath);
 };
 
 class TestConfigFile
@@ -78,25 +38,13 @@ private:
     std::string filePath;
 
 public:
-    TestConfigFile(const std::string &path, const std::string &content) : filePath(path)
-    {
-        std::ofstream file(filePath);
-        file << content;
-        file.close();
-    }
-
-    ~TestConfigFile()
-    {
-        if (!filePath.empty())
-        {
-            std::remove(filePath.c_str());
-        }
-    }
+    TestConfigFile(const std::string &path, const std::string &content);
+    ~TestConfigFile();
 
     // Get the path for use in the test
-    const std::string &path() const { return filePath; }
+    const std::string &path() const;
 
     // Non-copyable
-    TestConfigFile testFile(const TestConfigFile &) = delete;
+    TestConfigFile(const TestConfigFile &) = delete;
     TestConfigFile &operator=(const TestConfigFile &) = delete;
 };

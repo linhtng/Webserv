@@ -496,20 +496,20 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 {
 	std::vector<Location> matchingLocations;
 
-	std::cout << "getMatchingLocation(): Location route: " << locationRoute << std::endl;
+	// std::cout << "getMatchingLocation(): Location route: " << locationRoute << std::endl;
 	std::string trimmedLocationRoute = "/" + StringUtils::trimChar(locationRoute, '/');
-	std::cout << "Trimmed location route: " << trimmedLocationRoute << std::endl;
+	// std::cout << "Trimmed location route: " << trimmedLocationRoute << std::endl;
 	for (const auto &locationPair : this->locations)
 	{
 		std::string pathPattern = "/" + StringUtils::trimChar(locationPair.first, '/');
-		std::cout << "Path pattern: " << pathPattern << std::endl;
+		// std::cout << "Path pattern: " << pathPattern << std::endl;
 		if (trimmedLocationRoute.find(pathPattern) == 0)
 		{
-			std::cout << "Found this location: " << locationPair.first << std::endl;
+			// std::cout << "Found this location: " << locationPair.first << std::endl;
 			// check if after the prefix lodaation string either ends or has a slash
 			if (trimmedLocationRoute.size() == pathPattern.size() || trimmedLocationRoute[pathPattern.size()] == '/' || trimmedLocationRoute[pathPattern.size() - 1] == '/')
 			{
-				std::cout << "Matched location: " << locationPair.first << std::endl;
+				// std::cout << "Matched location: " << locationPair.first << std::endl;
 				matchingLocations.push_back(locationPair.second);
 			}
 			else
@@ -518,7 +518,7 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 			}
 		}
 	}
-	std::cout << "Matching locations size: " << matchingLocations.size() << std::endl;
+	// std::cout << "Matching locations size: " << matchingLocations.size() << std::endl;
 	if (matchingLocations.size() == 0)
 	{
 		throw std::runtime_error("No matching location found for trimmed route: " + trimmedLocationRoute);
@@ -528,7 +528,7 @@ Location ConfigData::getMatchingLocation(std::string locationRoute) const
 		// Sort the matching locations by path length in descending order
 		std::sort(matchingLocations.begin(), matchingLocations.end(), [](Location &a, Location &b)
 				  { return a.getLocationRoute().size() > b.getLocationRoute().size(); });
-		std::cout << "Matching location: '" << matchingLocations[0].getLocationRoute() << "'" << std::endl;
+		// std::cout << "Matching location: '" << matchingLocations[0].getLocationRoute() << "'" << std::endl;
 		return matchingLocations[0];
 	}
 }
